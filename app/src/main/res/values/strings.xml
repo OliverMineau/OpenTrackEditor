@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">OpenTrackEditor</string>
+
+    <string name="track_no_name">Untitled Track</string>
 </resources>

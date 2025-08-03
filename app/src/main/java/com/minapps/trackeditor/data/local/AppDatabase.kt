@@ -1,11 +1,27 @@
 package com.minapps.trackeditor.data.local
 
-import android.content.Context
 import androidx.room.Database
-import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [WaypointEntity::class], version = 1, exportSchema = false)
+/**
+ * Main Room database for the app.
+ * Holds both Tracks and Waypoints tables.
+ *
+ * @Database annotation:
+ *  - entities: list of all tables (TrackEntity & WaypointEntity)
+ *  - version: database version (used for migrations)
+ *  - exportSchema: false to avoid exporting schema files
+ */
+@Database(
+    entities = [TrackEntity::class, WaypointEntity::class],
+    version = 3,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
-    abstract fun waypointDao(): WaypointDao
+
+    /**
+     * Exposes the DAO (Data Access Object) to perform
+     * all CRUD operations on tracks and waypoints.
+     */
+    abstract fun trackDao(): TrackDao
 }

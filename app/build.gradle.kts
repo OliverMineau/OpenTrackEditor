@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     id("kotlin-kapt")
     id("dagger.hilt.android.plugin")
+    id("org.jetbrains.dokka") version "2.0.0"
 
 }
 android {
