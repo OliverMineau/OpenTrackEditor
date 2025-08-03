@@ -58,13 +58,19 @@ interface TrackDao {
     }
 
     /**
+     * Inserts a list of waypoints
+     *
+     * @param waypoints
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWaypoints(waypoints: List<WaypointEntity>)
+
+    /**
      * Get all waypoints for a specific track, ordered by their ID.
      * @param trackId Track ID
      */
     @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId ORDER BY waypointId ASC")
     suspend fun getTrackWaypoints(trackId: Int): List<WaypointEntity>
-
-
 
 
 

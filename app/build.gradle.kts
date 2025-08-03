@@ -1,3 +1,5 @@
+import org.jetbrains.dokka.gradle.DokkaTask
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -61,4 +63,8 @@ dependencies {
     implementation("androidx.hilt:hilt-navigation-fragment:1.0.0")
     kapt("androidx.hilt:hilt-compiler:1.0.0")
 
+}
+
+tasks.withType<DokkaTask>().configureEach {
+    outputDirectory.set(layout.buildDirectory.dir("dokka"))
 }

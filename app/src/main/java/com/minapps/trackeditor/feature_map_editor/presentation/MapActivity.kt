@@ -19,6 +19,7 @@ import com.minapps.trackeditor.R
 import com.minapps.trackeditor.TrackEditorApp
 import com.minapps.trackeditor.databinding.ActivityMapBinding
 import com.minapps.trackeditor.feature_track_import.presentation.ImportTrackViewModel
+import com.minapps.trackeditor.feature_track_import.presentation.TrackImportEvent
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -147,8 +148,23 @@ class MapActivity : AppCompatActivity(), MapListener {
                         }
                     }
                 }
+
+                launch {
+                    importTrackViewModel.events.collect { event ->
+                        when (event) {
+                            is TrackImportEvent.TrackAdded -> {
+                                Log.d("debug", "Track imported ${event.trackId}, loading waypoints...")
+                                lifecycleScope.launch {
+                                    mapViewModel.loadTrackWaypoints(event.trackId)
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
+
+
 
 
     }

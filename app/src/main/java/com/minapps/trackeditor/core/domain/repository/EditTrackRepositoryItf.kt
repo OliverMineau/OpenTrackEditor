@@ -49,4 +49,19 @@ interface EditTrackRepositoryItf {
      * Delete all tracks and waypoints from the database.
      */
     suspend fun clearAll()
+
+    /**
+     * Add an imported track to the database.
+     *
+     * @param track The domain track to add
+     */
+    suspend fun addImportedTrack(track: Track) : Long
+
+    /**
+     * Add a list of waypoints to the database.
+     * Converts the domain model Waypoint to a database entity and inserts it.
+     *
+     * @param waypoints The domain Waypoint to add
+     */
+    suspend fun addWaypoints(waypoints: List<Waypoint>)
 }

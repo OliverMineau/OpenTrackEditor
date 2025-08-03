@@ -110,5 +110,20 @@ class MapViewModel @Inject constructor(
 
 
 
+    suspend fun loadTrackWaypoints(trackId: Int) {
+        val waypoints = getTrackWaypointsUseCase(trackId)
+        waypoints.forEach { wp ->
+            _waypointEvents.emit(
+                WaypointUpdate.Added(
+                    trackId,
+                    Pair(wp.lat, wp.lng)
+                )
+            )
+        }
+    }
+
+
+
+
 
 }

@@ -8,6 +8,7 @@ import com.minapps.trackeditor.data.local.TrackDao
 import com.minapps.trackeditor.data.local.TrackEntity
 import com.minapps.trackeditor.data.mapper.toDomain
 import com.minapps.trackeditor.data.mapper.toEntity
+import com.minapps.trackeditor.feature_track_import.domain.model.ImportedTrack
 import jakarta.inject.Inject
 
 /**
@@ -30,6 +31,18 @@ class EditTrackRepositoryImpl @Inject constructor(
     override suspend fun addWaypoint(waypoint: Waypoint) {
         dao.insertWaypointWithTrackCheck(waypoint.toEntity(), )
         Log.d("debug", "Added to track: ${waypoint.trackId}, ${waypoint.id}")
+    }
+
+    /**
+     * Add a list of waypoints to the database.
+     * Converts the domain model Waypoint to a database entity and inserts it.
+     *
+     * @param waypoints The domain Waypoint to add
+     */
+    override suspend fun addWaypoints(waypoints: List<Waypoint>) {
+        //TODO
+        dao.insertWaypoints(waypoints.map { it.toEntity() })
+        Log.d("debug", "Added ${waypoints.size} waypoints")
     }
 
     /**
@@ -69,4 +82,33 @@ class EditTrackRepositoryImpl @Inject constructor(
         dao.clearAll()
         Log.d("debug", "Cleared all waypoints")
     }
+
+    /**
+     * Add an imported track to the database.
+     *
+     * @param track The domain track to add
+     */
+   /* override suspend fun addImportedTrack(track: Track) {
+        // Insert track and get the generated trackId
+        val trackId = insertTrack(track.toEntity())
+
+        // Assign the correct trackId to all waypoints before inserting
+        val waypointsWithTrackId = track.waypoints.map { it.copy(trackId = trackId.toInt()) }
+
+        addWaypoints(waypointsWithTrackId)
+
+        Log.d("debug", "Added imported track $trackId with ${waypointsWithTrackId.size} waypoints")
+    }*/
+
+    override suspend fun addImportedTrack(track: Track): Long {
+        val trackId = dao.insertTrack(track.toEntity())
+        val waypointsWithTrackId = track.waypoints.map {
+            it.copy(trackId = trackId.toInt())
+        }
+        dao.insertWaypoints(waypointsWithTrackId.map { it.toEntity() })
+
+        Log.d("debug", "Added imported track $trackId with ${track.waypoints.size} waypoints")
+        return trackId
+    }
+
 }

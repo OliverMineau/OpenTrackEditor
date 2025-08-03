@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
+import androidx.core.net.toFile
+import com.minapps.trackeditor.core.domain.model.Track
 import com.minapps.trackeditor.feature_track_import.data.parser.GpxParser
 import com.minapps.trackeditor.feature_track_import.data.parser.TrackParser
 import com.minapps.trackeditor.feature_track_import.domain.model.ImportedTrack
@@ -29,8 +31,10 @@ class TrackImportRepositoryImpl @Inject constructor(
      * @return ImportedTrack instance or null if import fails.
      * @throws IllegalArgumentException if the file format is unsupported.
      */
-    override suspend fun importTrack(fileUri: Uri): ImportedTrack? {
+    override suspend fun importTrack(fileUri: Uri): Track? {
         val fileName = getFileName(context, fileUri)
+        val fileSize = getFileSize(context, fileUri)
+
         val format = when {
             fileName?.endsWith(".gpx", ignoreCase = true) == true -> "gpx"
             else -> detectFileFormat(context, fileUri) ?: throw IllegalArgumentException("Unsupported file type: $fileUri")
@@ -41,6 +45,9 @@ class TrackImportRepositoryImpl @Inject constructor(
             // Add other parsers in future
             else -> throw IllegalArgumentException("Unsupported format: $format")
         }
+
+        //TODO Warn file size in separate use case
+        Log.d("debug", "File $fileName -> ${"%.2f".format(fileSize.toDouble() / (1024 * 1024))} MB")
 
         return parser.parse(context, fileUri)
     }
@@ -63,6 +70,24 @@ class TrackImportRepositoryImpl @Inject constructor(
         }
         return fileName
     }
+
+    /**
+     * Helper method to retrieve the size of a file
+     *
+     * @param context
+     * @param uri
+     * @return
+     */
+    fun getFileSize(context: Context, uri: Uri): Long {
+        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+            if (sizeIndex != -1 && cursor.moveToFirst()) {
+                return cursor.getLong(sizeIndex)
+            }
+        }
+        return -1L // Unknown size
+    }
+
 
     /**
      * Detect the file format by reading the first line of the file.

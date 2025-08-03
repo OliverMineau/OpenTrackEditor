@@ -2,6 +2,7 @@ package com.minapps.trackeditor.feature_track_import.data.parser
 
 import android.content.Context
 import android.net.Uri
+import com.minapps.trackeditor.core.domain.model.Track
 import com.minapps.trackeditor.feature_track_import.domain.model.ImportedTrack
 
 /**
@@ -17,7 +18,7 @@ interface TrackParser {
      * @param fileUri Uri of the file to parse.
      * @return ImportedTrack if parsing is successful, or null if parsing fails.
      */
-    suspend fun parse(context: Context, fileUri: Uri): ImportedTrack?
+    suspend fun parse(context: Context, fileUri: Uri): Track?
 
     /**
      * Check whether this parser can handle the given file Uri.

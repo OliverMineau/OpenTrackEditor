@@ -3,6 +3,7 @@ package com.minapps.trackeditor.feature_track_import.data.parser
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.minapps.trackeditor.core.domain.model.Track
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.feature_track_import.domain.model.ImportedTrack
 import org.xmlpull.v1.XmlPullParser
@@ -28,7 +29,7 @@ class GpxParser : TrackParser {
      * Parses the GPX file, extracting track name and waypoints.
      * Handles XML parsing exceptions and returns null if parsing fails.
      */
-    override suspend fun parse(context: Context, fileUri: Uri): ImportedTrack? {
+    override suspend fun parse(context: Context, fileUri: Uri): Track? {
         val waypoints = mutableListOf<Waypoint>()
         var inputStream: InputStream? = null
 
@@ -89,7 +90,8 @@ class GpxParser : TrackParser {
 
 
             Log.d("GpxParser", "Track parsed successfully: $name with ${waypoints.size} waypoints")
-            return ImportedTrack(name, waypoints)
+            //TODO set real values
+            return Track(0,name, "",0, waypoints)
 
         } catch (e: XmlPullParserException) {
             Log.e("GpxParser", "XML parsing error: ${e.message}", e)
