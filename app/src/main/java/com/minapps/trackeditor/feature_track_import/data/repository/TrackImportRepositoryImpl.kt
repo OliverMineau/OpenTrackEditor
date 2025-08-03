@@ -8,7 +8,6 @@ import androidx.core.net.toFile
 import com.minapps.trackeditor.core.domain.model.Track
 import com.minapps.trackeditor.feature_track_import.data.parser.GpxParser
 import com.minapps.trackeditor.feature_track_import.data.parser.TrackParser
-import com.minapps.trackeditor.feature_track_import.domain.model.ImportedTrack
 import com.minapps.trackeditor.feature_track_import.domain.repository.TrackImportRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject

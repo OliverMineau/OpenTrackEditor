@@ -6,11 +6,11 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minapps.trackeditor.R
+import com.minapps.trackeditor.core.domain.repository.EditTrackRepositoryItf
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.ClearAllUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.CreateTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackWaypointsUseCase
-import com.minapps.trackeditor.feature_track_import.domain.model.ImportedTrack
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
@@ -23,6 +23,7 @@ import org.osmdroid.util.GeoPoint
 
 sealed class WaypointUpdate {
     data class Added(val trackId: Int, val point: Pair<Double, Double>) : WaypointUpdate()
+    data class AddedList(val trackId: Int, val points: List<Pair<Double,Double>>) : WaypointUpdate()
     data class Removed(val trackId: Int, val index: Int) : WaypointUpdate()
     data class Cleared(val trackId: Int) : WaypointUpdate()
 }
@@ -30,6 +31,7 @@ sealed class WaypointUpdate {
 
 @HiltViewModel
 class MapViewModel @Inject constructor(
+    private val repository: EditTrackRepositoryItf,
     private val addWaypointUseCase: AddWaypointUseCase,
     private val clearAllUseCase: ClearAllUseCase,
     private val createTrackUseCase: CreateTrackUseCase,
@@ -49,6 +51,10 @@ class MapViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             clearAll()
+
+            repository.addedTracks.collect { track ->
+                loadTrackWaypoints(track.id) // or handle the Track object directly
+            }
         }
     }
 
@@ -110,8 +116,10 @@ class MapViewModel @Inject constructor(
 
 
 
-    suspend fun loadTrackWaypoints(trackId: Int) {
+    /*suspend fun loadTrackWaypoints(trackId: Int) {
+        Log.d("debug", "Reemitting points")
         val waypoints = getTrackWaypointsUseCase(trackId)
+        Log.d("debug", "Size ${waypoints.size} ${trackId}")
         waypoints.forEach { wp ->
             _waypointEvents.emit(
                 WaypointUpdate.Added(
@@ -119,6 +127,17 @@ class MapViewModel @Inject constructor(
                     Pair(wp.lat, wp.lng)
                 )
             )
+        }
+    }*/
+
+    suspend fun loadTrackWaypoints(trackId: Int) {
+        Log.d("debug", "Reemitting points")
+        val waypoints = getTrackWaypointsUseCase(trackId)
+        Log.d("debug", "Size ${waypoints.size} $trackId")
+
+        if (waypoints.isNotEmpty()) {
+            val points = waypoints.map { wp -> Pair(wp.lat, wp.lng) }
+            _waypointEvents.emit(WaypointUpdate.AddedList(trackId, points))
         }
     }
 

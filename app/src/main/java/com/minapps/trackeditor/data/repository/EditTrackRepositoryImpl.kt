@@ -8,8 +8,9 @@ import com.minapps.trackeditor.data.local.TrackDao
 import com.minapps.trackeditor.data.local.TrackEntity
 import com.minapps.trackeditor.data.mapper.toDomain
 import com.minapps.trackeditor.data.mapper.toEntity
-import com.minapps.trackeditor.feature_track_import.domain.model.ImportedTrack
 import jakarta.inject.Inject
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 
 /**
  * Implementation of the EditTrackRepository interface.
@@ -21,6 +22,9 @@ import jakarta.inject.Inject
 class EditTrackRepositoryImpl @Inject constructor(
     private val dao: TrackDao
 ) : EditTrackRepositoryItf {
+
+    private val _addedTracks = MutableSharedFlow<Track>()
+    override val addedTracks: Flow<Track> = _addedTracks
 
     /**
      * Add a waypoint to the database.
@@ -100,7 +104,7 @@ class EditTrackRepositoryImpl @Inject constructor(
         Log.d("debug", "Added imported track $trackId with ${waypointsWithTrackId.size} waypoints")
     }*/
 
-    override suspend fun addImportedTrack(track: Track): Long {
+    /*override suspend fun addImportedTrack(track: Track): Long {
         val trackId = dao.insertTrack(track.toEntity())
         val waypointsWithTrackId = track.waypoints.map {
             it.copy(trackId = trackId.toInt())
@@ -109,6 +113,27 @@ class EditTrackRepositoryImpl @Inject constructor(
 
         Log.d("debug", "Added imported track $trackId with ${track.waypoints.size} waypoints")
         return trackId
+    }*/
+
+    /*override suspend fun addImportedTrack(track: Track): Track {
+        //TODO
+        val trackId = dao.insertTrack(track.toEntity()) // or whatever you currently do
+        return Track(id = trackId.toInt(), name = track.name, description = track.description, createdAt = 0, waypoints = track.waypoints)
+    }*/
+
+
+
+    override suspend fun addImportedTrack(track: Track): Track {
+        val trackId = dao.insertTrack(track.toEntity())
+
+        val waypointsWithTrackId = track.waypoints.map {
+            it.copy(trackId = trackId.toInt())
+        }
+        dao.insertWaypoints(waypointsWithTrackId.map { it.toEntity() })
+
+        val newTrack = Track(id = trackId.toInt(), name = track.name, description = track.description, createdAt = 0, waypoints = waypointsWithTrackId)
+        _addedTracks.emit(newTrack)
+        return newTrack
     }
 
 }

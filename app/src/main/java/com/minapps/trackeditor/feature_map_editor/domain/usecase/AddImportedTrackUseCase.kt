@@ -20,7 +20,7 @@ class AddImportedTrackUseCase @Inject constructor(
      * @param track
      * @return
      */
-    suspend operator fun invoke(track: Track): Long {
+    suspend operator fun invoke(track: Track): Track {
         return repository.addImportedTrack(track)
     }
 

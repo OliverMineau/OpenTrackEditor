@@ -4,7 +4,6 @@ import android.net.Uri
 import android.util.Log
 import com.minapps.trackeditor.core.domain.model.Track
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepositoryItf
-import com.minapps.trackeditor.feature_track_import.domain.model.ImportedTrack
 import com.minapps.trackeditor.feature_track_import.domain.repository.TrackImportRepository
 import jakarta.inject.Inject
 
@@ -13,7 +12,6 @@ import jakarta.inject.Inject
  */
 class TrackImportUseCase @Inject constructor(
     private val trackImportRepository: TrackImportRepository,
-    private val editTrackRepo: EditTrackRepositoryItf,
 ) {
 
     /**
@@ -23,7 +21,7 @@ class TrackImportUseCase @Inject constructor(
      */
     suspend operator fun invoke(fileUri: Uri): Track?{
         val importedTrack = trackImportRepository.importTrack(fileUri)
-        Log.d("debug", "Track imported ${if (importedTrack != null) "successfully" else "unsuccessfully"} (${importedTrack?.waypoints?.size} waypoints) e.g. ${importedTrack?.waypoints?.get(0)}}")
+        Log.d("debug", "Track imported ${if (importedTrack != null) "successfully" else "unsuccessfully"} id:${importedTrack?.id}, (${importedTrack?.waypoints?.size} waypoints) e.g. ${importedTrack?.waypoints?.get(0)}}")
 
         if(importedTrack == null){
             Log.d("debug", "Track import error")

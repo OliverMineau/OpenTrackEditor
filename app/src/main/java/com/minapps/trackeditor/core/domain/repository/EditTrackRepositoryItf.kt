@@ -4,6 +4,7 @@ import androidx.room.Insert
 import com.minapps.trackeditor.core.domain.model.Track
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.data.local.TrackEntity
+import kotlinx.coroutines.flow.Flow
 
 
 /**
@@ -14,6 +15,8 @@ import com.minapps.trackeditor.data.local.TrackEntity
  * (Room, network, etc.).
  */
 interface EditTrackRepositoryItf {
+
+    val addedTracks: Flow<Track>
 
     /**
      * Add a single waypoint to a track.
@@ -55,7 +58,7 @@ interface EditTrackRepositoryItf {
      *
      * @param track The domain track to add
      */
-    suspend fun addImportedTrack(track: Track) : Long
+    suspend fun addImportedTrack(track: Track) : Track
 
     /**
      * Add a list of waypoints to the database.

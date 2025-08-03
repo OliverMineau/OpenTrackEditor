@@ -5,7 +5,6 @@ import android.net.Uri
 import android.util.Log
 import com.minapps.trackeditor.core.domain.model.Track
 import com.minapps.trackeditor.core.domain.model.Waypoint
-import com.minapps.trackeditor.feature_track_import.domain.model.ImportedTrack
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import org.xmlpull.v1.XmlPullParserFactory

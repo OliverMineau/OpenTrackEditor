@@ -143,21 +143,9 @@ class MapActivity : AppCompatActivity(), MapListener {
                     mapViewModel.waypointEvents.collect { event ->
                         when (event) {
                             is WaypointUpdate.Added -> handleWaypointAdded(event.trackId, event.point)
+                            is WaypointUpdate.AddedList -> handleWaypointAddedList(event.trackId, event.points)
                             is WaypointUpdate.Removed -> handleWaypointRemoved(event.trackId, event.index)
                             is WaypointUpdate.Cleared -> handleTrackCleared(event.trackId)
-                        }
-                    }
-                }
-
-                launch {
-                    importTrackViewModel.events.collect { event ->
-                        when (event) {
-                            is TrackImportEvent.TrackAdded -> {
-                                Log.d("debug", "Track imported ${event.trackId}, loading waypoints...")
-                                lifecycleScope.launch {
-                                    mapViewModel.loadTrackWaypoints(event.trackId)
-                                }
-                            }
                         }
                     }
                 }
@@ -239,6 +227,37 @@ class MapActivity : AppCompatActivity(), MapListener {
             }
         }
         polyline.addPoint(GeoPoint(point.first, point.second))
+        mMap.invalidate()
+    }
+
+    /**
+     * TODO
+     * Add points to polyline in optimised way
+     *
+     * @param trackId
+     * @param point
+     */
+    private fun handleWaypointAddedList(trackId: Int, points: List<Pair<Double, Double>>){
+        val polyline = polylines.getOrPut(trackId) {
+            Polyline().apply {
+                outlinePaint.color = randomColorForTrack(trackId)
+                outlinePaint.strokeWidth = 8f
+                mMap.overlays.add(this)
+            }
+        }
+
+        // Convert all pairs to GeoPoints in one go
+        val geoPoints = points.map { (lat, lng) -> GeoPoint(lat, lng) }
+
+        // Combine with existing points if polyline already has some
+        val allPoints = mutableListOf<GeoPoint>().apply {
+            addAll(polyline.actualPoints)
+            addAll(geoPoints)
+        }
+
+        // Update the polyline in a single operation
+        polyline.setPoints(allPoints)
+
         mMap.invalidate()
     }
 

@@ -3,7 +3,6 @@ package com.minapps.trackeditor.feature_track_import.data.parser
 import android.content.Context
 import android.net.Uri
 import com.minapps.trackeditor.core.domain.model.Track
-import com.minapps.trackeditor.feature_track_import.domain.model.ImportedTrack
 
 /**
  * Interface for parsers that handle importing tracks from files.
