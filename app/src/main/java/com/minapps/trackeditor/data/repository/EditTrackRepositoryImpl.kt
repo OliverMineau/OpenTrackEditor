@@ -91,46 +91,21 @@ class EditTrackRepositoryImpl @Inject constructor(
      * Add an imported track to the database.
      *
      * @param track The domain track to add
+     * @return Track
      */
-   /* override suspend fun addImportedTrack(track: Track) {
-        // Insert track and get the generated trackId
-        val trackId = insertTrack(track.toEntity())
-
-        // Assign the correct trackId to all waypoints before inserting
-        val waypointsWithTrackId = track.waypoints.map { it.copy(trackId = trackId.toInt()) }
-
-        addWaypoints(waypointsWithTrackId)
-
-        Log.d("debug", "Added imported track $trackId with ${waypointsWithTrackId.size} waypoints")
-    }*/
-
-    /*override suspend fun addImportedTrack(track: Track): Long {
-        val trackId = dao.insertTrack(track.toEntity())
-        val waypointsWithTrackId = track.waypoints.map {
-            it.copy(trackId = trackId.toInt())
-        }
-        dao.insertWaypoints(waypointsWithTrackId.map { it.toEntity() })
-
-        Log.d("debug", "Added imported track $trackId with ${track.waypoints.size} waypoints")
-        return trackId
-    }*/
-
-    /*override suspend fun addImportedTrack(track: Track): Track {
-        //TODO
-        val trackId = dao.insertTrack(track.toEntity()) // or whatever you currently do
-        return Track(id = trackId.toInt(), name = track.name, description = track.description, createdAt = 0, waypoints = track.waypoints)
-    }*/
-
-
-
     override suspend fun addImportedTrack(track: Track): Track {
+        // Insert track to DB
         val trackId = dao.insertTrack(track.toEntity())
 
+        // Remap waypoint to given trackID
         val waypointsWithTrackId = track.waypoints.map {
             it.copy(trackId = trackId.toInt())
         }
+
+        // Insert waypoints
         dao.insertWaypoints(waypointsWithTrackId.map { it.toEntity() })
 
+        // Emit track for MapViewModel
         val newTrack = Track(id = trackId.toInt(), name = track.name, description = track.description, createdAt = 0, waypoints = waypointsWithTrackId)
         _addedTracks.emit(newTrack)
         return newTrack

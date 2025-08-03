@@ -45,15 +45,17 @@ class MapViewModel @Inject constructor(
     private val trackWaypointIndexes = mutableMapOf<Int, Double>()
     private var selectedTrackId:Int = 0
 
-    /**
-     * Clear database at init
-     */
+
     init {
         viewModelScope.launch {
+
+            //Clear database at init
             clearAll()
 
+            //Make MapViewModel listen to changes on "repository.addedTracks"
             repository.addedTracks.collect { track ->
-                loadTrackWaypoints(track.id) // or handle the Track object directly
+                //If added load waypoints of given track id
+                loadTrackWaypoints(track.id)
             }
         }
     }
@@ -115,27 +117,16 @@ class MapViewModel @Inject constructor(
     }
 
 
-
-    /*suspend fun loadTrackWaypoints(trackId: Int) {
-        Log.d("debug", "Reemitting points")
-        val waypoints = getTrackWaypointsUseCase(trackId)
-        Log.d("debug", "Size ${waypoints.size} ${trackId}")
-        waypoints.forEach { wp ->
-            _waypointEvents.emit(
-                WaypointUpdate.Added(
-                    trackId,
-                    Pair(wp.lat, wp.lng)
-                )
-            )
-        }
-    }*/
-
+    /**
+     * Reemit imported track to flow listened to by mapActivity
+     *
+     * @param trackId
+     */
     suspend fun loadTrackWaypoints(trackId: Int) {
-        Log.d("debug", "Reemitting points")
         val waypoints = getTrackWaypointsUseCase(trackId)
-        Log.d("debug", "Size ${waypoints.size} $trackId")
 
         if (waypoints.isNotEmpty()) {
+            //Reemit points for mapActivity
             val points = waypoints.map { wp -> Pair(wp.lat, wp.lng) }
             _waypointEvents.emit(WaypointUpdate.AddedList(trackId, points))
         }

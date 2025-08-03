@@ -20,23 +20,11 @@ class ImportTrackViewModel @Inject constructor(
     private val addImportedTrackUseCase: AddImportedTrackUseCase,
 ) : ViewModel() {
 
-    private val _events = MutableSharedFlow<TrackImportEvent>()
-    val events = _events.asSharedFlow()
-
     /**
      * Launches a coroutine to import a track from the given URI.
      *
      * @param uri The Uri pointing to the track file to be imported.
      */
-    /*fun importTrack(uri: Uri) {
-        viewModelScope.launch {
-            val importedTrack = trackImportUseCase(uri)?: return@launch
-            val track = importedTrack
-            val trackId = addImportedTrackUseCase(track)
-            _events.emit(TrackImportEvent.TrackAdded(trackId.toInt()))
-        }
-    }*/
-
     fun importTrack(uri: Uri) {
         viewModelScope.launch {
             val importedTrack = trackImportUseCase(uri) ?: return@launch
@@ -45,8 +33,4 @@ class ImportTrackViewModel @Inject constructor(
             addImportedTrackUseCase(importedTrack)
         }
     }
-}
-
-sealed class TrackImportEvent {
-    data class TrackAdded(val trackId: Int) : TrackImportEvent()
 }
