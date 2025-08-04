@@ -152,7 +152,9 @@ class MapActivity : AppCompatActivity(), MapListener {
                             is WaypointUpdate.Added -> handleWaypointAdded(event.trackId, event.point)
                             is WaypointUpdate.AddedList -> handleWaypointAddedList(event.trackId, event.points)
                             is WaypointUpdate.Removed -> handleWaypointRemoved(event.trackId, event.index)
+                            is WaypointUpdate.Moved -> handleWaypointMoved(event.trackId, event.points)
                             is WaypointUpdate.Cleared -> handleTrackCleared(event.trackId)
+                            is WaypointUpdate.MovedDone -> handleWaypointMovedDone(event.trackId, event.pointId, event.point)
                         }
                     }
                 }
@@ -268,6 +270,15 @@ class MapActivity : AppCompatActivity(), MapListener {
         polyline.setPoints(allPoints)
 
         mMap.invalidate()*/
+    }
+
+    private fun handleWaypointMoved(trackId: Int, points: List<Pair<Double, Double>>){
+        //Log.d("debug", "${points.size}, $points")
+        mapRenderer.displayLiveModification(points, trackId, Color.BLUE, false)
+    }
+
+    private fun handleWaypointMovedDone(trackId: Int, pointId: Int, point: Pair<Double, Double>){
+        mapRenderer.displayLiveModificationDone(point, trackId, pointId)
     }
 
     /**

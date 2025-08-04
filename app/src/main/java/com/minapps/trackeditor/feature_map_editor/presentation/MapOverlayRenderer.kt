@@ -6,7 +6,9 @@ import android.graphics.Path
 import android.graphics.PathDashPathEffect
 import android.graphics.Rect
 import android.util.Log
+import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.feature_map_editor.presentation.listeners.PointInteractionListener
+import kotlinx.serialization.builtins.LongArraySerializer
 import org.osmdroid.api.IGeoPoint
 import org.osmdroid.api.IMapController
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -50,7 +52,7 @@ class MapOverlayRenderer (private val mMap : MapView, private val mapViewModel: 
 
         val polylineAndMarker = displayWaypoints(
             waypoints = waypoints,
-            trackId = 0,
+            trackId = trackId,
             color = color,
             center = center
         )
@@ -65,19 +67,69 @@ class MapOverlayRenderer (private val mMap : MapView, private val mapViewModel: 
         trackId: Int,
         color: Int,
         center: Boolean
-    ): Pair<Polyline, List<Marker>> {
+    ) {
+        // Remove previous modification overlay if it exists
+        modifyingPolylines[trackId]?.let {
+            mMap.overlayManager.remove(it)
+        }
 
-        val polylineAndMarker = displayWaypoints(
-            waypoints = waypoints,
-            trackId = 0,
-            color = color,
-            center = center,
-            isModifying = true
-        )
+        // Convert to GeoPoints
+        val movingPoints = waypoints.map { GeoPoint(it.first, it.second) }
+        //Log.d("debug", "- ${waypoints.size} - Updated : ${movingPoints.toString()}")
 
-        modifyingPolylines[trackId] = polylineAndMarker.first
 
-        return polylineAndMarker
+        // Create new modifying polyline
+        val movedPolyline = Polyline().apply {
+            setPoints(movingPoints)
+            id = System.identityHashCode(this).toString()
+            outlinePaint.apply {
+                this.color = color
+
+                // Optional dashed effect
+                val pathShape = Path().apply {
+                    moveTo(-5f, -5f)
+                    lineTo(5f, -5f)
+                    lineTo(5f, 5f)
+                    lineTo(-5f, 5f)
+                }
+                pathEffect = PathDashPathEffect(pathShape, 12f, 0f, PathDashPathEffect.Style.ROTATE)
+            }
+        }
+
+        // Add to map and track it
+        mMap.overlayManager.add(movedPolyline)
+        modifyingPolylines[trackId] = movedPolyline
+
+        // Optional: recenter on points if needed
+        if (center && movingPoints.isNotEmpty()) {
+            val boundingBox = BoundingBox.fromGeoPointsSafe(movingPoints)
+            mMap.post {
+                mMap.zoomToBoundingBox(boundingBox.increaseByScale(2f), true)
+                mMap.invalidate()
+            }
+        } else {
+            mMap.invalidate() // Ensure redraw even if not centering
+        }
+    }
+
+    fun displayLiveModificationDone(
+    waypoint: Pair<Double, Double>,
+    trackId: Int,
+    pointId: Int,
+    ) {
+
+        Log.d("debug", "trackid:$trackId")
+        modifyingPolylines[trackId]?.let {
+            mMap.overlayManager.remove(it)
+        }
+        val polyline = displayedPolylines[trackId] ?: return
+        val updatedPoints = polyline.actualPoints.toMutableList() // Make sure it's mutable
+        updatedPoints[pointId] = GeoPoint(waypoint.first, waypoint.second)
+        polyline.setPoints(updatedPoints)
+
+        polylinesOverlay[trackId]?.updatePoint(pointId, GeoPoint(waypoint.first, waypoint.second))
+
+        mMap.invalidate()
     }
 
 
@@ -141,7 +193,7 @@ class MapOverlayRenderer (private val mMap : MapView, private val mapViewModel: 
         }
 
         if(!isModifying){
-            val pointTheme = SimplePointTheme(labelledPoints, false)
+            val pointAdapter = MutablePointAdapter(labelledPoints.toMutableList(), false)
             val pointOptions = SimpleFastPointOverlayOptions.getDefaultStyle()
                 .setAlgorithm(SimpleFastPointOverlayOptions.RenderingAlgorithm.MAXIMUM_OPTIMIZATION)
                 .setRadius(10f)
@@ -151,10 +203,8 @@ class MapOverlayRenderer (private val mMap : MapView, private val mapViewModel: 
                 .setSelectedPointStyle(selectedPaint)
                 .setSymbol(SimpleFastPointOverlayOptions.Shape.CIRCLE)
 
-            //val pointOverlay = SimpleFastPointOverlay(pointTheme, pointOptions)
-            val pointOverlay = CustomSimpleFastPointOverlay(pointTheme, pointOptions, this, trackId)
+            val pointOverlay = CustomSimpleFastPointOverlay(pointAdapter, pointOptions, this, trackId)
             mMap.overlayManager.add(pointOverlay)
-
             polylinesOverlay[trackId] = pointOverlay
         }
 
@@ -194,9 +244,31 @@ class MapOverlayRenderer (private val mMap : MapView, private val mapViewModel: 
         TODO("Not yet implemented")
     }
 
+
+
     override fun onPointMoved(selectedBundle: MovingPointBundle) {
 
-        //mapViewModel.movePoint(selectedBundle)
+        val movingPoint = mutableListOf<Waypoint>()
+        val isSet = selectedBundle.selectedPoint == null
+
+        if (selectedBundle.previousPoint != null && !isSet) {
+            val it = selectedBundle.previousPoint!!
+            movingPoint.add(Waypoint(id = 0.0, lat = it.latitude, lng = it.longitude, elv = null, trackId = selectedBundle.trackId))
+        }
+        selectedBundle.movingPos?.let {
+            movingPoint.add(Waypoint(id = 1.0, lat = it.latitude, lng = it.longitude, elv = null, trackId = selectedBundle.trackId))
+        }
+        if (selectedBundle.nextPoint != null && !isSet) {
+            val it = selectedBundle.nextPoint!!
+            movingPoint.add(Waypoint(id = 2.0, lat = it.latitude, lng = it.longitude, elv = null, trackId = selectedBundle.trackId))
+        }
+
+        mapViewModel.movePoint(movingPoint, selectedBundle.selectedPointIdx, selectedBundle.selectedPoint == null)
+        return
+
+
+
+
 
         //Remove previous line:
         if(modifyingPolylines[selectedBundle.trackId] != null){

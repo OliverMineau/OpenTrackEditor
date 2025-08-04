@@ -5,7 +5,8 @@ import org.osmdroid.views.overlay.simplefastpoint.LabelledGeoPoint
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlay
 
 class MutablePointAdapter(
-    private val points: MutableList<IGeoPoint>
+    private val points: MutableList<IGeoPoint>,
+    private val displayLabel: Boolean
 ) : SimpleFastPointOverlay.PointAdapter {
 
     override fun get(index: Int): IGeoPoint = points[index]
@@ -14,7 +15,7 @@ class MutablePointAdapter(
 
     override fun iterator(): MutableIterator<IGeoPoint> = points.iterator()
 
-    override fun isLabelled(): Boolean = points.firstOrNull() is LabelledGeoPoint
+    override fun isLabelled(): Boolean = displayLabel//points.firstOrNull() is LabelledGeoPoint
 
     override fun isStyled(): Boolean = false
 
@@ -23,4 +24,8 @@ class MutablePointAdapter(
     }
 
     fun getAll(): List<IGeoPoint> = points
+
+    fun updatePoint(index: Int, newPoint: IGeoPoint) {
+        points[index] = newPoint
+    }
 }

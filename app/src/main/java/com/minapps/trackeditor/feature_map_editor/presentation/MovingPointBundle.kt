@@ -8,6 +8,7 @@ data class MovingPointBundle(
     var nextPoint: IGeoPoint? = null,
     var movingPos: IGeoPoint? = null,
     var trackId: Int,
+    var selectedPointIdx : Int? = null,
 ) {
     fun clear() {
         previousPoint = null

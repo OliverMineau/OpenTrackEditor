@@ -1,6 +1,5 @@
 package com.minapps.trackeditor.feature_map_editor.domain.usecase
 
-import android.util.Log
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepositoryItf
 import jakarta.inject.Inject
@@ -13,7 +12,7 @@ import jakarta.inject.Inject
  *
  * @property repository Repository used to add the waypoint to the data source.
  */
-class AddWaypointUseCase @Inject constructor(
+class ReplaceWaypointUseCase @Inject constructor(
     private val repository: EditTrackRepositoryItf
 ) {
 

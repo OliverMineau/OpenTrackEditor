@@ -7,16 +7,18 @@ import android.view.MotionEvent.ACTION_DOWN
 import android.view.MotionEvent.ACTION_MOVE
 import android.view.MotionEvent.ACTION_UP
 import com.minapps.trackeditor.feature_map_editor.presentation.listeners.PointInteractionListener
+import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlay
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlayOptions
 
 class CustomSimpleFastPointOverlay(
-    private val pointList: PointAdapter,
+    //private val pointList: PointAdapter,
+    private val pointAdapter: MutablePointAdapter,
     style: SimpleFastPointOverlayOptions,
     private val listener: PointInteractionListener,
     private val trackId: Int,
-) : SimpleFastPointOverlay(pointList, style), SimpleFastPointOverlay.OnClickListener {
+) : SimpleFastPointOverlay(pointAdapter, style), SimpleFastPointOverlay.OnClickListener {
 
     var isDragging: Boolean = false
     var selectedBundle: MovingPointBundle = MovingPointBundle(trackId = trackId)
@@ -26,14 +28,15 @@ class CustomSimpleFastPointOverlay(
         setOnClickListener(this)
     }
 
-    override fun onClick(points: PointAdapter, point: Int) {
-        val geoPoint = points.get(point)
-        Log.d("debug","Clicked point index: $point at (${geoPoint.latitude}, ${geoPoint.longitude})")
+    override fun onClick(points: PointAdapter, pointId: Int) {
+        val geoPoint = points.get(pointId)
+        Log.d("debug","Clicked point index: $pointId at (${geoPoint.latitude}, ${geoPoint.longitude})")
 
         selectedBundle.clear()
-        selectedBundle.selectedPoint = points.get(point)
-        if(point > 0) selectedBundle.previousPoint = points.get(point-1)
-        if(point+1 < points.size()) selectedBundle.nextPoint = points.get(point+1)
+        selectedBundle.selectedPointIdx = pointId
+        selectedBundle.selectedPoint = points.get(pointId)
+        if(pointId > 0) selectedBundle.previousPoint = points.get(pointId-1)
+        if(pointId+1 < points.size()) selectedBundle.nextPoint = points.get(pointId+1)
 
     }
 
@@ -57,10 +60,10 @@ class CustomSimpleFastPointOverlay(
                 ACTION_UP, ACTION_CANCEL -> {
                     val finalPos = mapView.getProjection().fromPixels(x.toInt(), y.toInt())
                     selectedBundle.movingPos = finalPos
+                    selectedBundle.selectedPoint = null
                     listener.onPointMoved(selectedBundle)
                     isDragging = false
                     selectedBundle.clear()
-                    listener.onPointMoved(selectedBundle)
                 }
             }
 
@@ -78,8 +81,12 @@ class CustomSimpleFastPointOverlay(
         return isDragging
     }
 
-
+    fun updatePoint(index: Int, newPoint: GeoPoint) {
+            pointAdapter.updatePoint(index, newPoint)
+    }
 }
+
+
 
 
 /*class CustomSimpleFastPointOverlay(

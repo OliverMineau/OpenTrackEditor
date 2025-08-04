@@ -6,11 +6,13 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minapps.trackeditor.R
+import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepositoryItf
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.ClearAllUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.CreateTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackWaypointsUseCase
+import com.minapps.trackeditor.feature_map_editor.domain.usecase.ReplaceWaypointUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
@@ -25,6 +27,8 @@ sealed class WaypointUpdate {
     data class Added(val trackId: Int, val point: Pair<Double, Double>) : WaypointUpdate()
     data class AddedList(val trackId: Int, val points: List<Pair<Double,Double>>) : WaypointUpdate()
     data class Removed(val trackId: Int, val index: Int) : WaypointUpdate()
+    data class Moved(val trackId: Int, val points: List<Pair<Double,Double>>) : WaypointUpdate()
+    data class MovedDone(val trackId: Int, val pointId: Int, val point: Pair<Double,Double>) : WaypointUpdate()
     data class Cleared(val trackId: Int) : WaypointUpdate()
 }
 
@@ -36,6 +40,7 @@ class MapViewModel @Inject constructor(
     private val clearAllUseCase: ClearAllUseCase,
     private val createTrackUseCase: CreateTrackUseCase,
     private val getTrackWaypointsUseCase: GetTrackWaypointsUseCase,
+    private val replaceWaypointUseCase: ReplaceWaypointUseCase,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -133,8 +138,28 @@ class MapViewModel @Inject constructor(
     }
 
 
-    fun movePoint(selectedBundle: MovingPointBundle){
+    fun movePoint(selectedBundle: List<Waypoint>, pointId: Int?, isPointSet: Boolean = false){
 
+        viewModelScope.launch {
+            val trackId = selectedBundle.first().trackId
+
+            Log.d("debug", "Trackid $trackId")
+
+            if(isPointSet && pointId != null){
+                addWaypointUseCase(
+                    selectedBundle.first().lat,
+                    selectedBundle.first().lng,
+                    pointId.toDouble(),
+                    trackId = trackId
+                )
+
+                _waypointEvents.emit(WaypointUpdate.MovedDone(trackId, pointId, selectedBundle.first().lat to selectedBundle.first().lng))
+                return@launch
+            }
+
+            val points = selectedBundle.map { wp -> Pair(wp.lat, wp.lng) }
+            _waypointEvents.emit(WaypointUpdate.Moved(trackId, points))
+        }
 
 
     }
