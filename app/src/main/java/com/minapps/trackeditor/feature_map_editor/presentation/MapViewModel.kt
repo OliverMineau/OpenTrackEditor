@@ -133,6 +133,12 @@ class MapViewModel @Inject constructor(
     }
 
 
+    fun movePoint(selectedBundle: MovingPointBundle){
+
+
+
+    }
+
 
 
 

@@ -3,6 +3,7 @@ package com.minapps.trackeditor.feature_map_editor.presentation
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.Rect
 import android.os.Bundle
 import android.util.Log
@@ -17,12 +18,14 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.minapps.trackeditor.R
 import com.minapps.trackeditor.TrackEditorApp
+import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.databinding.ActivityMapBinding
 import com.minapps.trackeditor.feature_track_import.presentation.ImportTrackViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import org.osmdroid.api.IGeoPoint
 import org.osmdroid.api.IMapController
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
@@ -37,15 +40,23 @@ import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
-
+import org.osmdroid.views.overlay.simplefastpoint.LabelledGeoPoint
+import android.graphics.Path;
+import android.graphics.PathDashPathEffect;
+import org.osmdroid.util.BoundingBox
+import org.osmdroid.views.CustomZoomButtonsController
+import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlay
+import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlayOptions
+import org.osmdroid.views.overlay.simplefastpoint.SimplePointTheme
 
 @AndroidEntryPoint
 class MapActivity : AppCompatActivity(), MapListener {
 
     private lateinit var mMap: MapView
     private lateinit var loadTrackButton: Button
-    private lateinit var controller: IMapController
     private lateinit var mMyLocationOverlay: MyLocationNewOverlay
+    private lateinit var mapRenderer: MapOverlayRenderer
+
     private val mapViewModel: MapViewModel by viewModels()
     private val importTrackViewModel: ImportTrackViewModel by viewModels()
 
@@ -71,7 +82,7 @@ class MapActivity : AppCompatActivity(), MapListener {
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (isGranted) setupMyLocation()
+            //if (isGranted) setupMyLocation()
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,19 +99,16 @@ class MapActivity : AppCompatActivity(), MapListener {
 
         //Setup osmmap
         mMap = binding.osmmap
-        mMap.setTileSource(TileSourceFactory.MAPNIK)
-        mMap.setMultiTouchControls(true)
-        mMap.getLocalVisibleRect(Rect())
+        mapRenderer = MapOverlayRenderer(mMap, mapViewModel)
+        mapRenderer.setSettings()
 
-        controller = mMap.controller
-        controller.setZoom(6.0)
 
         // Request location permission before enabling overlay
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED) {
             requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         } else {
-            setupMyLocation()
+            //setupMyLocation()
         }
 
         mMap.addMapListener(this)
@@ -152,7 +160,7 @@ class MapActivity : AppCompatActivity(), MapListener {
         }
 
 
-
+        testDisplayWaypoints()
 
     }
 
@@ -169,8 +177,8 @@ class MapActivity : AppCompatActivity(), MapListener {
             runOnUiThread {
                 mMyLocationOverlay.myLocation?.let { loc ->
                     val geoPoint = GeoPoint(loc.latitude, loc.longitude)
-                    controller.setCenter(geoPoint)
-                    controller.animateTo(geoPoint)
+                    /*controller.setCenter(geoPoint)
+                    controller.animateTo(geoPoint)*/
                 }
             }
         }
@@ -237,7 +245,9 @@ class MapActivity : AppCompatActivity(), MapListener {
      * @param point
      */
     private fun handleWaypointAddedList(trackId: Int, points: List<Pair<Double, Double>>){
-        val polyline = polylines.getOrPut(trackId) {
+
+        mapRenderer.displayTrack(points, trackId, Color.RED, true)
+        /*val polyline = polylines.getOrPut(trackId) {
             Polyline().apply {
                 outlinePaint.color = randomColorForTrack(trackId)
                 outlinePaint.strokeWidth = 8f
@@ -257,7 +267,7 @@ class MapActivity : AppCompatActivity(), MapListener {
         // Update the polyline in a single operation
         polyline.setPoints(allPoints)
 
-        mMap.invalidate()
+        mMap.invalidate()*/
     }
 
     /**
@@ -298,6 +308,46 @@ class MapActivity : AppCompatActivity(), MapListener {
      */
     fun openFileExplorer(mimeType: String = "*/*") {
         filePicker.launch(mimeType)
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    //TODO Testing in progress
+
+    fun testDisplayWaypoints() {
+
+        // Sample list of waypoints
+        val testPoints = listOf(
+            48.8566 to 2.3522,    // Paris
+            51.5074 to -0.1278,   // London
+            52.52 to 13.4050      // Berlin
+        )
+
+        val polylineColor = Color.RED
+
+        // Call the display function
+        mapRenderer.displayTrack(
+            waypoints = testPoints,
+            trackId = 0,
+            color = polylineColor,
+            center = true
+        )
     }
 
 
