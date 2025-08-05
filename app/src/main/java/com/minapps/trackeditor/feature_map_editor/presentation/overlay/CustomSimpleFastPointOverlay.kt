@@ -1,4 +1,4 @@
-package com.minapps.trackeditor.feature_map_editor.presentation
+package com.minapps.trackeditor.feature_map_editor.presentation.overlay
 
 import android.util.Log
 import android.view.MotionEvent
@@ -6,7 +6,9 @@ import android.view.MotionEvent.ACTION_CANCEL
 import android.view.MotionEvent.ACTION_DOWN
 import android.view.MotionEvent.ACTION_MOVE
 import android.view.MotionEvent.ACTION_UP
-import com.minapps.trackeditor.feature_map_editor.presentation.listeners.PointInteractionListener
+import com.minapps.trackeditor.feature_map_editor.presentation.MovingPointBundle
+import com.minapps.trackeditor.feature_map_editor.presentation.MutablePointAdapter
+import com.minapps.trackeditor.feature_map_editor.presentation.interaction.PointInteractionListener
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlay
@@ -14,7 +16,7 @@ import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlayOptions
 
 class CustomSimpleFastPointOverlay(
     //private val pointList: PointAdapter,
-    private val pointAdapter: MutablePointAdapter,
+    val pointAdapter: MutablePointAdapter,
     style: SimpleFastPointOverlayOptions,
     private val listener: PointInteractionListener,
     private val trackId: Int,
@@ -84,6 +86,7 @@ class CustomSimpleFastPointOverlay(
     fun updatePoint(index: Int, newPoint: GeoPoint) {
             pointAdapter.updatePoint(index, newPoint)
     }
+
 }
 
 

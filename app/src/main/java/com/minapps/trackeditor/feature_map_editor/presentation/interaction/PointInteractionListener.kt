@@ -1,9 +1,7 @@
-package com.minapps.trackeditor.feature_map_editor.presentation.listeners
+package com.minapps.trackeditor.feature_map_editor.presentation.interaction
 
 import com.minapps.trackeditor.feature_map_editor.presentation.MovingPointBundle
-import org.osmdroid.api.IGeoPoint
 
 interface PointInteractionListener {
-    fun onPointSelected(index: Int)
     fun onPointMoved(selectedBundle: MovingPointBundle)
 }

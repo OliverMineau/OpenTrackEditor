@@ -12,7 +12,6 @@ import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointUseC
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.ClearAllUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.CreateTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackWaypointsUseCase
-import com.minapps.trackeditor.feature_map_editor.domain.usecase.ReplaceWaypointUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
@@ -40,10 +39,10 @@ class MapViewModel @Inject constructor(
     private val clearAllUseCase: ClearAllUseCase,
     private val createTrackUseCase: CreateTrackUseCase,
     private val getTrackWaypointsUseCase: GetTrackWaypointsUseCase,
-    private val replaceWaypointUseCase: ReplaceWaypointUseCase,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
+    // Expose data events (Add,Remove,Move points) to other classes (MapActivity)
     private val _waypointEvents = MutableSharedFlow<WaypointUpdate>()
     val waypointEvents: SharedFlow<WaypointUpdate> = _waypointEvents
 
@@ -138,26 +137,27 @@ class MapViewModel @Inject constructor(
     }
 
 
-    fun movePoint(selectedBundle: List<Waypoint>, pointId: Int?, isPointSet: Boolean = false){
+    fun movePoint(waypointList: List<Waypoint>, pointId: Int?, isPointSet: Boolean = false){
 
         viewModelScope.launch {
-            val trackId = selectedBundle.first().trackId
+            val trackId = waypointList.first().trackId
 
             Log.d("debug", "Trackid $trackId")
 
+            // Point is set, update database
             if(isPointSet && pointId != null){
                 addWaypointUseCase(
-                    selectedBundle.first().lat,
-                    selectedBundle.first().lng,
+                    waypointList.first().lat,
+                    waypointList.first().lng,
                     pointId.toDouble(),
                     trackId = trackId
                 )
 
-                _waypointEvents.emit(WaypointUpdate.MovedDone(trackId, pointId, selectedBundle.first().lat to selectedBundle.first().lng))
+                _waypointEvents.emit(WaypointUpdate.MovedDone(trackId, pointId, waypointList.first().lat to waypointList.first().lng))
                 return@launch
             }
 
-            val points = selectedBundle.map { wp -> Pair(wp.lat, wp.lng) }
+            val points = waypointList.map { wp -> Pair(wp.lat, wp.lng) }
             _waypointEvents.emit(WaypointUpdate.Moved(trackId, points))
         }
 

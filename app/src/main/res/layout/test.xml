@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Toolbar -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:menu="@menu/edit_menu" />
+
+    <!-- MapView -->
+    <org.osmdroid.views.MapView
+        android:id="@+id/mapview"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintBottom_toTopOf="@id/edit_navigation"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Edit Navigation -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/edit_navigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:elevation="16dp"
+        app:menu="@menu/edit_menu"
+        app:itemTextColor="@color/black"
+        app:labelVisibilityMode="unlabeled"
+        app:layout_constraintBottom_toTopOf="@id/navigation"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Bottom Navigation -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/navigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/white"
+        app:elevation="16dp"
+        app:menu="@menu/edit_menu"
+        app:itemTextColor="@color/black"
+        app:labelVisibilityMode="labeled"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Zoom Out Button -->
+    <FrameLayout
+        android:id="@+id/zoom_out_btn"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/next"
+        android:clickable="true"
+        app:layout_constraintBottom_toTopOf="@id/edit_navigation"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_margin="10dp">
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:src="@drawable/next"
+            android:scaleX="0.5"
+            android:scaleY="0.5"
+            />
+    </FrameLayout>
+
+    <!-- Zoom In Button -->
+    <FrameLayout
+        android:id="@+id/zoom_in_btn"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/moreinfo_arrow"
+        android:clickable="true"
+        app:layout_constraintBottom_toTopOf="@id/edit_navigation"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_margin="10dp">
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:src="@drawable/ic_menu_compass"
+            android:scaleX="0.5"
+            android:scaleY="0.5"/>
+    </FrameLayout>
+
+    <!-- Bottom Info Frame -->
+    <FrameLayout
+        android:id="@+id/bottom_info_frame"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minHeight="40dp"
+        android:background="@drawable/moreinfo_arrow"
+        android:backgroundTint="#CCFFFFFF"
+        android:clickable="true"
+        android:padding="10dp"
+        android:layout_marginBottom="10dp"
+        android:layout_marginHorizontal="10dp"
+        app:layout_constraintBottom_toTopOf="@id/edit_navigation"
+        app:layout_constraintStart_toEndOf="@id/zoom_in_btn"
+        app:layout_constraintEnd_toStartOf="@id/zoom_out_btn">
+
+        <TextView
+            android:id="@+id/bottom_info_text"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:text=""
+            android:gravity="center"
+            android:textColor="@color/black"/>
+    </FrameLayout>
+
+    <!-- Info Frame -->
+    <FrameLayout
+        android:id="@+id/info_frame"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/ic_menu_compass"
+        android:clickable="true"
+        android:minWidth="100dp"
+        android:padding="10dp"
+        android:layout_margin="20dp"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/info_frame_description"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingBottom="8dp"
+                android:text="Select points : "
+                android:textColor="@color/black"
+                android:textSize="10sp"
+                android:textStyle="italic" />
+
+            <TextView
+                android:id="@+id/info_frame_start_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Start : "
+                android:textColor="@color/black"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/info_frame_end_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="End : "
+                android:textColor="@color/black"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="10dp">
+
+                <SeekBar
+                    android:id="@+id/seekBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:min="0"
+                    android:max="500"
+                    android:progress="250"
+                    android:progressBackgroundTint="@color/black"
+                    android:stepSize="1"
+                    android:thumbOffset="0dp"/>
+
+                <TextView
+                    android:id="@+id/seekBarTxt"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text=""
+                    android:textColor="@color/black"
+                    android:textSize="11sp"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="10dp">
+
+                <Button
+                    android:id="@+id/info_frame_apply_btn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="APPLY"/>
+
+                <Button
+                    android:id="@+id/info_frame_cancel_btn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="CANCEL"
+                    android:layout_marginStart="8dp"/>
+            </LinearLayout>
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- Loading & Exporting Icons -->
+    <ImageView
+        android:id="@+id/loadingIV"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/btn_moreinfo"
+        android:scaleX="0.5"
+        android:scaleY="0.5"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_margin="10dp"/>
+
+    <ImageView
+        android:id="@+id/exportingIV"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/center"
+        android:scaleX="0.5"
+        android:scaleY="0.5"
+        app:layout_constraintTop_toBottomOf="@id/loadingIV"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_margin="10dp"/>
+
+    <!-- Save Input Include -->
+
+
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

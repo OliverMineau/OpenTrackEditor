@@ -1,14 +1,11 @@
-package com.minapps.trackeditor.feature_map_editor.presentation
+package com.minapps.trackeditor.feature_map_editor.presentation.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Rect
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -17,37 +14,24 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.minapps.trackeditor.R
-import com.minapps.trackeditor.TrackEditorApp
-import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.databinding.ActivityMapBinding
+import com.minapps.trackeditor.feature_map_editor.presentation.overlay.MapOverlayRenderer
+import com.minapps.trackeditor.feature_map_editor.presentation.MapViewModel
+import com.minapps.trackeditor.feature_map_editor.presentation.WaypointUpdate
 import com.minapps.trackeditor.feature_track_import.presentation.ImportTrackViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import org.osmdroid.api.IGeoPoint
-import org.osmdroid.api.IMapController
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
 import org.osmdroid.events.ZoomEvent
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
-import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
-import org.osmdroid.views.overlay.simplefastpoint.LabelledGeoPoint
-import android.graphics.Path;
-import android.graphics.PathDashPathEffect;
-import org.osmdroid.util.BoundingBox
-import org.osmdroid.views.CustomZoomButtonsController
-import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlay
-import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlayOptions
-import org.osmdroid.views.overlay.simplefastpoint.SimplePointTheme
 
 @AndroidEntryPoint
 class MapActivity : AppCompatActivity(), MapListener {
@@ -97,11 +81,10 @@ class MapActivity : AppCompatActivity(), MapListener {
         val binding = ActivityMapBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        //Setup osmmap
+        // Setup osmmap
         mMap = binding.osmmap
         mapRenderer = MapOverlayRenderer(mMap, mapViewModel)
         mapRenderer.setSettings()
-
 
         // Request location permission before enabling overlay
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -113,14 +96,12 @@ class MapActivity : AppCompatActivity(), MapListener {
 
         mMap.addMapListener(this)
 
-
         //Bind button to openFile
         loadTrackButton = binding.loadTrackBtn
         loadTrackButton.setOnClickListener {
             Log.d("debug", "Loading file")
             openFileExplorer()
         }
-
 
         // Add map click listener that calls viewmodel
         val mapEventsReceiver = object : MapEventsReceiver {
@@ -161,7 +142,7 @@ class MapActivity : AppCompatActivity(), MapListener {
             }
         }
 
-
+        //Todo Remove (for testing)
         testDisplayWaypoints()
 
     }
@@ -190,13 +171,17 @@ class MapActivity : AppCompatActivity(), MapListener {
 
     override fun onScroll(event: ScrollEvent?): Boolean {
         event?.source?.mapCenter?.let { center ->
-            //Log.d("MapScroll", "Lat: ${center.latitude}, Lon: ${center.longitude}")
         }
         return true
     }
 
+    /**
+     * TODO Trigger largeFileDisplayMethods
+     *
+     * @param event
+     * @return
+     */
     override fun onZoom(event: ZoomEvent?): Boolean {
-        //Log.d("MapZoom", "Zoom level: ${event?.zoomLevel}")
         return true
     }
 
@@ -239,52 +224,40 @@ class MapActivity : AppCompatActivity(), MapListener {
         mMap.invalidate()
     }
 
+
     /**
-     * TODO
-     * Add points to polyline in optimised way
+     * Render list of points
      *
      * @param trackId
-     * @param point
+     * @param points
      */
     private fun handleWaypointAddedList(trackId: Int, points: List<Pair<Double, Double>>){
-
         mapRenderer.displayTrack(points, trackId, Color.RED, true)
-        /*val polyline = polylines.getOrPut(trackId) {
-            Polyline().apply {
-                outlinePaint.color = randomColorForTrack(trackId)
-                outlinePaint.strokeWidth = 8f
-                mMap.overlays.add(this)
-            }
-        }
-
-        // Convert all pairs to GeoPoints in one go
-        val geoPoints = points.map { (lat, lng) -> GeoPoint(lat, lng) }
-
-        // Combine with existing points if polyline already has some
-        val allPoints = mutableListOf<GeoPoint>().apply {
-            addAll(polyline.actualPoints)
-            addAll(geoPoints)
-        }
-
-        // Update the polyline in a single operation
-        polyline.setPoints(allPoints)
-
-        mMap.invalidate()*/
     }
 
+    /**
+     * Render moved point
+     *
+     * @param trackId
+     * @param points
+     */
     private fun handleWaypointMoved(trackId: Int, points: List<Pair<Double, Double>>){
-        //Log.d("debug", "${points.size}, $points")
-        mapRenderer.displayLiveModification(points, trackId, Color.BLUE, false)
+        mapRenderer.displayLiveModification(points, trackId, Color.rgb(255,128,0))
     }
 
+    /**
+     * Render final point move
+     *
+     * @param trackId
+     * @param pointId
+     * @param point
+     */
     private fun handleWaypointMovedDone(trackId: Int, pointId: Int, point: Pair<Double, Double>){
         mapRenderer.displayLiveModificationDone(point, trackId, pointId)
     }
 
     /**
-     * TODO
-     *
-     * Remove point in optimised way
+     * Remove point
      *
      * @param trackId
      * @param index
@@ -297,9 +270,7 @@ class MapActivity : AppCompatActivity(), MapListener {
     }
 
     /**
-     * TODO
-     *
-     * Remove track in optimised way
+     * Remove track
      *
      * @param trackId
      */
@@ -312,8 +283,7 @@ class MapActivity : AppCompatActivity(), MapListener {
     }
 
     /**
-     * TODO
-     * Function to open file picker, you call this when you want to launch
+     * Function to open file picker
      *
      * @param mimeType
      */

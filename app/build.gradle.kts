@@ -62,7 +62,6 @@ dependencies {
     kapt("com.google.dagger:hilt-compiler:2.57")
     implementation("androidx.hilt:hilt-navigation-fragment:1.0.0")
     kapt("androidx.hilt:hilt-compiler:1.0.0")
-
 }
 
 tasks.withType<DokkaTask>().configureEach {

@@ -19,7 +19,7 @@
         android:theme="@style/Theme.TrackEditor">
 
         <activity
-            android:name=".feature_map_editor.presentation.MapActivity"
+            android:name=".feature_map_editor.presentation.ui.MapActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
