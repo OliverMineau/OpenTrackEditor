@@ -1,4 +1,6 @@
 import android.animation.ValueAnimator
+import android.graphics.Color
+import android.graphics.PorterDuff
 import android.graphics.drawable.AnimatedVectorDrawable
 import android.view.LayoutInflater
 import android.view.View
@@ -9,33 +11,55 @@ import android.widget.*
 import androidx.core.view.children
 import androidx.core.view.isEmpty
 import com.minapps.trackeditor.R
+import com.minapps.trackeditor.feature_map_editor.presentation.ActionDescriptor
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 class ToolboxPopup(
     private val popupContainer: FrameLayout,
-    private val inflater: LayoutInflater
+    private val inflater: LayoutInflater,
+    private val coroutineScope: CoroutineScope
 ) {
 
     private var isUnfolded = false
     private var isVisibleTop = false
     private var isAnimatingTop = false
     private var isAnimatingLeft = false
-
     private var collapsedWidth = 0
-    private lateinit var unfoldButton: ImageView
-    private lateinit var separator: View
 
+    private lateinit var unfoldButton: ImageView
+
+    // Menu View
+    private lateinit var popupView: View
+
+    // List given by VM to populate tool menu
+    lateinit var menuItems: List<ActionDescriptor>
+
+    // Stores the selected item
+    private var selectedItemView: View? = null
+
+
+    /**
+     * Called to show popup menu
+     *
+     */
     fun show() {
+
+        //If animations are currently running : return
         if (isAnimatingTop || isAnimatingLeft) return
 
+        //If second click on menu item, close menus
         if (isVisibleTop) {
             hide()
             return
         }
 
+        //Menu is visible
         isVisibleTop = true
 
+        //Retrieve popup container
         if (popupContainer.isEmpty()) {
-            val popupView = inflater.inflate(R.layout.popup_toolbox_menu, popupContainer, false)
+            popupView = inflater.inflate(R.layout.popup_toolbox_menu, popupContainer, false)
             popupContainer.addView(popupView)
             setupUI(popupView as ViewGroup)
         }
@@ -56,10 +80,14 @@ class ToolboxPopup(
         }
     }
 
-
-
+    /**
+     * Called to hide popup menu
+     *
+     */
     fun hide() {
         if (!isVisibleTop || isAnimatingTop || isAnimatingLeft) return
+
+        clearSelection()
 
         isVisibleTop = false
         isAnimatingTop = true
@@ -73,19 +101,27 @@ class ToolboxPopup(
             .start()
     }
 
+    /**
+     * Retrieve unfold second menu button
+     *
+     * @param menuLayout
+     */
     private fun setupUI(menuLayout: ViewGroup) {
         unfoldButton = menuLayout.findViewById(R.id.unfold_button)
-        separator = menuLayout.findViewById(R.id.separator)
-
         unfoldButton.setOnClickListener {
             if (isAnimatingLeft) return@setOnClickListener
             isAnimatingLeft = true
             toggleExpand(menuLayout)
         }
 
-        populateTools(menuLayout)
+        populateTools()
     }
 
+    /**
+     * Called to expand second menu (display btn info)
+     *
+     * @param menuLayout
+     */
     private fun toggleExpand(menuLayout: ViewGroup) {
         if (collapsedWidth == 0) {
             collapsedWidth = menuLayout.width
@@ -95,6 +131,7 @@ class ToolboxPopup(
         val startWidth = menuLayout.width
         val endWidth = if (isUnfolded) collapsedWidth else expandedWidth
 
+        //Animate width of layout
         ValueAnimator.ofInt(startWidth, endWidth).apply {
             duration = 300
             addUpdateListener { animation ->
@@ -105,8 +142,8 @@ class ToolboxPopup(
             start()
         }
 
+        //Expand labels
         val toolboxChildren = (menuLayout.findViewById<LinearLayout>(R.id.toolbox_menu)).children
-
         toolboxChildren.forEach { child ->
             val label = (child as? LinearLayout)?.children?.filterIsInstance<TextView>()?.firstOrNull()
             label?.let {
@@ -115,6 +152,7 @@ class ToolboxPopup(
             }
         }
 
+        //Change fold button icon
         val newIcon = if (isUnfolded) R.drawable.angle_double_small_left_24
         else R.drawable.angle_double_small_right_24
         unfoldButton.setImageResource(newIcon)
@@ -122,6 +160,13 @@ class ToolboxPopup(
         isUnfolded = !isUnfolded
     }
 
+    /**
+     * Animate label when menu expands
+     *
+     * @param label
+     * @param child
+     * @param menuLayout
+     */
     private fun animateLabelExpand(label: TextView, child: ViewGroup, menuLayout: ViewGroup) {
         label.visibility = VISIBLE
         label.alpha = 0f
@@ -135,11 +180,19 @@ class ToolboxPopup(
                 }
             }
             .withEndAction {
+                //Begin boing animation
                 onLabelAnimationEnd(menuLayout, R.drawable.boing_double_arrow_right)
             }
             .start()
     }
 
+    /**
+     * Animate label when menu collapses
+     *
+     * @param label
+     * @param child
+     * @param menuLayout
+     */
     private fun animateLabelCollapse(label: TextView, child: ViewGroup, menuLayout: ViewGroup) {
         label.animate()
             .alpha(0f)
@@ -152,11 +205,18 @@ class ToolboxPopup(
             }
             .withEndAction {
                 label.visibility = GONE
+                //Begin boing animation
                 onLabelAnimationEnd(menuLayout, R.drawable.boing_double_arrow_left)
             }
             .start()
     }
 
+    /**
+     * Start boing animation
+     *
+     * @param menuLayout
+     * @param iconRes
+     */
     private fun onLabelAnimationEnd(menuLayout: ViewGroup, iconRes: Int) {
         isAnimatingLeft = false
         unfoldButton.setImageResource(iconRes)
@@ -166,6 +226,12 @@ class ToolboxPopup(
         }
     }
 
+    /**
+     * Infinite animation
+     *
+     * @param drawable
+     * @param imageView
+     */
     private fun startAnimatedDrawableRepeat(drawable: AnimatedVectorDrawable, imageView: ImageView) {
         val intervalMillis = 3000L
 
@@ -176,6 +242,10 @@ class ToolboxPopup(
         startAndRepeat()
     }
 
+    /**
+     * Animate main popup from the right
+     *
+     */
     private fun animatePopupShow() {
         isAnimatingTop = true
 
@@ -187,14 +257,15 @@ class ToolboxPopup(
 
                 val menuLayout = popupContainer.getChildAt(0) as ViewGroup
 
+                // Scroll to bottom
                 val scrollView = menuLayout.findViewById<ScrollView>(R.id.scroll)
                 scrollView.post {
                     scrollView.fullScroll(View.FOCUS_DOWN)
                 }
 
+                // Set btn animation
                 val imageView = menuLayout.findViewById<ImageView>(R.id.unfold_button)
                 imageView.setImageResource(R.drawable.boing_double_arrow_left)
-
                 (imageView.drawable as? AnimatedVectorDrawable)?.let { drawable ->
                     startAnimatedDrawableRepeat(drawable, imageView)
                 }
@@ -202,13 +273,18 @@ class ToolboxPopup(
             .start()
     }
 
-
+    /**
+     * Collapse second menu
+     *
+     * @param menuLayout
+     */
     private fun resetToCollapsed(menuLayout: ViewGroup) {
         if (collapsedWidth > 0) {
             menuLayout.layoutParams.width = collapsedWidth
             menuLayout.layoutParams = menuLayout.layoutParams
         }
 
+        // Hide labels
         val toolboxChildren = (menuLayout.findViewById<LinearLayout>(R.id.toolbox_menu)).children
         toolboxChildren.forEach { child ->
             val label = (child as? LinearLayout)?.children?.filterIsInstance<TextView>()?.firstOrNull()
@@ -218,9 +294,16 @@ class ToolboxPopup(
             }
         }
 
+        //Change btn image
         unfoldButton.setImageResource(R.drawable.angle_double_small_left_24)
     }
 
+    /**
+     * Measure width of expanded menu  (before expanding it)
+     *
+     * @param menuLayout
+     * @return
+     */
     private fun measureExpandedWidth(menuLayout: ViewGroup): Int {
         val toolboxChildren = (menuLayout.findViewById<LinearLayout>(R.id.toolbox_menu)).children
         toolboxChildren.forEach { child ->
@@ -235,34 +318,82 @@ class ToolboxPopup(
         return menuLayout.measuredWidth
     }
 
-    private fun populateTools(menuLayout: ViewGroup) {
-        val toolboxMenu = menuLayout.findViewById<LinearLayout>(R.id.toolbox_menu)
+    /**
+     *  Populate menu with ViewModel UseCases when loaded
+     *
+     * @param menuLayout
+     */
+    fun populateTools() {
 
-        val menuItems = listOf(
-            R.drawable.file_export_24 to "Export",
-            null to null,
-            R.drawable.trash_24 to "Clear",
-            null to null,
-            R.drawable.map_marker_cross_24 to "Filter",
-            R.drawable.map_marker_edit_24 to "Reverse",
-            R.drawable.map_marker_plus_24 to "Join",
-            R.drawable.map_marker_minus_24 to "Remove",
-            null to null,
-            R.drawable.layers_24 to "Layers",
-            null to null,
-        )
-        
-        menuItems.reversed().forEach { (iconRes, labelText) ->
+        if (menuItems.isEmpty()) return
+
+        val toolboxMenu = popupContainer.findViewById<LinearLayout>(R.id.toolbox_menu)
+
+        menuItems.reversed().forEach { (iconRes, labelText, action, selectionCount) ->
             val itemView = inflater.inflate(R.layout.tool_item, toolboxMenu, false)
-            if (iconRes == null) {
+
+            if (iconRes == null || labelText == null || action == null || selectionCount == null) {
                 itemView.findViewById<View>(R.id.separator).visibility = VISIBLE
                 itemView.findViewById<ImageView>(R.id.icon).visibility = GONE
                 itemView.findViewById<TextView>(R.id.label).visibility = GONE
             } else {
-                itemView.findViewById<ImageView>(R.id.icon).setImageResource(iconRes)
-                itemView.findViewById<TextView>(R.id.label).text = labelText
+                val iconCurrent = itemView.findViewById<ImageView>(R.id.icon)
+                iconCurrent.setImageResource(iconRes)
+                val labelCurrent = itemView.findViewById<TextView>(R.id.label)
+                labelCurrent.text = labelText
+
+                itemView.setOnClickListener {
+                    // Unselect previous item if exists
+                    selectedItemView?.let { previous ->
+                        val icon = previous.findViewById<ImageView>(R.id.icon)
+                        val label = previous.findViewById<TextView>(R.id.label)
+                        icon.setColorFilter(Color.LTGRAY, PorterDuff.Mode.SRC_IN)
+                        label.setTextColor(Color.LTGRAY)
+                    }
+
+                    // Select current
+                    selectedItemView = itemView
+                    iconCurrent.setColorFilter(Color.rgb(255, 167, 40), PorterDuff.Mode.SRC_IN)
+                    labelCurrent.setTextColor(Color.rgb(255, 167, 40))
+
+                    // Launch action
+                    coroutineScope.launch {
+                        action.invoke()
+                    }
+
+                    if(selectionCount == 1){
+                        clearSelection()
+                    }
+
+                    if (isUnfolded) {
+
+                        toggleExpand(popupView as ViewGroup)
+                    }                }
             }
+
             toolboxMenu.addView(itemView, 0)
         }
     }
+
+    /**
+     * Clear selected items
+     *
+     */
+    private fun clearSelection() {
+        val toolboxMenu = popupContainer.findViewById<LinearLayout>(R.id.toolbox_menu)
+
+        for (i in 0 until toolboxMenu.childCount) {
+            val item = toolboxMenu.getChildAt(i)
+
+            val icon = item.findViewById<ImageView>(R.id.icon)
+            val label = item.findViewById<TextView>(R.id.label)
+
+            icon?.setColorFilter(Color.LTGRAY, PorterDuff.Mode.SRC_IN)
+            label?.setTextColor(Color.LTGRAY)
+        }
+
+        selectedItemView = null
+    }
+
+
 }

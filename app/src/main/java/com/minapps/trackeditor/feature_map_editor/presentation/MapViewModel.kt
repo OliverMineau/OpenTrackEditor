@@ -3,6 +3,7 @@ package com.minapps.trackeditor.feature_map_editor.presentation
 import android.content.Context
 import android.provider.Settings.Global.getString
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minapps.trackeditor.R
@@ -12,6 +13,7 @@ import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointUseC
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.ClearAllUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.CreateTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackWaypointsUseCase
+import com.minapps.trackeditor.feature_map_editor.domain.usecase.UIAction
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
@@ -31,6 +33,13 @@ sealed class WaypointUpdate {
     data class Cleared(val trackId: Int) : WaypointUpdate()
 }
 
+data class ActionDescriptor(
+    val icon: Int?,
+    val label: String?,
+    val action: UIAction?,
+    val selectionCount: Int?,
+)
+
 
 @HiltViewModel
 class MapViewModel @Inject constructor(
@@ -45,6 +54,9 @@ class MapViewModel @Inject constructor(
     // Expose data events (Add,Remove,Move points) to other classes (MapActivity)
     private val _waypointEvents = MutableSharedFlow<WaypointUpdate>()
     val waypointEvents: SharedFlow<WaypointUpdate> = _waypointEvents
+
+    private val _actions = MutableStateFlow<List<ActionDescriptor>>(emptyList())
+    val actions: StateFlow<List<ActionDescriptor>> = _actions
 
     private val trackWaypointIndexes = mutableMapOf<Int, Double>()
     private var selectedTrackId:Int = 0
@@ -62,6 +74,37 @@ class MapViewModel @Inject constructor(
                 loadTrackWaypoints(track.id)
             }
         }
+
+        _actions.value = listOf(
+            ActionDescriptor(R.drawable.file_export_24, "Export", UIAction { toolExportTrack() }, 1),
+            ActionDescriptor(R.drawable.mode_landscape_24, "Screenshot", UIAction { toolGetScreenshot() }, 1),
+            ActionDescriptor(null, null, null, null),
+            ActionDescriptor(R.drawable.trash_24, "Clear", UIAction { null }, 1),
+            ActionDescriptor(null, null, null, null),
+            ActionDescriptor(R.drawable.curve_arrow_24, "Elevation", UIAction { null }, 1),
+            ActionDescriptor(R.drawable.land_layers_24, "Layers", UIAction { null }, 1),
+            ActionDescriptor(null, null, null, null),
+            ActionDescriptor(R.drawable.rotate_reverse_24, "Reverse", UIAction { null }, -1),
+            ActionDescriptor(R.drawable.circle_overlap_24, "Remove dups", UIAction { null }, -1),
+            ActionDescriptor(R.drawable.bug_slash_24, "Remove bugs", UIAction { null }, -1),
+            ActionDescriptor(R.drawable.scissors_24, "Cut", UIAction { null }, -1),
+            ActionDescriptor(R.drawable.link_alt_24, "Join", UIAction { null }, -1),
+            ActionDescriptor(R.drawable.noise_cancelling_headphones_24, "Reduce noise", UIAction { null }, -1),
+            ActionDescriptor(R.drawable.filter_24, "Filter", UIAction { null }, -1),
+            ActionDescriptor(R.drawable.sweep_24, "Magic filter", UIAction { null }, -1),
+            ActionDescriptor(null, null, null, null)
+        )
+
+    }
+
+    private suspend fun toolExportTrack() {
+        Toast.makeText(context, "Exporting Track", Toast.LENGTH_SHORT).show()
+        Log.d("debug", "Exporting Track")
+    }
+
+    private suspend fun toolGetScreenshot() {
+        Toast.makeText(context, "Taking Screenshot", Toast.LENGTH_SHORT).show()
+        Log.d("debug", "Screenshot")
     }
 
     /**
@@ -136,7 +179,13 @@ class MapViewModel @Inject constructor(
         }
     }
 
-
+    /**
+     * Send coord to activity and to database if set
+     *
+     * @param waypointList
+     * @param pointId
+     * @param isPointSet
+     */
     fun movePoint(waypointList: List<Waypoint>, pointId: Int?, isPointSet: Boolean = false){
 
         viewModelScope.launch {
