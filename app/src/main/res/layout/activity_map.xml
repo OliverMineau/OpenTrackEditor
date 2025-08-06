@@ -18,15 +18,37 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.0" />
 
-    <Button
-        android:id="@+id/loadTrackBtn"
+    <!-- Popup container that will slide up behind nav -->
+    <FrameLayout
+        android:id="@+id/popup_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Load Track"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:visibility="gone"
+        android:elevation="2dp"
+        app:layout_constraintBottom_toTopOf="@id/edit_bottom_navigation"
+        app:layout_constraintEnd_toEndOf="parent" />
 
+    <com.google.android.material.button.MaterialButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        app:icon="@drawable/plus_24"
+        app:iconGravity="textStart"
+        app:iconPadding="4dp"
+        app:layout_constraintBottom_toTopOf="@+id/edit_bottom_navigation"
+        app:layout_constraintStart_toStartOf="parent"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        app:icon="@drawable/minus_24"
+        app:iconGravity="textStart"
+        app:iconPadding="4dp"
+        app:layout_constraintBottom_toTopOf="@+id/edit_bottom_navigation"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <include
+        layout="@layout/bottom_navigation" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -5,6 +5,7 @@
     <!-- Optional edit nav (hidden by default) -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/edit_bottom_navigation"
+        style="@style/CustomBottomNavigationView2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:visibility="gone"
@@ -16,9 +17,11 @@
     <!-- Main bottom nav -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/main_bottom_navigation"
+        style="@style/CustomBottomNavigationView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:menu="@menu/main_menu"
+        app:labelVisibilityMode="unlabeled"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />

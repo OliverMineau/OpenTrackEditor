@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/nav_home"
-        android:icon="@drawable/ic_menu_compass"
-        android:title="Home" />
+        android:id="@+id/nav_remove"
+        android:icon="@drawable/map_marker_cross_24"
+        android:title="Remove" />
     <item
-        android:id="@+id/nav_search"
-        android:icon="@drawable/moreinfo_arrow"
-        android:title="Search" />
+        android:id="@+id/nav_add"
+        android:icon="@drawable/map_marker_plus_24"
+        android:title="Add" />
     <item
-        android:id="@+id/nav_profile"
-        android:icon="@drawable/next"
-        android:title="Profile" />
+        android:id="@+id/nav_toolbox"
+        android:icon="@drawable/tools_24"
+        android:title="Toolbox" />
 </menu>

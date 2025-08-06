@@ -1,11 +1,22 @@
 package com.minapps.trackeditor.feature_map_editor.presentation.ui
 
+import ToolboxPopup
 import android.Manifest
+import android.animation.ValueAnimator
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.PopupWindow
+import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -13,8 +24,10 @@ import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.minapps.trackeditor.R
 import com.minapps.trackeditor.databinding.ActivityMapBinding
+import com.minapps.trackeditor.databinding.BottomNavigationBinding
 import com.minapps.trackeditor.feature_map_editor.presentation.overlay.MapOverlayRenderer
 import com.minapps.trackeditor.feature_map_editor.presentation.MapViewModel
 import com.minapps.trackeditor.feature_map_editor.presentation.WaypointUpdate
@@ -36,10 +49,12 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 @AndroidEntryPoint
 class MapActivity : AppCompatActivity(), MapListener {
 
+    private lateinit var binding: ActivityMapBinding
     private lateinit var mMap: MapView
     private lateinit var loadTrackButton: Button
     private lateinit var mMyLocationOverlay: MyLocationNewOverlay
     private lateinit var mapRenderer: MapOverlayRenderer
+    private lateinit var toolboxPopup: ToolboxPopup
 
     private val mapViewModel: MapViewModel by viewModels()
     private val importTrackViewModel: ImportTrackViewModel by viewModels()
@@ -78,7 +93,7 @@ class MapActivity : AppCompatActivity(), MapListener {
             getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE)
         )
 
-        val binding = ActivityMapBinding.inflate(layoutInflater)
+        binding = ActivityMapBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         // Setup osmmap
@@ -97,11 +112,11 @@ class MapActivity : AppCompatActivity(), MapListener {
         mMap.addMapListener(this)
 
         //Bind button to openFile
-        loadTrackButton = binding.loadTrackBtn
+        /*loadTrackButton = binding.loadTrackBtn
         loadTrackButton.setOnClickListener {
             Log.d("debug", "Loading file")
             openFileExplorer()
-        }
+        }*/
 
         // Add map click listener that calls viewmodel
         val mapEventsReceiver = object : MapEventsReceiver {
@@ -145,7 +160,137 @@ class MapActivity : AppCompatActivity(), MapListener {
         //Todo Remove (for testing)
         testDisplayWaypoints()
 
+
+        setupBottomNavs()
+        toolboxPopup = ToolboxPopup(findViewById(R.id.popup_container), layoutInflater)
+
     }
+
+
+
+    private fun setupBottomNavs(){
+
+        val navBinding = BottomNavigationBinding.bind(binding.root)
+        val mainNav = navBinding.mainBottomNavigation
+        val editNav = navBinding.editBottomNavigation
+
+        mainNav.setOnItemSelectedListener {
+            editNav.visibility = View.GONE
+            toolboxPopup.hide()
+            when (it.itemId) {
+                R.id.nav_edit -> {
+                    editNav.visibility = View.VISIBLE
+                    true
+                }
+                R.id.nav_add_track -> {
+                    openFileExplorer()
+                    true
+                }
+                else -> {
+                    true
+                }
+            }
+        }
+
+        editNav.setOnItemSelectedListener {
+            when (it.itemId) {
+                R.id.nav_toolbox -> {
+                    //showPopupUnderEditNav()
+                    toolboxPopup.show()
+                    true
+                }
+                else -> {
+                    //hidePopup()
+                    toolboxPopup.hide()
+                    true
+                }
+            }
+        }
+    }
+
+    /*private fun showPopupUnderEditNav() {
+        val popupContainer = findViewById<FrameLayout>(R.id.popup_container)
+
+        // Inflate popup layout if not inflated yet
+        if (popupContainer.childCount == 0) {
+            val popupView = layoutInflater.inflate(R.layout.popup_toolbox_menu, popupContainer, false)
+            popupContainer.addView(popupView)
+        }
+
+        popupContainer.visibility = View.VISIBLE
+
+        // Wait until layout pass completes and height is known
+        popupContainer.post {
+            popupContainer.translationY = popupContainer.height.toFloat()
+            popupContainer.animate()
+                .translationY(0f)
+                .setDuration(300)
+                .start()
+
+            expandMenuToLeft(popupContainer.getChildAt(0) as ViewGroup)
+        }
+    }
+
+
+    private fun hidePopup() {
+        val popupContainer = findViewById<FrameLayout>(R.id.popup_container)
+        popupContainer.animate()
+            .translationY(popupContainer.height.toFloat())
+            .setDuration(300)
+            .withEndAction {
+                popupContainer.visibility = View.GONE
+            }
+            .start()
+    }
+
+
+    private fun expandMenuToLeft(menuLayout: ViewGroup) {
+        val unfoldButton = menuLayout.findViewById<ImageView>(R.id.unfold_button)
+        var isUnfolded = false
+
+        unfoldButton.setOnClickListener {
+
+            val initialWidth = menuLayout.width
+            var expandSize = 200
+            if(isUnfolded){
+                expandSize = -200
+            }
+            isUnfolded = !isUnfolded
+
+            // Expand the container width
+            val targetWidth = initialWidth + expandSize  // Expand by 200px or calculate
+
+            val animator = ValueAnimator.ofInt(initialWidth, targetWidth)
+            animator.duration = 300
+            animator.addUpdateListener {
+                val value = it.animatedValue as Int
+                val params = menuLayout.layoutParams
+                params.width = value
+                menuLayout.layoutParams = params
+            }
+            animator.start()
+
+            // Show all text labels
+            for (i in 0 until menuLayout.childCount) {
+                val child = menuLayout.getChildAt(i)
+                if (child is LinearLayout) {
+                    val label = child.findViewById<TextView>(R.id.tool_label)
+                    label?.let {
+                        it.visibility = View.VISIBLE
+                        it.animate()
+                            .alpha(1f)
+                            .setDuration(300)
+                            .start()
+                    }
+                }
+            }
+        }
+    }*/
+
+
+
+
+
 
     /**
      * Setup location of user

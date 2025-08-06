@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/nav_home"
-        android:icon="@drawable/ic_menu_compass"
-        android:title="Home" />
+        android:id="@+id/nav_view"
+        android:icon="@drawable/map_marker_24"
+        android:title="View" />
     <item
-        android:id="@+id/nav_search"
-        android:icon="@drawable/moreinfo_arrow"
-        android:title="Search" />
+        android:id="@+id/nav_edit"
+        android:icon="@drawable/file_edit_24"
+        android:title="Edit" />
     <item
-        android:id="@+id/nav_profile"
-        android:icon="@drawable/next"
-        android:title="Profile" />
+        android:id="@+id/nav_add_track"
+        android:icon="@drawable/add_document_24"
+        android:title="Add Track" />
+    <item
+        android:id="@+id/nav_settings"
+        android:icon="@drawable/settings_24"
+        android:title="Settings" />
 </menu>

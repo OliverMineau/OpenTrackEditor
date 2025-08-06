@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="CustomBottomNavigationView" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="itemPaddingTop">0dp</item>
+        <item name="itemPaddingBottom">0dp</item>
+        <item name="android:background">@color/black</item>
+    </style>
+
+    <style name="CustomBottomNavigationView2" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="android:background">@color/black</item>
+    </style>
+
+    <style name="PopupWindow_Animation_SlideUp">
+        <item name="android:windowEnterAnimation">@anim/slide_in_up</item>
+        <item name="android:windowExitAnimation">@anim/slide_out_down</item>
+    </style>
+
+
+</resources>
