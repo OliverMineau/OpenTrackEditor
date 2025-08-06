@@ -1,0 +1,20 @@
+<!-- res/animator/right_arrow_anim_set.xml -->
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <objectAnimator
+        android:propertyName="translateX"
+        android:startOffset="150"
+        android:duration="150"
+        android:valueFrom="0"
+        android:valueTo="6"
+        android:interpolator="@android:anim/accelerate_interpolator"
+        android:valueType="floatType"/>
+
+    <objectAnimator
+        android:propertyName="translateX"
+        android:startOffset="300"
+        android:duration="400"
+        android:valueFrom="6"
+        android:valueTo="0"
+        android:interpolator="@android:anim/decelerate_interpolator"
+        android:valueType="floatType"/>
+</set>

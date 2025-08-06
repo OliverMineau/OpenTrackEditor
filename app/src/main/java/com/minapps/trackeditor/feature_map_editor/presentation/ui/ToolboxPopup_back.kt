@@ -10,7 +10,7 @@ import androidx.core.view.children
 import androidx.core.view.isEmpty
 import com.minapps.trackeditor.R
 
-class ToolboxPopup(
+class ToolboxPopup_back(
     private val popupContainer: FrameLayout,
     private val inflater: LayoutInflater
 ) {
@@ -45,18 +45,11 @@ class ToolboxPopup(
             isUnfolded = false
         }
 
-        // Wait for layout before measuring width and animating
-        popupContainer.visibility = View.INVISIBLE
+        popupContainer.visibility = View.VISIBLE
         popupContainer.post {
-            // Ensure width is measured now
-            val width = popupContainer.width
-            popupContainer.translationX = width.toFloat()
-            popupContainer.visibility = View.VISIBLE
-            animatePopupShow() // this animates to translationX = 0f
+            animatePopupShow()
         }
     }
-
-
 
     fun hide() {
         if (!isVisibleTop || isAnimatingTop || isAnimatingLeft) return
@@ -64,7 +57,7 @@ class ToolboxPopup(
         isVisibleTop = false
         isAnimatingTop = true
         popupContainer.animate()
-            .translationX(popupContainer.width.toFloat()) // Move it back off-screen right
+            .translationY(popupContainer.height.toFloat())
             .setDuration(300)
             .withEndAction {
                 popupContainer.visibility = GONE
@@ -178,14 +171,17 @@ class ToolboxPopup(
 
     private fun animatePopupShow() {
         isAnimatingTop = true
-
+        popupContainer.translationY = popupContainer.height.toFloat()
         popupContainer.animate()
-            .translationX(0f) // Animate in from the right
+            .translationY(0f)
             .setDuration(300)
             .withEndAction {
                 isAnimatingTop = false
-
                 val menuLayout = popupContainer.getChildAt(0) as ViewGroup
+
+                /* menuLayout.findViewById<ScrollView>(R.id.scroll)?.post {
+                     it.fullScroll(View.FOCUS_DOWN)
+                 }*/
 
                 val scrollView = menuLayout.findViewById<ScrollView>(R.id.scroll)
                 scrollView.post {
@@ -201,7 +197,6 @@ class ToolboxPopup(
             }
             .start()
     }
-
 
     private fun resetToCollapsed(menuLayout: ViewGroup) {
         if (collapsedWidth > 0) {
@@ -251,7 +246,9 @@ class ToolboxPopup(
             R.drawable.layers_24 to "Layers",
             null to null,
         )
-        
+
+
+
         menuItems.reversed().forEach { (iconRes, labelText) ->
             val itemView = inflater.inflate(R.layout.tool_item, toolboxMenu, false)
             if (iconRes == null) {

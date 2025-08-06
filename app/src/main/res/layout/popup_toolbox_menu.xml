@@ -1,18 +1,37 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/toolbox_menu"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main_tool_layout"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="@drawable/popup_background"
-    android:padding="8dp">
+    android:padding="2dp">
 
-    <!-- Add unfold button -->
-    <ImageView
-        android:id="@+id/unfold_button"
+    <ScrollView
+        android:id="@+id/scroll"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:contentDescription="TODO"
-        android:src="@drawable/angle_double_small_left_24"
-        android:layout_gravity="end"
-        android:padding="8dp"/>
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:id="@+id/toolbox_menu"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/unfold_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:contentDescription="TODO"
+                android:src="@drawable/angle_double_small_left_24"
+                android:layout_gravity="start"
+                android:paddingLeft="8dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:paddingRight="8dp" />
+
+        </LinearLayout>
+
+    </ScrollView>
 </LinearLayout>

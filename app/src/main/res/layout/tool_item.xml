@@ -4,13 +4,23 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:padding="8dp">
+    android:padding="8dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <View
+        android:id="@+id/separator"
+        android:visibility="gone"
+        android:layout_width="24dp"
+        android:layout_height="15dp"
+        android:background="@drawable/dotted">
+    </View>
 
     <ImageView
         android:id="@+id/icon"
         android:layout_width="24dp"
         android:layout_height="24dp"
-        android:src="@drawable/tools_24" />
+        android:src="@drawable/tools_24"/>
 
     <TextView
         android:id="@+id/label"
@@ -20,5 +30,7 @@
         android:paddingStart="8dp"
         android:visibility="gone"
         android:alpha="0"
+        android:maxLines="1"
+        android:ellipsize="end"
         android:gravity="center_vertical"/>
 </LinearLayout>

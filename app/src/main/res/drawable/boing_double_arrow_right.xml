@@ -1,0 +1,13 @@
+<!-- res/drawable/boing_double_arrow_anim.xml -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_double_arrow_right">
+
+    <target
+        android:name="left_arrow_group"
+        android:animation="@animator/anim_left_arrow_right"
+        />
+
+    <target
+        android:name="right_arrow_group"
+        android:animation="@animator/anim_right_arrow_right" />
+</animated-vector>
