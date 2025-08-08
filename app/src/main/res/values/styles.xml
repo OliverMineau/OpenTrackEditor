@@ -4,11 +4,11 @@
     <style name="CustomBottomNavigationView" parent="Widget.MaterialComponents.BottomNavigationView">
         <item name="itemPaddingTop">0dp</item>
         <item name="itemPaddingBottom">0dp</item>
-        <item name="android:background">@color/black</item>
+        <item name="android:background">@color/background_dark</item>
     </style>
 
     <style name="CustomBottomNavigationView2" parent="Widget.MaterialComponents.BottomNavigationView">
-        <item name="android:background">@color/black</item>
+        <item name="android:background">@color/background_dark</item>
     </style>
 
     <style name="PopupWindow_Animation_SlideUp">

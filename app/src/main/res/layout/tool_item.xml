@@ -6,7 +6,8 @@
     android:gravity="center_vertical"
     android:padding="8dp"
     android:clickable="true"
-    android:focusable="true">
+    android:focusable="true"
+    android:background="?attr/selectableItemBackgroundBorderless">
 
     <View
         android:id="@+id/separator"

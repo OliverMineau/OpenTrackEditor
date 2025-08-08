@@ -22,6 +22,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.utils.widget.MotionLabel
 import androidx.core.app.ActivityCompat
+import androidx.core.view.children
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -30,6 +31,8 @@ import com.minapps.trackeditor.R
 import com.minapps.trackeditor.databinding.ActivityMapBinding
 import com.minapps.trackeditor.databinding.BottomNavigationBinding
 import com.minapps.trackeditor.feature_map_editor.presentation.ActionDescriptor
+import com.minapps.trackeditor.feature_map_editor.presentation.ActionType
+import com.minapps.trackeditor.feature_map_editor.presentation.DataDestination
 import com.minapps.trackeditor.feature_map_editor.presentation.overlay.MapOverlayRenderer
 import com.minapps.trackeditor.feature_map_editor.presentation.MapViewModel
 import com.minapps.trackeditor.feature_map_editor.presentation.WaypointUpdate
@@ -48,6 +51,9 @@ import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import org.w3c.dom.Text
+import androidx.core.view.size
+import androidx.core.view.get
+import androidx.lifecycle.viewModelScope
 
 @AndroidEntryPoint
 class MapActivity : AppCompatActivity(), MapListener {
@@ -133,7 +139,9 @@ class MapActivity : AppCompatActivity(), MapListener {
         val overlayEvents = MapEventsOverlay(mapEventsReceiver)
         mMap.overlays.add(overlayEvents)
 
-        //Optimise track display updates
+        setupBottomNavs()
+        toolboxPopup = ToolboxPopup(findViewById(R.id.popup_container), layoutInflater, lifecycleScope)
+
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 //Safely collect waypoint events from the ViewModel, only while the Activity is visible
@@ -150,21 +158,58 @@ class MapActivity : AppCompatActivity(), MapListener {
                     }
                 }
 
-                lifecycleScope.launch {
-                    mapViewModel.actions.collect { actionList ->
-                        handleToolAdded(actionList)
+                launch {
+                    mapViewModel.actions.collect { actionMap ->
+                        actionMap.forEach { (destination, actions) ->
+                            when (destination) {
+                                DataDestination.EDIT_TOOL_POPUP -> handleToolAdded(actions)
+                                DataDestination.EDIT_BOTTOM_NAV -> TODO()
+                            }
+                        }
+
                     }
                 }
+
+                launch {
+                    mapViewModel.editState.collect { state ->
+                        Log.d("debug", "Received click")
+                        toolboxPopup.toolSelected(state.currentSelectedTool)
+                        toolSelected(state.currentSelectedTool)
+                    }
+                }
+
             }
         }
 
-        //Todo Remove (for testing)
-        testDisplayWaypoints()
-
-        setupBottomNavs()
-        toolboxPopup = ToolboxPopup(findViewById(R.id.popup_container), layoutInflater, lifecycleScope)
 
     }
+
+    fun toolSelected(tool: ActionType) {
+        val navBinding = BottomNavigationBinding.bind(binding.root)
+        val editNav = navBinding.editBottomNavigation
+
+        if (tool.group == 1) {
+
+            // Uncheck all menu if not type items
+            for (i in 0 until editNav.menu.size) {
+                val item = editNav.menu[i]
+
+                if(item.itemId == R.id.nav_add && tool == ActionType.ADD){
+                    item.isChecked = true
+                    return
+                }
+                else if(item.itemId == R.id.nav_remove && tool == ActionType.REMOVE){
+                    item.isChecked = true
+                    return
+                }
+                else if(item.itemId == R.id.nav_toolbox && tool != ActionType.REMOVE && tool != ActionType.ADD){
+                    item.isChecked = true
+                    return
+                }
+            }
+        }
+    }
+
 
     /**
      * Init Navigation bars
@@ -182,27 +227,44 @@ class MapActivity : AppCompatActivity(), MapListener {
             when (it.itemId) {
                 R.id.nav_edit -> {
                     editNav.visibility = View.VISIBLE
-                    true
                 }
                 R.id.nav_add_track -> {
+                    mapViewModel.selectedTool(ActionType.NONE)
                     openFileExplorer()
-                    true
                 }
                 else -> {
-                    true
+
                 }
             }
+
+            mapRenderer.unselectPolyline()
+            mMap.invalidate()
+            mapViewModel.selectedTool(ActionType.NONE)
+            true
         }
 
         editNav.setOnItemSelectedListener {
+
+            mapRenderer.unselectPolyline()
+            mMap.invalidate()
+
             when (it.itemId) {
                 R.id.nav_toolbox -> {
-                    //showPopupUnderEditNav()
+                    mapViewModel.selectedTool(ActionType.NONE)
                     toolboxPopup.show()
+                    true
+                }
+                R.id.nav_add -> {
+                    mapViewModel.selectedTool(ActionType.ADD)
+                    true
+                }
+                R.id.nav_remove -> {
+                    mapViewModel.selectedTool(ActionType.REMOVE)
                     true
                 }
                 else -> {
                     //hidePopup()
+                    mapViewModel.selectedTool(ActionType.NONE)
                     toolboxPopup.hide()
                     true
                 }
@@ -270,21 +332,15 @@ class MapActivity : AppCompatActivity(), MapListener {
 
     /**
      * TODO
+     * Called When Map clicked
      * Add point to polyline in optimised way
      *
      * @param trackId
      * @param point
      */
     private fun handleWaypointAdded(trackId: Int, point: Pair<Double, Double>) {
-        val polyline = polylines.getOrPut(trackId) {
-            Polyline().apply {
-                outlinePaint.color = randomColorForTrack(trackId)
-                outlinePaint.strokeWidth = 8f
-                mMap.overlays.add(this)
-            }
-        }
-        polyline.addPoint(GeoPoint(point.first, point.second))
-        mMap.invalidate()
+        mapRenderer.displayNewAddedPoint(point, trackId)
+        Log.d("debug", "Added point")
     }
 
 
@@ -362,30 +418,5 @@ class MapActivity : AppCompatActivity(), MapListener {
     fun handleToolAdded(actions: List<ActionDescriptor>){
         toolboxPopup.menuItems = actions
     }
-
-
-    //TODO Testing in progress
-
-    fun testDisplayWaypoints() {
-
-        // Sample list of waypoints
-        val testPoints = listOf(
-            48.8566 to 2.3522,    // Paris
-            51.5074 to -0.1278,   // London
-            52.52 to 13.4050      // Berlin
-        )
-
-        val polylineColor = Color.RED
-
-        // Call the display function
-        mapRenderer.displayTrack(
-            waypoints = testPoints,
-            trackId = 0,
-            color = polylineColor,
-            center = true
-        )
-    }
-
-
 
 }

@@ -14,6 +14,7 @@ import com.minapps.trackeditor.feature_map_editor.domain.usecase.ClearAllUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.CreateTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackWaypointsUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.UIAction
+import com.minapps.trackeditor.feature_map_editor.presentation.util.vibrate
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
@@ -21,15 +22,21 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
+import kotlin.collections.emptyList
 
 sealed class WaypointUpdate {
     data class Added(val trackId: Int, val point: Pair<Double, Double>) : WaypointUpdate()
-    data class AddedList(val trackId: Int, val points: List<Pair<Double,Double>>) : WaypointUpdate()
+    data class AddedList(val trackId: Int, val points: List<Pair<Double, Double>>) :
+        WaypointUpdate()
+
     data class Removed(val trackId: Int, val index: Int) : WaypointUpdate()
-    data class Moved(val trackId: Int, val points: List<Pair<Double,Double>>) : WaypointUpdate()
-    data class MovedDone(val trackId: Int, val pointId: Int, val point: Pair<Double,Double>) : WaypointUpdate()
+    data class Moved(val trackId: Int, val points: List<Pair<Double, Double>>) : WaypointUpdate()
+    data class MovedDone(val trackId: Int, val pointId: Int, val point: Pair<Double, Double>) :
+        WaypointUpdate()
+
     data class Cleared(val trackId: Int) : WaypointUpdate()
 }
 
@@ -38,8 +45,56 @@ data class ActionDescriptor(
     val label: String?,
     val action: UIAction?,
     val selectionCount: Int?,
+    val type: ActionType,
+    val group: Int?
 )
 
+enum class ActionType(
+    val icon: Int?,
+    val label: String?,
+    val selectionCount: Int?,
+    val group: Int? = 0
+) {
+    // No action
+    NONE(null, null, null),
+    SPACER(null, null, null),
+
+    // File & system actions
+    EXPORT(R.drawable.file_export_24, "Export", 1, 2),
+    SCREENSHOT(R.drawable.mode_landscape_24, "Screenshot", 1, 2),
+    CLEAR(R.drawable.trash_24, "Clear", 1, 2),
+
+    // Visual tools
+    ELEVATION(R.drawable.curve_arrow_24, "Elevation", 1),
+    LAYERS(R.drawable.land_layers_24, "Layers", 1),
+
+    // Editing tools
+    REVERSE(R.drawable.rotate_reverse_24, "Reverse", -1, 1),
+    REMOVE_DUPS(R.drawable.circle_overlap_24, "Remove dups", -1, 1),
+    REMOVE_BUGS(R.drawable.bug_slash_24, "Remove bugs", -1, 1),
+    CUT(R.drawable.scissors_24, "Cut", -1, 1),
+    JOIN(R.drawable.link_alt_24, "Join", -1, 1),
+    REDUCE_NOISE(R.drawable.noise_cancelling_headphones_24, "Reduce noise", -1, 1),
+    FILTER(R.drawable.filter_24, "Filter", -1, 1),
+    MAGIC_FILTER(R.drawable.sweep_24, "Magic filter", -1, 1),
+
+    // Edit Bottom Navigation
+    ADD(R.drawable.map_marker_plus_24, "Add", -1, 1),
+    REMOVE(R.drawable.map_marker_minus_24, "Remove", -1, 1),
+
+}
+
+data class EditState(
+    val currentSelectedTool: ActionType = ActionType.NONE,
+    val currentselectedTrack: Int? = null,
+    val version: Long = System.nanoTime(),
+
+    )
+
+enum class DataDestination {
+    EDIT_BOTTOM_NAV,
+    EDIT_TOOL_POPUP,
+}
 
 @HiltViewModel
 class MapViewModel @Inject constructor(
@@ -55,11 +110,33 @@ class MapViewModel @Inject constructor(
     private val _waypointEvents = MutableSharedFlow<WaypointUpdate>()
     val waypointEvents: SharedFlow<WaypointUpdate> = _waypointEvents
 
-    private val _actions = MutableStateFlow<List<ActionDescriptor>>(emptyList())
-    val actions: StateFlow<List<ActionDescriptor>> = _actions
+    private val _actions =
+        MutableStateFlow<Map<DataDestination, List<ActionDescriptor>>>(emptyMap())
+    val actions: MutableStateFlow<Map<DataDestination, List<ActionDescriptor>>> = _actions
+
+    private val _editState = MutableStateFlow(EditState())
+    val editState: StateFlow<EditState> = _editState
 
     private val trackWaypointIndexes = mutableMapOf<Int, Double>()
-    private var selectedTrackId:Int = 0
+
+
+    private val actionHandlers: Map<ActionType, UIAction> = mapOf(
+        ActionType.EXPORT to { selectedTool(ActionType.EXPORT) },
+        ActionType.SCREENSHOT to { selectedTool(ActionType.SCREENSHOT) },
+        ActionType.CLEAR to { selectedTool(ActionType.CLEAR) },
+        ActionType.ELEVATION to { selectedTool(ActionType.ELEVATION) },
+        ActionType.LAYERS to { selectedTool(ActionType.LAYERS) },
+        ActionType.REVERSE to { selectedTool(ActionType.REVERSE) },
+        ActionType.REMOVE_DUPS to { selectedTool(ActionType.REMOVE_DUPS) },
+        ActionType.REMOVE_BUGS to { selectedTool(ActionType.REMOVE_BUGS) },
+        ActionType.CUT to { selectedTool(ActionType.CUT) },
+        ActionType.JOIN to { selectedTool(ActionType.JOIN) },
+        ActionType.REDUCE_NOISE to { selectedTool(ActionType.REDUCE_NOISE) },
+        ActionType.FILTER to { selectedTool(ActionType.FILTER) },
+        ActionType.MAGIC_FILTER to { selectedTool(ActionType.MAGIC_FILTER) },
+        ActionType.ADD to { selectedTool(ActionType.ADD) },
+        ActionType.REMOVE to { selectedTool(ActionType.REMOVE) }
+    )
 
 
     init {
@@ -73,37 +150,77 @@ class MapViewModel @Inject constructor(
                 //If added load waypoints of given track id
                 loadTrackWaypoints(track.id)
             }
+
         }
 
-        _actions.value = listOf(
-            ActionDescriptor(R.drawable.file_export_24, "Export", UIAction { toolExportTrack() }, 1),
-            ActionDescriptor(R.drawable.mode_landscape_24, "Screenshot", UIAction { toolGetScreenshot() }, 1),
-            ActionDescriptor(null, null, null, null),
-            ActionDescriptor(R.drawable.trash_24, "Clear", UIAction { null }, 1),
-            ActionDescriptor(null, null, null, null),
-            ActionDescriptor(R.drawable.curve_arrow_24, "Elevation", UIAction { null }, 1),
-            ActionDescriptor(R.drawable.land_layers_24, "Layers", UIAction { null }, 1),
-            ActionDescriptor(null, null, null, null),
-            ActionDescriptor(R.drawable.rotate_reverse_24, "Reverse", UIAction { null }, -1),
-            ActionDescriptor(R.drawable.circle_overlap_24, "Remove dups", UIAction { null }, -1),
-            ActionDescriptor(R.drawable.bug_slash_24, "Remove bugs", UIAction { null }, -1),
-            ActionDescriptor(R.drawable.scissors_24, "Cut", UIAction { null }, -1),
-            ActionDescriptor(R.drawable.link_alt_24, "Join", UIAction { null }, -1),
-            ActionDescriptor(R.drawable.noise_cancelling_headphones_24, "Reduce noise", UIAction { null }, -1),
-            ActionDescriptor(R.drawable.filter_24, "Filter", UIAction { null }, -1),
-            ActionDescriptor(R.drawable.sweep_24, "Magic filter", UIAction { null }, -1),
-            ActionDescriptor(null, null, null, null)
+        val tools = listOf(
+            ActionType.EXPORT,
+            ActionType.SCREENSHOT,
+            ActionType.SPACER,
+            ActionType.CLEAR,
+            ActionType.SPACER,
+            ActionType.ELEVATION,
+            ActionType.LAYERS,
+            ActionType.SPACER,
+            ActionType.REVERSE,
+            ActionType.REMOVE_DUPS,
+            ActionType.REMOVE_BUGS,
+            ActionType.CUT,
+            ActionType.JOIN,
+            ActionType.REDUCE_NOISE,
+            ActionType.FILTER,
+            ActionType.MAGIC_FILTER,
+            ActionType.SPACER
         )
+
+        _actions.value = mapOf(
+            DataDestination.EDIT_TOOL_POPUP to tools.map { type ->
+                val action = actionHandlers[type]
+                ActionDescriptor(
+                    type.icon,
+                    type.label,
+                    action,
+                    type.selectionCount,
+                    type,
+                    type.group
+                )
+            }
+        )
+
 
     }
 
+
+    /**
+     * Propagates selected tool to UI
+     * /!\ Update version, if same tool selected twice, wont trigger /!\
+     *
+     * @param action
+     */
+    fun selectedTool(action: ActionType) {
+
+        context.vibrate(30)
+
+
+        _editState.update { it.copy(currentSelectedTool = action,
+            currentselectedTrack = null, version = System.nanoTime()) }
+        Log.d("debug", "Selected ${action.label}")
+
+        viewModelScope.launch {
+            when (action) {
+                ActionType.EXPORT -> toolExportTrack()
+                ActionType.SCREENSHOT -> toolGetScreenshot()
+
+                else -> Log.d("debug", "Not Implemented")
+            }
+        }
+    }
+
     private suspend fun toolExportTrack() {
-        Toast.makeText(context, "Exporting Track", Toast.LENGTH_SHORT).show()
         Log.d("debug", "Exporting Track")
     }
 
     private suspend fun toolGetScreenshot() {
-        Toast.makeText(context, "Taking Screenshot", Toast.LENGTH_SHORT).show()
         Log.d("debug", "Screenshot")
     }
 
@@ -114,8 +231,15 @@ class MapViewModel @Inject constructor(
      * @param lng
      */
     fun addWaypoint(lat: Double, lng: Double) {
+
+        val selectedTrackId = editState.value.currentselectedTrack
+        val currentTool = editState.value.currentSelectedTool
+
         // If no track is selected, do nothing
-        if (selectedTrackId == 0) return
+        if (selectedTrackId == null) return
+
+        // If not Add as selected tool
+        if (currentTool != ActionType.ADD) return
 
         val currentIndex = trackWaypointIndexes[selectedTrackId] ?: 0.0
 
@@ -132,21 +256,32 @@ class MapViewModel @Inject constructor(
     /**
      * Create new track entity if no track is selected
      *
-     * @return
+     * @return Track id (Never Null)
      */
     suspend fun createNewTrackIfNeeded(): Int {
+
+        var selectedTrackId = editState.value.currentselectedTrack
+
         // If no track selected
-        if (selectedTrackId == 0) {
+        if (selectedTrackId == null) {
             //Set default track name
             val newId = createTrackUseCase(context.getString(R.string.track_no_name))
+
             selectedTrackId = newId
             trackWaypointIndexes[selectedTrackId] = 0.0
+            _editState.update {
+                it.copy(
+                    currentselectedTrack = selectedTrackId,
+                    version = System.nanoTime()
+                )
+            }
+
             Log.d("debug", "Created new track with ID: $newId")
         }
         return selectedTrackId
     }
 
-    fun clearAll(){
+    fun clearAll() {
         viewModelScope.launch {
             clearAllUseCase()
         }
@@ -157,10 +292,13 @@ class MapViewModel @Inject constructor(
      *
      * @param geoPoint
      */
-    suspend fun singleTapConfirmed(geoPoint: GeoPoint){
+    suspend fun singleTapConfirmed(geoPoint: GeoPoint) {
         val trackId = createNewTrackIfNeeded()
         addWaypoint(geoPoint.latitude, geoPoint.longitude)
-        Log.d("debug", "Added waypoint to track $trackId at: ${geoPoint.latitude}, ${geoPoint.longitude}")
+        Log.d(
+            "debug",
+            "Added waypoint to track $trackId at: ${geoPoint.latitude}, ${geoPoint.longitude}"
+        )
     }
 
 
@@ -186,15 +324,13 @@ class MapViewModel @Inject constructor(
      * @param pointId
      * @param isPointSet
      */
-    fun movePoint(waypointList: List<Waypoint>, pointId: Int?, isPointSet: Boolean = false){
+    fun movePoint(waypointList: List<Waypoint>, pointId: Int?, isPointSet: Boolean = false) {
 
         viewModelScope.launch {
             val trackId = waypointList.first().trackId
 
-            Log.d("debug", "Trackid $trackId")
-
             // Point is set, update database
-            if(isPointSet && pointId != null){
+            if (isPointSet && pointId != null) {
                 addWaypointUseCase(
                     waypointList.first().lat,
                     waypointList.first().lng,
@@ -202,18 +338,26 @@ class MapViewModel @Inject constructor(
                     trackId = trackId
                 )
 
-                _waypointEvents.emit(WaypointUpdate.MovedDone(trackId, pointId, waypointList.first().lat to waypointList.first().lng))
+                _waypointEvents.emit(
+                    WaypointUpdate.MovedDone(
+                        trackId,
+                        pointId,
+                        waypointList.first().lat to waypointList.first().lng
+                    )
+                )
                 return@launch
             }
 
             val points = waypointList.map { wp -> Pair(wp.lat, wp.lng) }
             _waypointEvents.emit(WaypointUpdate.Moved(trackId, points))
         }
-
-
     }
 
-
+    fun selectedTrack(trackId: Int) {
+        Log.d("debug", "Selected track $trackId")
+        _editState.update { it.copy(currentselectedTrack = trackId, version = System.nanoTime()) }
+        context.vibrate(30)
+    }
 
 
 }

@@ -23,14 +23,20 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.simplefastpoint.LabelledGeoPoint
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlayOptions
+import kotlin.toString
 
 
-class MapOverlayRenderer (private val mMap : MapView, private val mapViewModel: MapViewModel) : PointInteractionListener {
+class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: MapViewModel) :
+    PointInteractionListener {
 
     private val controller: IMapController = mMap.controller
 
     //Polylines that are currently displayed
-    private val displayedPolylines: MutableMap<Int, MutablePair<Polyline, CustomSimpleFastPointOverlay?>> = mutableMapOf()
+    private val displayedPolylines: MutableMap<Int, MutablePair<Polyline, CustomSimpleFastPointOverlay?>> =
+        mutableMapOf()
+
+    private var selectedPolyline: Int? = null
+
     // Polyline that is being modified
     private val modifyingPolylines: MutableMap<Int, Polyline> = mutableMapOf()
 
@@ -39,7 +45,7 @@ class MapOverlayRenderer (private val mMap : MapView, private val mapViewModel: 
      * Pure map settings
      *
      */
-    fun setSettings(){
+    fun setSettings() {
         mMap.setTileSource(TileSourceFactory.MAPNIK)
         mMap.setMultiTouchControls(true)
         mMap.getLocalVisibleRect(Rect())
@@ -47,8 +53,12 @@ class MapOverlayRenderer (private val mMap : MapView, private val mapViewModel: 
         mMap.zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER);
         mMap.setHorizontalMapRepetitionEnabled(true);
         mMap.setVerticalMapRepetitionEnabled(false);
-        mMap.setScrollableAreaLimitLatitude(MapView.getTileSystem().maxLatitude, MapView.getTileSystem().minLatitude, 0);
-        mMap.minZoomLevel =3.0
+        mMap.setScrollableAreaLimitLatitude(
+            MapView.getTileSystem().maxLatitude,
+            MapView.getTileSystem().minLatitude,
+            0
+        );
+        mMap.minZoomLevel = 3.0
     }
 
 
@@ -65,10 +75,35 @@ class MapOverlayRenderer (private val mMap : MapView, private val mapViewModel: 
         trackId: Int,
         color: Int,
         center: Boolean
-    ){
+    ) {
+
+        displayedPolylines[trackId]?.let { pair ->
+            mMap.overlayManager.remove(pair.first)
+            pair.second?.let { mMap.overlayManager.remove(it) }
+            displayedPolylines.remove(trackId)
+        }
+
+        // List of points to display in GeoPoint format
+        val geoPoints = mutableListOf<GeoPoint>()
+
+        // Clickable points
+        val clickablePoints = mutableListOf<IGeoPoint>()
+
+        // Convert all coords to geoPoints
+        waypoints.forEachIndexed { index, waypoint ->
+            val geoPoint = GeoPoint(waypoint.first, waypoint.second)
+            geoPoints.add(geoPoint)
+
+            // Interactable labelled point
+            val labelled = LabelledGeoPoint(waypoint.first, waypoint.second, "").apply {
+                label = index.toString()
+            }
+            clickablePoints.add(labelled)
+        }
 
         val polylinePair = displayWaypoints(
-            waypoints = waypoints,
+            geoPoints = geoPoints,
+            nodes = clickablePoints,
             trackId = trackId,
             color = color,
             center = center
@@ -76,6 +111,93 @@ class MapOverlayRenderer (private val mMap : MapView, private val mapViewModel: 
 
         // Add track to display list
         displayedPolylines[trackId] = polylinePair
+    }
+
+    /**
+     * TODO For already in polylines
+     *
+     * @param trackId
+     * @param color
+     * @param center
+     */
+    fun displayTrack(
+        trackId: Int,
+        color: Int,
+        center: Boolean
+    ) {
+
+        val polyline = displayedPolylines[trackId]?.first
+        if (polyline == null) return
+
+        // Remove old polyline and overlay if already displayed
+        displayedPolylines[trackId]?.let { pair ->
+            mMap.overlayManager.remove(pair.first)
+            pair.second?.let { mMap.overlayManager.remove(it) }
+            displayedPolylines.remove(trackId)
+        }
+
+
+
+        // Clickable points
+        val clickablePoints = mutableListOf<IGeoPoint>()
+
+        val geoPoints = polyline.actualPoints
+        geoPoints.forEachIndexed { index, waypoint ->
+            // Interactable labelled point
+            val labelled = LabelledGeoPoint(waypoint.latitude, waypoint.longitude, "").apply {
+                label = index.toString()
+            }
+            clickablePoints.add(labelled)
+        }
+
+        val polylinePair = displayWaypoints(
+            geoPoints = geoPoints,
+            nodes = clickablePoints,
+            trackId = trackId,
+            color = color,
+            center = center
+        )
+
+        // Add track to display list
+        displayedPolylines[trackId] = polylinePair
+    }
+
+
+    /**
+     * TODO OOOOOOOOOOOO
+     * Display full track (e.g. after import)
+     *
+     * @param waypoints List of waypoints to display
+     * @param trackId Track id
+     * @param color Track color
+     * @param center If should center after displaying
+     */
+    fun displayNewAddedPoint(
+        waypoint: Pair<Double, Double>,
+        trackId: Int,
+    ) {
+
+        val polyline = displayedPolylines[trackId]?.first
+
+        // First point of track : Create it
+        if (polyline == null) {
+            displayTrack(
+                waypoints = listOf(waypoint),
+                trackId = trackId,
+                color = Color.RED,
+                center = false
+            )
+        } else {
+            polyline.addPoint(GeoPoint(waypoint.first, waypoint.second))
+            displayTrack(
+                trackId = trackId,
+                color = Color.RED,
+                center = false
+            )
+        }
+
+        mMap.invalidate()
+
     }
 
 
@@ -112,6 +234,8 @@ class MapOverlayRenderer (private val mMap : MapView, private val mapViewModel: 
         // Add reference to polyline
         modifyingPolylines[trackId] = movedPolyline
 
+        unselectPolyline(trackId)
+
         mMap.invalidate()
     }
 
@@ -134,6 +258,9 @@ class MapOverlayRenderer (private val mMap : MapView, private val mapViewModel: 
             mMap.overlayManager.remove(it)
             modifyingPolylines.remove(trackId)
         }
+
+        selectedPolyline = trackId
+        unselectPolyline(trackId)
 
         // Get the displayed polyline and clickable overlay and update its point
         val polyline = displayedPolylines[trackId]?.first ?: return
@@ -162,8 +289,8 @@ class MapOverlayRenderer (private val mMap : MapView, private val mapViewModel: 
         mMap.invalidate()
     }
 
-
     /**
+     * MAIN DISPLAY FUNCTION
      * Display a list of waypoints
      *
      * @param waypoints List of points to be displayed
@@ -174,36 +301,39 @@ class MapOverlayRenderer (private val mMap : MapView, private val mapViewModel: 
      * @return Polyline and clickable points
      */
     private fun displayWaypoints(
-        waypoints: List<Pair<Double, Double>>,
+        geoPoints: MutableList<GeoPoint>,
+        nodes: MutableList<IGeoPoint>,
         trackId: Int,
         color: Int,
         center: Boolean,
         isModifying: Boolean = false
     ): MutablePair<Polyline, CustomSimpleFastPointOverlay?> {
 
-        // List of points to display in GeoPoint format
-        val geoPoints = mutableListOf<GeoPoint>()
+        val selectedColor = Color.YELLOW
+        val unselectedColor = Color.RED
+        val paintColor = if(mapViewModel.editState.value.currentselectedTrack == trackId) selectedColor else color
 
-        // Clickable points
-        val clickablePoints = mutableListOf<IGeoPoint>()
-
-        // Convert all coords to geoPoints
-        waypoints.forEachIndexed { index, waypoint ->
-            val geoPoint = GeoPoint(waypoint.first, waypoint.second)
-            geoPoints.add(geoPoint)
-
-            // Interactable labelled point
-            val labelled = LabelledGeoPoint(waypoint.first, waypoint.second, "").apply {
-                label = index.toString()
-            }
-            clickablePoints.add(labelled)
-        }
+        selectedPolyline = trackId
+        unselectPolyline(trackId)
 
         // Create polyline with geoPoints and style
         val polyline = Polyline().apply {
             setPoints(geoPoints)
             id = System.identityHashCode(this).toString()
-            PaintType.SOLID.applyTo(outlinePaint, color)
+            PaintType.SOLID.applyTo(outlinePaint, paintColor)
+        }
+
+        polyline.setOnClickListener{ polyline, mapView, eventPos ->
+
+            if(selectedPolyline == trackId){
+                selectedPolyline = null
+            }else{
+                selectedPolyline = trackId
+            }
+            unselectPolyline(selectedPolyline)
+            mMap.invalidate()
+            mapViewModel.selectedTrack(trackId)
+            true
         }
 
         // Add to polyline to be displayed
@@ -219,13 +349,13 @@ class MapOverlayRenderer (private val mMap : MapView, private val mapViewModel: 
 
         // Create clickable points overlay
         var pointOverlay: CustomSimpleFastPointOverlay? = null
-        if(!isModifying){
-            val pointAdapter = MutablePointAdapter(clickablePoints.toMutableList(), false)
+        if (!isModifying) {
+            val pointAdapter = MutablePointAdapter(nodes.toMutableList(), false)
             val pointOptions = SimpleFastPointOverlayOptions.getDefaultStyle()
                 .setAlgorithm(SimpleFastPointOverlayOptions.RenderingAlgorithm.MAXIMUM_OPTIMIZATION)
-                .setRadius(7f) //Smaller is faster
+                .setRadius(8f) //Smaller is faster
                 .setIsClickable(true)
-                .setCellSize(25) //Bigger is faster (less points shown on screen)
+                .setCellSize(20) //Bigger is faster (less points shown on screen)
                 .setPointStyle(primaryPaint)
                 .setSelectedPointStyle(selectedPaint)
                 .setSymbol(SimpleFastPointOverlayOptions.Shape.CIRCLE)
@@ -258,6 +388,16 @@ class MapOverlayRenderer (private val mMap : MapView, private val mapViewModel: 
         return Color.HSVToColor(alpha, hsv)
     }
 
+    fun unselectPolyline(trackId: Int? = null){
+        displayedPolylines.forEach { id, p1 ->
+            if(trackId == null || id != trackId){
+                p1.first.outlinePaint.color = Color.RED
+            }else{
+                p1.first.outlinePaint.color = Color.YELLOW
+            }
+        }
+    }
+
 
     /**
      * When user moves point, renderer listens for move notification.
@@ -282,21 +422,49 @@ class MapOverlayRenderer (private val mMap : MapView, private val mapViewModel: 
         // Add previous point if exists (track border)
         if (selectedBundle.previousPoint != null && !isSet) {
             val it = selectedBundle.previousPoint!!
-            movingPoint.add(Waypoint(id = 0.0, lat = it.latitude, lng = it.longitude, elv = null, trackId = selectedBundle.trackId))
+            movingPoint.add(
+                Waypoint(
+                    id = 0.0,
+                    lat = it.latitude,
+                    lng = it.longitude,
+                    elv = null,
+                    trackId = selectedBundle.trackId
+                )
+            )
         }
 
         // Add current moving point
         selectedBundle.movingPos?.let {
-            movingPoint.add(Waypoint(id = 1.0, lat = it.latitude, lng = it.longitude, elv = null, trackId = selectedBundle.trackId))
+            movingPoint.add(
+                Waypoint(
+                    id = 1.0,
+                    lat = it.latitude,
+                    lng = it.longitude,
+                    elv = null,
+                    trackId = selectedBundle.trackId
+                )
+            )
         }
 
         // Add next point if exists (track border)
         if (selectedBundle.nextPoint != null && !isSet) {
             val it = selectedBundle.nextPoint!!
-            movingPoint.add(Waypoint(id = 2.0, lat = it.latitude, lng = it.longitude, elv = null, trackId = selectedBundle.trackId))
+            movingPoint.add(
+                Waypoint(
+                    id = 2.0,
+                    lat = it.latitude,
+                    lng = it.longitude,
+                    elv = null,
+                    trackId = selectedBundle.trackId
+                )
+            )
         }
 
         // Call VM movePoint with list of point, idx of point being modified, if set
-        mapViewModel.movePoint(movingPoint, selectedBundle.selectedPointIdx, selectedBundle.selectedPoint == null)
+        mapViewModel.movePoint(
+            movingPoint,
+            selectedBundle.selectedPointIdx,
+            selectedBundle.selectedPoint == null
+        )
     }
 }

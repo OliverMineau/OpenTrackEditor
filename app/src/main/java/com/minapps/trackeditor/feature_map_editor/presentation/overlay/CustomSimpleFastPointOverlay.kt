@@ -9,6 +9,7 @@ import android.view.MotionEvent.ACTION_UP
 import com.minapps.trackeditor.feature_map_editor.presentation.MovingPointBundle
 import com.minapps.trackeditor.feature_map_editor.presentation.MutablePointAdapter
 import com.minapps.trackeditor.feature_map_editor.presentation.interaction.PointInteractionListener
+import com.minapps.trackeditor.feature_map_editor.presentation.util.vibrate
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlay
@@ -79,6 +80,10 @@ class CustomSimpleFastPointOverlay(
         // TODO: Implement long press handling
 
         isDragging = onSingleTapConfirmed(e,mapView)
+
+        if(selectedBundle.isInit){
+            mapView.context.vibrate(20)
+        }
 
         return isDragging
     }

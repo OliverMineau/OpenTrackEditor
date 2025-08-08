@@ -2,4 +2,40 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Backgrounds -->
+    <color name="background_light">#F9FAFB</color>
+    <color name="background_dark">#121212</color>
+
+    <!-- Primary Accent -->
+    <color name="primary_teal">#008080</color>
+    <!-- Alternate Primary Accent options you can swap in -->
+    <color name="primary_blue">#1565C0</color>
+    <color name="primary_forest_green">#2E7D32</color>
+
+    <!-- Secondary Accent -->
+    <color name="secondary_coral">#FF6F61</color>
+    <!-- Alternate Secondary Accent options -->
+    <color name="secondary_amber">#FFC107</color>
+    <color name="secondary_sky_blue">#81D4FA</color>
+
+    <!-- Navigation Bars and Tool Panels -->
+    <color name="nav_bar_dark_gray">#37474F</color>
+    <color name="nav_bar_blue_gray">#455A64</color>
+
+    <!-- Map Interaction Elements -->
+    <color name="point_orange">#FF5722</color>
+    <color name="point_cyan">#00BCD4</color>
+    <color name="track_lime_green">#CDDC39</color>
+    <color name="track_royal_blue">#3F51B5</color>
+
+    <!-- Text & Icons -->
+    <color name="text_dark">#212121</color>
+    <color name="text_light">#FFFFFF</color>
+    <color name="trash">#d90000</color>
+
+    <color name="selectedTool">@color/primary_blue</color>
+    <color name="selectedFeature">@color/secondary_coral</color>
+    <color name="unselectedTool">#FFCCCCCC</color>
+
 </resources>

@@ -1,17 +1,22 @@
 import android.animation.ValueAnimator
 import android.graphics.Color
+import android.graphics.Color.*
 import android.graphics.PorterDuff
 import android.graphics.drawable.AnimatedVectorDrawable
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import android.view.ViewGroup
 import android.widget.*
+import androidx.core.content.ContextCompat
 import androidx.core.view.children
 import androidx.core.view.isEmpty
 import com.minapps.trackeditor.R
 import com.minapps.trackeditor.feature_map_editor.presentation.ActionDescriptor
+import com.minapps.trackeditor.feature_map_editor.presentation.ActionType
+import com.minapps.trackeditor.feature_map_editor.presentation.util.vibrate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -36,7 +41,12 @@ class ToolboxPopup(
     lateinit var menuItems: List<ActionDescriptor>
 
     // Stores the selected item
-    private var selectedItemView: View? = null
+    private var selectedItemCount: MutableMap<ActionType, Int> = mutableMapOf()
+    private var selectedItemView: MutableMap<View, Boolean?> = mutableMapOf()
+    private var lastSelectedItemView: View? = null
+
+    //List of all tools to select and deselect
+    var toolViews: MutableList<Pair<ActionDescriptor, View>> = mutableListOf()
 
 
     /**
@@ -75,7 +85,7 @@ class ToolboxPopup(
             // Ensure width is measured now
             val width = popupContainer.width
             popupContainer.translationX = width.toFloat()
-            popupContainer.visibility = View.VISIBLE
+            popupContainer.visibility = VISIBLE
             animatePopupShow() // this animates to translationX = 0f
         }
     }
@@ -329,46 +339,38 @@ class ToolboxPopup(
 
         val toolboxMenu = popupContainer.findViewById<LinearLayout>(R.id.toolbox_menu)
 
-        menuItems.reversed().forEach { (iconRes, labelText, action, selectionCount) ->
+        menuItems.reversed().forEach { item ->
             val itemView = inflater.inflate(R.layout.tool_item, toolboxMenu, false)
 
-            if (iconRes == null || labelText == null || action == null || selectionCount == null) {
+            if(item.group != 2){
+                toolViews.add(item to itemView)
+            }
+
+            if (item.icon == null || item.label == null || item.action == null || item.selectionCount == null) {
                 itemView.findViewById<View>(R.id.separator).visibility = VISIBLE
                 itemView.findViewById<ImageView>(R.id.icon).visibility = GONE
                 itemView.findViewById<TextView>(R.id.label).visibility = GONE
             } else {
                 val iconCurrent = itemView.findViewById<ImageView>(R.id.icon)
-                iconCurrent.setImageResource(iconRes)
+                iconCurrent.setImageResource(item.icon)
                 val labelCurrent = itemView.findViewById<TextView>(R.id.label)
-                labelCurrent.text = labelText
+                labelCurrent.text = item.label
 
                 itemView.setOnClickListener {
-                    // Unselect previous item if exists
-                    selectedItemView?.let { previous ->
-                        val icon = previous.findViewById<ImageView>(R.id.icon)
-                        val label = previous.findViewById<TextView>(R.id.label)
-                        icon.setColorFilter(Color.LTGRAY, PorterDuff.Mode.SRC_IN)
-                        label.setTextColor(Color.LTGRAY)
+
+                    if(selectedItemView[itemView] == true){
+                        selectedItemCount[item.type] = selectedItemCount.getOrDefault(item.type, 0) + 1
+                    }else{
+                        selectedItemView[itemView] = true
+                        selectedItemCount[item.type] = 0
                     }
 
-                    // Select current
-                    selectedItemView = itemView
-                    iconCurrent.setColorFilter(Color.rgb(255, 167, 40), PorterDuff.Mode.SRC_IN)
-                    labelCurrent.setTextColor(Color.rgb(255, 167, 40))
+                    lastSelectedItemView = itemView
 
-                    // Launch action
                     coroutineScope.launch {
-                        action.invoke()
+                        item.action.invoke()
                     }
-
-                    if(selectionCount == 1){
-                        clearSelection()
-                    }
-
-                    if (isUnfolded) {
-
-                        toggleExpand(popupView as ViewGroup)
-                    }                }
+                }
             }
 
             toolboxMenu.addView(itemView, 0)
@@ -380,19 +382,86 @@ class ToolboxPopup(
      *
      */
     private fun clearSelection() {
-        val toolboxMenu = popupContainer.findViewById<LinearLayout>(R.id.toolbox_menu)
-
-        for (i in 0 until toolboxMenu.childCount) {
-            val item = toolboxMenu.getChildAt(i)
-
-            val icon = item.findViewById<ImageView>(R.id.icon)
-            val label = item.findViewById<TextView>(R.id.label)
-
-            icon?.setColorFilter(Color.LTGRAY, PorterDuff.Mode.SRC_IN)
-            label?.setTextColor(Color.LTGRAY)
+        toolViews.forEach { item ->
+            val color = ContextCompat.getColor(popupContainer.context, R.color.unselectedTool)
+            changeColor(item.second, color)
         }
 
-        selectedItemView = null
+        selectedItemView.keys.forEach { view ->
+            selectedItemView[view] = false
+        }
+        selectedItemCount.keys.forEach { key ->
+            selectedItemCount[key] = 0
+        }
+
+    }
+
+
+    fun toolSelected(tool: ActionType){
+
+        toolViews.forEach { item ->
+
+            // Type 2 tools don't change colour and affect the ui
+            if (tool.group == 2){
+                return
+            }
+
+            val group = item.first.group
+            val type = item.first.type
+            val selCount = selectedItemCount.getOrDefault(tool, 0)
+
+            var color: Int
+
+            // If same group, deselect all except same action/tool or if same tool
+            if(tool.group == 0 && group == 0 && tool == type){
+
+                color = LTGRAY
+                //Selected item once = selected
+                if(selCount%2 == 0){
+                    color = ContextCompat.getColor(popupContainer.context, R.color.selectedFeature)
+                }
+
+                changeColor(item.second, color)
+            }
+            // If group 0 then nothing is affected
+            else if (group == 0){
+                return@forEach
+            }
+
+            // If same group other than 0
+            if(group == tool.group && group != 0){
+                // If different tools, deselect
+                if(type != tool){
+                    color = LTGRAY
+                    selectedItemView[item.second] = false
+                }
+                // If same tool, select
+                else{
+                    color = LTGRAY
+                    //Selected item once = selected
+                    if(selCount%2 == 0){
+                        color = ContextCompat.getColor(popupContainer.context, R.color.selectedTool)
+                    }else{
+                        selectedItemView[item.second] = false
+                    }
+                }
+
+                changeColor(item.second, color)
+            }
+            // If different group nothing is affected
+            else return@forEach
+        }
+
+        if (isUnfolded) {
+            toggleExpand(popupView as ViewGroup)
+        }
+    }
+
+    private fun changeColor(view: View, color: Int){
+        val icon = view.findViewById<ImageView>(R.id.icon)
+        val label = view.findViewById<TextView>(R.id.label)
+        icon?.setColorFilter(color, PorterDuff.Mode.SRC_IN)
+        label?.setTextColor(color)
     }
 
 
