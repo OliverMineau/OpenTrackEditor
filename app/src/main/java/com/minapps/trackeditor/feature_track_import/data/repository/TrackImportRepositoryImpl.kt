@@ -6,7 +6,6 @@ import android.provider.OpenableColumns
 import android.util.Log
 import androidx.core.net.toFile
 import com.minapps.trackeditor.core.domain.model.Track
-import com.minapps.trackeditor.core.domain.repository.EditTrackRepositoryItf
 import com.minapps.trackeditor.feature_track_import.data.parser.GpxParser
 import com.minapps.trackeditor.feature_track_import.data.parser.TrackParser
 import com.minapps.trackeditor.feature_track_import.domain.repository.TrackImportRepository
@@ -20,8 +19,7 @@ import javax.inject.Inject
  * @param context Application context, used for content resolver access.
  */
 class TrackImportRepositoryImpl @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val editTrackRepository: EditTrackRepositoryItf
+    @ApplicationContext private val context: Context
 ) : TrackImportRepository {
 
     /**
@@ -32,7 +30,7 @@ class TrackImportRepositoryImpl @Inject constructor(
      * @return ImportedTrack instance or null if import fails.
      * @throws IllegalArgumentException if the file format is unsupported.
      */
-    override suspend fun importTrack(fileUri: Uri): Boolean {
+    override suspend fun importTrack(fileUri: Uri): Track? {
         val fileName = getFileName(context, fileUri)
         val fileSize = getFileSize(context, fileUri)
 
@@ -42,7 +40,7 @@ class TrackImportRepositoryImpl @Inject constructor(
         }
 
         val parser = when(format) {
-            "gpx" -> GpxParser(editTrackRepository)
+            "gpx" -> GpxParser()
             // Add other parsers in future
             else -> throw IllegalArgumentException("Unsupported format: $format")
         }

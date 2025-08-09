@@ -29,10 +29,8 @@ class ImportTrackViewModel @Inject constructor(
         viewModelScope.launch {
             val importedTrack = trackImportUseCase(uri) ?: return@launch
             Log.d("debug", "Imported track")
-
-            //TODO tell track was or wasnt imported
             Log.d("debug", "Displaying track...")
-            //addImportedTrackUseCase(importedTrack)
+            addImportedTrackUseCase(importedTrack)
         }
     }
 }

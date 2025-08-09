@@ -34,7 +34,7 @@ class EditTrackRepositoryImpl @Inject constructor(
      */
     override suspend fun addWaypoint(waypoint: Waypoint) {
         dao.insertWaypointWithTrackCheck(waypoint.toEntity(), )
-        //Log.d("debug", "Added to track: ${waypoint.trackId}, ${waypoint.id}")
+        Log.d("debug", "Added to track: ${waypoint.trackId}, ${waypoint.id}")
     }
 
     /**
@@ -46,7 +46,7 @@ class EditTrackRepositoryImpl @Inject constructor(
     override suspend fun addWaypoints(waypoints: List<Waypoint>) {
         //TODO
         dao.insertWaypoints(waypoints.map { it.toEntity() })
-        //Log.d("debug", "Added ${waypoints.size} waypoints")
+        Log.d("debug", "Added ${waypoints.size} waypoints")
     }
 
     /**
