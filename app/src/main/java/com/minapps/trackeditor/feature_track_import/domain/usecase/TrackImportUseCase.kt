@@ -19,13 +19,9 @@ class TrackImportUseCase @Inject constructor(
      *
      * @param fileUri The Uri pointing to the track file to import.
      */
-    suspend operator fun invoke(fileUri: Uri): Track?{
+    suspend operator fun invoke(fileUri: Uri): Boolean{
         val importedTrack = trackImportRepository.importTrack(fileUri)
-        Log.d("debug", "Track imported ${if (importedTrack != null) "successfully" else "unsuccessfully"} id:${importedTrack?.id}, (${importedTrack?.waypoints?.size} waypoints) e.g. ${importedTrack?.waypoints?.get(0)}}")
-
-        if(importedTrack == null){
-            Log.d("debug", "Track import error")
-        }
+        Log.d("debug", "Track imported ${if (importedTrack) "successfully" else "unsuccessfully"}")
 
         return importedTrack
     }

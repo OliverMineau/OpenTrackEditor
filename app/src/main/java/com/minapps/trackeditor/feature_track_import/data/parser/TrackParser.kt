@@ -17,7 +17,7 @@ interface TrackParser {
      * @param fileUri Uri of the file to parse.
      * @return ImportedTrack if parsing is successful, or null if parsing fails.
      */
-    suspend fun parse(context: Context, fileUri: Uri): Track?
+    suspend fun parse(context: Context, fileUri: Uri): Boolean
 
     /**
      * Check whether this parser can handle the given file Uri.
