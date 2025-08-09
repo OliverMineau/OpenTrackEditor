@@ -48,6 +48,7 @@ class GpxParser : TrackParser {
             var lat = 0.0
             var lon = 0.0
             var ele: Double? = null
+            var time: String? = null
 
             while (eventType != XmlPullParser.END_DOCUMENT) {
                 when (eventType) {
@@ -74,12 +75,19 @@ class GpxParser : TrackParser {
                                     name = parser.text
                                 }
                             }
+
+                            "time" -> {
+                                parser.next()
+                                if (parser.eventType == XmlPullParser.TEXT) {
+                                    time = parser.text
+                                }
+                            }
                         }
                     }
 
                     XmlPullParser.END_TAG -> {
                         if (parser.name == "trkpt") {
-                            waypoints.add(Waypoint(waypointId, lat, lon, ele, trackId))
+                            waypoints.add(Waypoint(waypointId, lat, lon, ele, time, trackId))
                             waypointId++
                         }
                     }

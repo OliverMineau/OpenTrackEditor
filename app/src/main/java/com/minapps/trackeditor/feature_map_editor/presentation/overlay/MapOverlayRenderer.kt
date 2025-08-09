@@ -11,6 +11,7 @@ import com.minapps.trackeditor.core.common.MutablePair
 import com.minapps.trackeditor.feature_map_editor.presentation.MapViewModel
 import com.minapps.trackeditor.feature_map_editor.presentation.MovingPointBundle
 import com.minapps.trackeditor.feature_map_editor.presentation.MutablePointAdapter
+import com.minapps.trackeditor.feature_map_editor.presentation.WaypointUpdate
 import com.minapps.trackeditor.feature_map_editor.presentation.interaction.PointInteractionListener
 import com.minapps.trackeditor.feature_map_editor.presentation.util.PaintType
 import org.osmdroid.api.IGeoPoint
@@ -259,7 +260,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             modifyingPolylines.remove(trackId)
         }
 
-        selectedPolyline = trackId
+        selectTrack(trackId)
         unselectPolyline(trackId)
 
         // Get the displayed polyline and clickable overlay and update its point
@@ -313,7 +314,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         val unselectedColor = Color.RED
         val paintColor = if(mapViewModel.editState.value.currentselectedTrack == trackId) selectedColor else color
 
-        selectedPolyline = trackId
+        selectTrack(trackId)
         unselectPolyline(trackId)
 
         // Create polyline with geoPoints and style
@@ -332,7 +333,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             }
             unselectPolyline(selectedPolyline)
             mMap.invalidate()
-            mapViewModel.selectedTrack(trackId)
+            selectTrack(trackId)
             true
         }
 
@@ -388,13 +389,17 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         return Color.HSVToColor(alpha, hsv)
     }
 
-    fun unselectPolyline(trackId: Int? = null){
+    fun unselectPolyline(trackId: Int? = null, forceUpdate: Boolean? = false){
         displayedPolylines.forEach { id, p1 ->
             if(trackId == null || id != trackId){
                 p1.first.outlinePaint.color = Color.RED
             }else{
                 p1.first.outlinePaint.color = Color.YELLOW
             }
+        }
+
+        if(forceUpdate == true){
+            mMap.invalidate()
         }
     }
 
@@ -428,6 +433,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
                     lat = it.latitude,
                     lng = it.longitude,
                     elv = null,
+                    time = "",
                     trackId = selectedBundle.trackId
                 )
             )
@@ -441,6 +447,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
                     lat = it.latitude,
                     lng = it.longitude,
                     elv = null,
+                    time = "",
                     trackId = selectedBundle.trackId
                 )
             )
@@ -455,6 +462,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
                     lat = it.latitude,
                     lng = it.longitude,
                     elv = null,
+                    time = "",
                     trackId = selectedBundle.trackId
                 )
             )
@@ -466,5 +474,88 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             selectedBundle.selectedPointIdx,
             selectedBundle.selectedPoint == null
         )
+    }
+
+    fun handleWaypointEvents(event: WaypointUpdate){
+        when (event) {
+            is WaypointUpdate.Added -> handleWaypointAdded(event.trackId, event.point)
+            is WaypointUpdate.AddedList -> handleWaypointAddedList(event.trackId, event.points)
+            is WaypointUpdate.Removed -> handleWaypointRemoved(event.trackId, event.index)
+            is WaypointUpdate.Moved -> handleWaypointMoved(event.trackId, event.points)
+            is WaypointUpdate.Cleared -> handleTrackCleared(event.trackId)
+            is WaypointUpdate.MovedDone -> handleWaypointMovedDone(event.trackId, event.pointId, event.point)
+        }
+    }
+
+    /**
+     * TODO
+     * Called When Map clicked
+     * Add point to polyline in optimised way
+     *
+     * @param trackId
+     * @param point
+     */
+    private fun handleWaypointAdded(trackId: Int, point: Pair<Double, Double>) {
+        displayNewAddedPoint(point, trackId)
+        Log.d("debug", "Added point")
+    }
+
+
+    /**
+     * Render list of points
+     *
+     * @param trackId
+     * @param points
+     */
+    private fun handleWaypointAddedList(trackId: Int, points: List<Pair<Double, Double>>) {
+        displayTrack(points, trackId, Color.RED, true)
+    }
+
+    /**
+     * Render moved point
+     *
+     * @param trackId
+     * @param points
+     */
+    private fun handleWaypointMoved(trackId: Int, points: List<Pair<Double, Double>>) {
+        displayLiveModification(points, trackId, Color.rgb(255, 128, 0))
+    }
+
+    /**
+     * Render final point move
+     *
+     * @param trackId
+     * @param pointId
+     * @param point
+     */
+    private fun handleWaypointMovedDone(trackId: Int, pointId: Int, point: Pair<Double, Double>) {
+        displayLiveModificationDone(point, trackId, pointId)
+    }
+
+    /**
+     * Remove point
+     *
+     * @param trackId
+     * @param index
+     */
+    private fun handleWaypointRemoved(trackId: Int, index: Int) {
+        // TODO
+    }
+
+    /**
+     * Remove track
+     *
+     * @param trackId
+     */
+    private fun handleTrackCleared(trackId: Int) {
+        // TODO
+    }
+
+    private fun selectTrack(trackId: Int?){
+        selectedPolyline = trackId
+
+        if(trackId != null){
+            mapViewModel.selectedTrack(trackId)
+        }
     }
 }

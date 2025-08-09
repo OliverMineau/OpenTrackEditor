@@ -1,4 +1,5 @@
 import android.animation.ValueAnimator
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Color.*
 import android.graphics.PorterDuff
@@ -11,6 +12,7 @@ import android.view.View.VISIBLE
 import android.view.ViewGroup
 import android.widget.*
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.children
 import androidx.core.view.isEmpty
 import com.minapps.trackeditor.R
@@ -372,7 +374,6 @@ class ToolboxPopup(
                     }
                 }
             }
-
             toolboxMenu.addView(itemView, 0)
         }
     }
@@ -463,6 +464,8 @@ class ToolboxPopup(
         icon?.setColorFilter(color, PorterDuff.Mode.SRC_IN)
         label?.setTextColor(color)
     }
+
+
 
 
 }

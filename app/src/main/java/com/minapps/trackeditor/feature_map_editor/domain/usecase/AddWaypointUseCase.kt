@@ -31,6 +31,7 @@ class AddWaypointUseCase @Inject constructor(
             lat = lat,
             lng = lng,
             elv = null,
+            time = "",
             trackId = trackId,
         )
         repository.addWaypoint(waypoint)

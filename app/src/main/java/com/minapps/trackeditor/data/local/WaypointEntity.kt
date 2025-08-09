@@ -39,5 +39,6 @@ data class WaypointEntity(
     val latitude: Double,
     val longitude: Double,
     val elevation: Double?,
+    val time: String?,
     val trackOwnerId: Int // FK to TrackEntity
 )

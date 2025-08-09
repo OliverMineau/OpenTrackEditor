@@ -14,5 +14,6 @@ data class Waypoint(
     val lat: Double,
     val lng: Double,
     val elv: Double?,
+    val time: String?,
     val trackId: Int,
 )

@@ -48,6 +48,9 @@ interface EditTrackRepositoryItf {
      */
     suspend fun insertTrack(track: TrackEntity): Long
 
+
+    suspend fun getFullTrack(trackId: Int): Track?
+
     /**
      * Delete all tracks and waypoints from the database.
      */

@@ -17,6 +17,7 @@ fun Waypoint.toEntity(): WaypointEntity {
         latitude = lat,
         longitude = lng,
         elevation = elv,
+        time = time,
         trackOwnerId = trackId,
     )
 }
@@ -36,6 +37,7 @@ fun WaypointEntity.toDomain(): Waypoint {
         lat = latitude,
         lng = longitude,
         elv = elevation,
+        time = time,
         trackId = trackOwnerId,
     )
 }

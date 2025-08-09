@@ -79,6 +79,10 @@ class EditTrackRepositoryImpl @Inject constructor(
         return dao.insertTrack(track)
     }
 
+    override suspend fun getFullTrack(trackId: Int): Track? {
+        return dao.getTrackById(trackId)?.toDomain( dao.getTrackWaypoints(trackId))
+    }
+
     /**
      * Clear all tracks and waypoints from the database.
      */

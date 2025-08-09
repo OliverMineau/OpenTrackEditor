@@ -1,20 +1,22 @@
 package com.minapps.trackeditor.feature_map_editor.presentation
 
 import android.content.Context
-import android.provider.Settings.Global.getString
+import android.net.Uri
 import android.util.Log
-import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minapps.trackeditor.R
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepositoryItf
+import com.minapps.trackeditor.feature_track_export.domain.usecase.ExportTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.ClearAllUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.CreateTrackUseCase
+import com.minapps.trackeditor.core.domain.usecase.GetFullTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackWaypointsUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.UIAction
 import com.minapps.trackeditor.feature_map_editor.presentation.util.vibrate
+import com.minapps.trackeditor.feature_track_export.domain.model.ExportFormat
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
@@ -22,10 +24,10 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
-import kotlin.collections.emptyList
 
 sealed class WaypointUpdate {
     data class Added(val trackId: Int, val point: Pair<Double, Double>) : WaypointUpdate()
@@ -103,6 +105,8 @@ class MapViewModel @Inject constructor(
     private val clearAllUseCase: ClearAllUseCase,
     private val createTrackUseCase: CreateTrackUseCase,
     private val getTrackWaypointsUseCase: GetTrackWaypointsUseCase,
+    private val getFullTrackUseCase: GetFullTrackUseCase,
+    private val exportTrackUseCase: ExportTrackUseCase,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -112,10 +116,17 @@ class MapViewModel @Inject constructor(
 
     private val _actions =
         MutableStateFlow<Map<DataDestination, List<ActionDescriptor>>>(emptyMap())
-    val actions: MutableStateFlow<Map<DataDestination, List<ActionDescriptor>>> = _actions
+    val actions: StateFlow<Map<DataDestination, List<ActionDescriptor>>> = _actions
 
     private val _editState = MutableStateFlow(EditState())
     val editState: StateFlow<EditState> = _editState
+
+    private val _showExportDialog = MutableSharedFlow<String>()
+    val showExportDialog: SharedFlow<String> = _showExportDialog
+
+    private val _exportResult = MutableSharedFlow<Result<Uri>>()
+    val exportResult = _exportResult.asSharedFlow()
+
 
     private val trackWaypointIndexes = mutableMapOf<Int, Double>()
 
@@ -191,6 +202,11 @@ class MapViewModel @Inject constructor(
     }
 
 
+    //TODO Temporary
+    fun selectTool(action: ActionType) {
+        selectedTool(action)
+    }
+
     /**
      * Propagates selected tool to UI
      * /!\ Update version, if same tool selected twice, wont trigger /!\
@@ -202,8 +218,22 @@ class MapViewModel @Inject constructor(
         context.vibrate(30)
 
 
-        _editState.update { it.copy(currentSelectedTool = action,
-            currentselectedTrack = null, version = System.nanoTime()) }
+        if (action == ActionType.EXPORT) {
+            _editState.update {
+                it.copy(
+                    currentSelectedTool = action,
+                    version = System.nanoTime()
+                )
+            }
+        } else {
+            _editState.update {
+                it.copy(
+                    currentSelectedTool = action,
+                    currentselectedTrack = null, version = System.nanoTime()
+                )
+            }
+        }
+
         Log.d("debug", "Selected ${action.label}")
 
         viewModelScope.launch {
@@ -216,148 +246,236 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    private suspend fun toolExportTrack() {
-        Log.d("debug", "Exporting Track")
-    }
+    fun toolExport(fileName: String) {
 
-    private suspend fun toolGetScreenshot() {
-        Log.d("debug", "Screenshot")
-    }
-
-    /**
-     * Add waypoint to selected track
-     *
-     * @param lat
-     * @param lng
-     */
-    fun addWaypoint(lat: Double, lng: Double) {
-
-        val selectedTrackId = editState.value.currentselectedTrack
-        val currentTool = editState.value.currentSelectedTool
-
-        // If no track is selected, do nothing
-        if (selectedTrackId == null) return
-
-        // If not Add as selected tool
-        if (currentTool != ActionType.ADD) return
-
-        val currentIndex = trackWaypointIndexes[selectedTrackId] ?: 0.0
+        val format = ExportFormat.GPX
 
         viewModelScope.launch {
-            addWaypointUseCase(lat, lng, currentIndex.toDouble(), selectedTrackId)
-            // Notify observers that a waypoint was added
-            _waypointEvents.emit(WaypointUpdate.Added(selectedTrackId, lat to lng))
-            // Update index only after successful addition
-            trackWaypointIndexes[selectedTrackId] = currentIndex + 1
-        }
-    }
-
-
-    /**
-     * Create new track entity if no track is selected
-     *
-     * @return Track id (Never Null)
-     */
-    suspend fun createNewTrackIfNeeded(): Int {
-
-        var selectedTrackId = editState.value.currentselectedTrack
-
-        // If no track selected
-        if (selectedTrackId == null) {
-            //Set default track name
-            val newId = createTrackUseCase(context.getString(R.string.track_no_name))
-
-            selectedTrackId = newId
-            trackWaypointIndexes[selectedTrackId] = 0.0
-            _editState.update {
-                it.copy(
-                    currentselectedTrack = selectedTrackId,
-                    version = System.nanoTime()
-                )
-            }
-
-            Log.d("debug", "Created new track with ID: $newId")
-        }
-        return selectedTrackId
-    }
-
-    fun clearAll() {
-        viewModelScope.launch {
-            clearAllUseCase()
-        }
-    }
-
-    /**
-     * Manage single tap
-     *
-     * @param geoPoint
-     */
-    suspend fun singleTapConfirmed(geoPoint: GeoPoint) {
-        val trackId = createNewTrackIfNeeded()
-        addWaypoint(geoPoint.latitude, geoPoint.longitude)
-        Log.d(
-            "debug",
-            "Added waypoint to track $trackId at: ${geoPoint.latitude}, ${geoPoint.longitude}"
-        )
-    }
-
-
-    /**
-     * Reemit imported track to flow listened to by mapActivity
-     *
-     * @param trackId
-     */
-    suspend fun loadTrackWaypoints(trackId: Int) {
-        val waypoints = getTrackWaypointsUseCase(trackId)
-
-        if (waypoints.isNotEmpty()) {
-            //Reemit points for mapActivity
-            val points = waypoints.map { wp -> Pair(wp.lat, wp.lng) }
-            _waypointEvents.emit(WaypointUpdate.AddedList(trackId, points))
-        }
-    }
-
-    /**
-     * Send coord to activity and to database if set
-     *
-     * @param waypointList
-     * @param pointId
-     * @param isPointSet
-     */
-    fun movePoint(waypointList: List<Waypoint>, pointId: Int?, isPointSet: Boolean = false) {
-
-        viewModelScope.launch {
-            val trackId = waypointList.first().trackId
-
-            // Point is set, update database
-            if (isPointSet && pointId != null) {
-                addWaypointUseCase(
-                    waypointList.first().lat,
-                    waypointList.first().lng,
-                    pointId.toDouble(),
-                    trackId = trackId
-                )
-
-                _waypointEvents.emit(
-                    WaypointUpdate.MovedDone(
-                        trackId,
-                        pointId,
-                        waypointList.first().lat to waypointList.first().lng
-                    )
-                )
+            val trackId = editState.value.currentselectedTrack
+            if (trackId == null) {
+                _exportResult.emit(Result.failure(Exception("No track selected")))
                 return@launch
             }
 
-            val points = waypointList.map { wp -> Pair(wp.lat, wp.lng) }
-            _waypointEvents.emit(WaypointUpdate.Moved(trackId, points))
+            try {
+                val success = exportTrackUseCase(trackId, fileName, format)
+                if (success) {
+                    Log.d("debug", "export success, mapvm")
+                    //_exportResult.emit(Result.success(Unit))
+                } else {
+                    Log.d("debug", "export fail, mapvm")
+                    //_exportResult.emit(Result.failure(Exception("Export failed")))
+                }
+            } catch (e: Exception) {
+                _exportResult.emit(Result.failure(e))
+            }
         }
     }
 
-    fun selectedTrack(trackId: Int) {
-        Log.d("debug", "Selected track $trackId")
-        _editState.update { it.copy(currentselectedTrack = trackId, version = System.nanoTime()) }
+
+
+
+    /*fun toolExport(name: String) {
+
+        viewModelScope.launch {
+
+            /*val trackId = editState.value.currentselectedTrack ?: return@launch
+            val track = getFullTrackUseCase(trackId)
+            if (track == null || track.waypoints.isEmpty()) {
+                Toast.makeText(context, "No waypoints to export", Toast.LENGTH_SHORT).show()
+                Log.d("debug", "No waypoints to export")
+                return@launch
+            }
+
+            // Convert to GPX
+            val exporter = GpxExporter()
+            val gpxString = exporter.export(track)
+
+            val uri = FileExporter.saveTextAndGetUri(context, name, gpxString)
+
+            Toast.makeText(context, "Exported to : $uri", Toast.LENGTH_SHORT).show()*/
+
+        }
+
+    }*/
+
+private suspend fun toolExportTrack() {
+    Log.d("debug", "Exporting Track Fun")
+
+    // Emit event to UI to show dialog with default filename
+    _showExportDialog.emit("track.gpx")
+
+
+    /*val trackId = editState.value.currentselectedTrack ?: return
+    val track = getFullTrackUseCase(trackId)
+    if (track == null || track.waypoints.isEmpty()) {
+        Toast.makeText(context, "No waypoints to export", Toast.LENGTH_SHORT).show()
+        Log.d("debug", "No waypoints to export")
+        return
+    }
+
+    // Convert to GPX
+    val exporter = GpxExporter()
+    val gpxString = exporter.export(track)
+
+    FileExporter.promptFileNameAndExport(context,gpxString)
+    // Save & Share
+    //val uri = FileExporter.saveTextAndGetUri(context, "track_$trackId.gpx", gpxString)
+    //FileExporter.shareFile(context, uri, "application/gpx+xml")
+
+    //Log.d("debug", "Exported to $uri")
+    //Toast.makeText(context, "Exported to : $uri", Toast.LENGTH_SHORT).show()
+*/
+}
+
+
+private suspend fun toolGetScreenshot() {
+    Log.d("debug", "Screenshot")
+}
+
+/**
+ * Add waypoint to selected track
+ *
+ * @param lat
+ * @param lng
+ */
+fun addWaypoint(lat: Double, lng: Double) {
+
+    val selectedTrackId = editState.value.currentselectedTrack
+    val currentTool = editState.value.currentSelectedTool
+
+    // If no track is selected, do nothing
+    if (selectedTrackId == null) return
+
+    // If not Add as selected tool
+    if (currentTool != ActionType.ADD) return
+
+    val currentIndex = trackWaypointIndexes[selectedTrackId] ?: 0.0
+
+    viewModelScope.launch {
+        addWaypointUseCase(lat, lng, currentIndex.toDouble(), selectedTrackId)
+        // Notify observers that a waypoint was added
+        _waypointEvents.emit(WaypointUpdate.Added(selectedTrackId, lat to lng))
+        // Update index only after successful addition
+        trackWaypointIndexes[selectedTrackId] = currentIndex + 1
+    }
+}
+
+
+/**
+ * Create new track entity if no track is selected
+ *
+ * @return Track id (Never Null)
+ */
+suspend fun createNewTrackIfNeeded(): Int {
+
+    var selectedTrackId = editState.value.currentselectedTrack
+
+    // If no track selected
+    if (selectedTrackId == null) {
+        //Set default track name
+        val newId = createTrackUseCase(context.getString(R.string.track_no_name))
+
+        selectedTrackId = newId
+        trackWaypointIndexes[selectedTrackId] = 0.0
+        _editState.update {
+            it.copy(
+                currentselectedTrack = selectedTrackId,
+                version = System.nanoTime()
+            )
+        }
+
+        Log.d("debug", "Created new track with ID: $newId")
+    }
+    return selectedTrackId
+}
+
+fun clearAll() {
+    viewModelScope.launch {
+        clearAllUseCase()
+    }
+}
+
+/**
+ * Manage single tap
+ *
+ * @param geoPoint
+ */
+suspend fun singleTapConfirmed(geoPoint: GeoPoint) {
+    val trackId = createNewTrackIfNeeded()
+    addWaypoint(geoPoint.latitude, geoPoint.longitude)
+    Log.d(
+        "debug",
+        "Added waypoint to track $trackId at: ${geoPoint.latitude}, ${geoPoint.longitude}"
+    )
+}
+
+
+/**
+ * Reemit imported track to flow listened to by mapActivity
+ *
+ * @param trackId
+ */
+suspend fun loadTrackWaypoints(trackId: Int) {
+    val waypoints = getTrackWaypointsUseCase(trackId)
+
+    if (waypoints.isNotEmpty()) {
+        //Reemit points for mapActivity
+        val points = waypoints.map { wp -> Pair(wp.lat, wp.lng) }
+        _waypointEvents.emit(WaypointUpdate.AddedList(trackId, points))
+    }
+}
+
+/**
+ * Send coord to activity and to database if set
+ *
+ * @param waypointList
+ * @param pointId
+ * @param isPointSet
+ */
+fun movePoint(waypointList: List<Waypoint>, pointId: Int?, isPointSet: Boolean = false) {
+
+    viewModelScope.launch {
+        val trackId = waypointList.first().trackId
+
+        // Point is set, update database
+        if (isPointSet && pointId != null) {
+            addWaypointUseCase(
+                waypointList.first().lat,
+                waypointList.first().lng,
+                pointId.toDouble(),
+                trackId = trackId
+            )
+
+            _waypointEvents.emit(
+                WaypointUpdate.MovedDone(
+                    trackId,
+                    pointId,
+                    waypointList.first().lat to waypointList.first().lng
+                )
+            )
+            return@launch
+        }
+
+        val points = waypointList.map { wp -> Pair(wp.lat, wp.lng) }
+        _waypointEvents.emit(WaypointUpdate.Moved(trackId, points))
+    }
+}
+
+/**
+ * Updates selected track
+ *
+ * @param trackId
+ * @param vibrate
+ */
+fun selectedTrack(trackId: Int, vibrate: Boolean = false) {
+    Log.d("debug", "Selected track $trackId")
+    _editState.update { it.copy(currentselectedTrack = trackId, version = System.nanoTime()) }
+
+    if (vibrate) {
         context.vibrate(30)
     }
+}
 
 
 }

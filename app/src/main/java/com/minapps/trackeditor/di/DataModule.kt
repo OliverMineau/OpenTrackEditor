@@ -67,7 +67,7 @@ abstract class DataModule {
                 AppDatabase::class.java,
                 "track_editor_db"
             )
-                .fallbackToDestructiveMigration(true) // ⬅️ wipes and recreates DB when schema changes
+                .fallbackToDestructiveMigration(true)
                 .build()
         }
 
