@@ -2,40 +2,56 @@ package com.minapps.trackeditor.feature_track_export.data.formatter
 
 import com.minapps.trackeditor.core.domain.model.Track
 import jakarta.inject.Inject
+import java.io.OutputStream
 import java.util.Locale
 import kotlin.text.iterator
 
-class GpxExporter @Inject constructor() : TrackExporter{
+class GpxExporter @Inject constructor() : TrackExporter {
 
-    override fun export(track: Track): String {
-        val sb = StringBuilder()
+    override fun export(track: Track, outputStream: OutputStream) {
 
-        sb.append("""<?xml version="1.0" encoding="UTF-8"?>""").append("\n")
-        sb.append(
-            """<gpx version="1.1" creator="TrackEditorApp" xmlns="http://www.topografix.com/GPX/1/1">"""
-        ).append("\n")
+        outputStream.writer().use { writer ->
 
-        sb.append("<trk>").append("\n")
-        sb.append("  <name>${escapeXml(track.name)}</name>").append("\n")
-        sb.append("  <trkseg>").append("\n")
+            writer.write("""<?xml version="1.0" encoding="UTF-8"?>""")
+            writer.write("\n")
+            writer.write(
+                """<gpx version="1.1" creator="TrackEditorApp" xmlns="http://www.topografix.com/GPX/1/1">"""
+            )
+            writer.write("\n")
 
-        for (wp in track.waypoints) {
-            val latStr = String.format(Locale.US, "%f", wp.lat)
-            val lonStr = String.format(Locale.US, "%f", wp.lng)
+            writer.write("<trk>")
+            writer.write("\n")
 
-            sb.append("    <trkpt lat=\"$latStr\" lon=\"$lonStr\">").append("\n")
-            wp.elv?.let { sb.append("      <ele>${String.format(Locale.US, "%f", it)}</ele>").append("\n") }
+            writer.write("  <name>${escapeXml(track.name)}</name>")
+            writer.write("\n")
+            writer.write("  <trkseg>")
+            writer.write("\n")
 
-            wp.time?.let { sb.append("      <time>$it</time>").append("\n") }
+            for (wp in track.waypoints) {
+                val latStr = String.format(Locale.US, "%f", wp.lat)
+                val lonStr = String.format(Locale.US, "%f", wp.lng)
 
-            sb.append("    </trkpt>").append("\n")
+                writer.write("    <trkpt lat=\"$latStr\" lon=\"$lonStr\">")
+                writer.write("\n")
+                wp.elv?.let {
+                    writer.write("      <ele>${String.format(Locale.US, "%f", it)}</ele>")
+                    writer.write("\n")
+                }
+
+                wp.time?.let { writer.write("      <time>$it</time>")
+                    writer.write("\n") }
+
+                writer.write("    </trkpt>")
+                writer.write("\n")
+            }
+
+            writer.write("  </trkseg>")
+            writer.write("\n")
+            writer.write("</trk>")
+            writer.write("\n")
+            writer.write("</gpx>")
+            writer.write("\n")
         }
-
-        sb.append("  </trkseg>").append("\n")
-        sb.append("</trk>").append("\n")
-        sb.append("</gpx>").append("\n")
-
-        return sb.toString()
     }
 
     private fun escapeXml(input: String?): String {

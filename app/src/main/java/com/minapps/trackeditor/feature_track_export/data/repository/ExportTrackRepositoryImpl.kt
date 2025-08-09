@@ -15,6 +15,7 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.io.File
 import java.io.FileOutputStream
+import java.io.OutputStream
 
 
 @ViewModelScoped
@@ -26,16 +27,19 @@ class ExportTrackRepositoryImpl @Inject constructor(
         return trackDao.getTrackById(trackId)?.toDomain( trackDao.getTrackWaypoints(trackId))
     }
 
-    override suspend fun saveExportedTrack(fileName: String, content: String): Boolean {
+    override suspend fun saveExportedTrack(fileName: String, exportFunc: (OutputStream) -> Unit): Boolean {
         val downloadsFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         if (!downloadsFolder.exists()) downloadsFolder.mkdirs()
 
         val file = File(downloadsFolder, fileName)
         return try {
-            FileOutputStream(file).use { it.write(content.toByteArray()) }
+            FileOutputStream(file).use { outputStream ->
+                exportFunc(outputStream)
+            }
             true
         } catch (e: Exception) {
             false
         }
     }
+
 }

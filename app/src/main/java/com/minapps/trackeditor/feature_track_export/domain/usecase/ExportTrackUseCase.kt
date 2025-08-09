@@ -21,8 +21,10 @@ class ExportTrackUseCase @Inject constructor(
         if (track.waypoints.isEmpty()) return false
 
         val exporter = exporterFactory.getExporter(format)
-        val fileContent = exporter.export(track)
 
-        return repository.saveExportedTrack(fileName, fileContent)
+        return repository.saveExportedTrack(fileName) { outputStream ->
+            exporter.export(track, outputStream)
+        }
     }
+
 }
