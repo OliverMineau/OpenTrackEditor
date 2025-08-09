@@ -13,6 +13,7 @@ import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointUseC
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.ClearAllUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.CreateTrackUseCase
 import com.minapps.trackeditor.core.domain.usecase.GetFullTrackUseCase
+import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackLastWaypointIndexUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackWaypointsUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.UIAction
 import com.minapps.trackeditor.feature_map_editor.presentation.util.vibrate
@@ -107,7 +108,8 @@ class MapViewModel @Inject constructor(
     private val getTrackWaypointsUseCase: GetTrackWaypointsUseCase,
     private val getFullTrackUseCase: GetFullTrackUseCase,
     private val exportTrackUseCase: ExportTrackUseCase,
-    @ApplicationContext private val context: Context
+    private val getTrackLastWaypointIndexUseCase: GetTrackLastWaypointIndexUseCase,
+    @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
     // Expose data events (Add,Remove,Move points) to other classes (MapActivity)
@@ -350,9 +352,11 @@ fun addWaypoint(lat: Double, lng: Double) {
     // If not Add as selected tool
     if (currentTool != ActionType.ADD) return
 
-    val currentIndex = trackWaypointIndexes[selectedTrackId] ?: 0.0
 
     viewModelScope.launch {
+
+        val currentIndex = trackWaypointIndexes[selectedTrackId] ?: (getTrackLastWaypointIndexUseCase(selectedTrackId) + 1.0)
+
         addWaypointUseCase(lat, lng, currentIndex.toDouble(), selectedTrackId)
         // Notify observers that a waypoint was added
         _waypointEvents.emit(WaypointUpdate.Added(selectedTrackId, lat to lng))

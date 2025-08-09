@@ -69,6 +69,11 @@ class EditTrackRepositoryImpl @Inject constructor(
         return dao.getTrackWaypoints(trackId).map { it.toDomain() }
     }
 
+
+    override suspend fun getTrackLastWaypointIndex(trackId: Int): Double {
+        return dao.getTrackLastWaypointIndex(trackId)
+    }
+
     /**
      * Insert a new Track entity into the database.
      *

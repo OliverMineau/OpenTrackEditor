@@ -70,4 +70,6 @@ interface EditTrackRepositoryItf {
      * @param waypoints The domain Waypoint to add
      */
     suspend fun addWaypoints(waypoints: List<Waypoint>)
+
+    suspend fun getTrackLastWaypointIndex(trackId: Int): Double
 }

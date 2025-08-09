@@ -25,6 +25,10 @@ interface TrackDao {
     @Query("SELECT * FROM tracks WHERE trackId = :id LIMIT 1")
     suspend fun getTrackById(id: Int): TrackEntity?
 
+
+    @Query("""SELECT MAX(waypointId) FROM waypoints WHERE trackOwnerId = :trackId""")
+    suspend fun getTrackLastWaypointIndex(trackId: Int): Double
+
     /**
      * Insert a waypoint into the database.
      * If the waypoint already exists, it will be replaced.
