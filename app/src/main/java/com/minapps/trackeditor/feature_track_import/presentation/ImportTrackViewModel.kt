@@ -26,11 +26,11 @@ class ImportTrackViewModel @Inject constructor(
      * @param uri The Uri pointing to the track file to be imported.
      */
     fun importTrack(uri: Uri) {
-        viewModelScope.launch {
+        /*viewModelScope.launch {
             val importedTrack = trackImportUseCase(uri) ?: return@launch
             Log.d("debug", "Imported track")
             Log.d("debug", "Displaying track...")
             addImportedTrackUseCase(importedTrack)
-        }
+        }*/
     }
 }

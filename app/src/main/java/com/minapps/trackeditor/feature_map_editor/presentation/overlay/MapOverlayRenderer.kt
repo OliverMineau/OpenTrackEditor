@@ -59,7 +59,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             MapView.getTileSystem().minLatitude,
             0
         );
-        mMap.minZoomLevel = 3.0
+        mMap.minZoomLevel = 4.0
     }
 
 

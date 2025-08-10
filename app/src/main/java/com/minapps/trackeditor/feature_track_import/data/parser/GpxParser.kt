@@ -3,8 +3,12 @@ package com.minapps.trackeditor.feature_track_import.data.parser
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.collection.emptyIntSet
 import com.minapps.trackeditor.core.domain.model.Track
 import com.minapps.trackeditor.core.domain.model.Waypoint
+import com.minapps.trackeditor.feature_map_editor.presentation.util.CountingInputStream
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import org.xmlpull.v1.XmlPullParserFactory
@@ -28,27 +32,32 @@ class GpxParser : TrackParser {
      * Parses the GPX file, extracting track name and waypoints.
      * Handles XML parsing exceptions and returns null if parsing fails.
      */
-    override suspend fun parse(context: Context, fileUri: Uri): Track? {
+    override suspend fun parse(context: Context, fileUri: Uri, fileSize : Long, batchSize: Int): Flow<ParsedData> = flow {
         val waypoints = mutableListOf<Waypoint>()
         var inputStream: InputStream? = null
 
         try {
-            inputStream = context.contentResolver.openInputStream(fileUri)
+            val totalFileSize = fileSize
+
+            val rawInputStream = context.contentResolver.openInputStream(fileUri)
                 ?: throw IOException("Cannot open input stream")
+
+            val countingStream = CountingInputStream(rawInputStream)
+            inputStream = countingStream
 
             val factory = XmlPullParserFactory.newInstance()
             val parser = factory.newPullParser()
-            parser.setInput(inputStream, null)
+            parser.setInput(countingStream, null)
 
             var eventType = parser.eventType
             var name = "Imported GPX Track"
-
             var waypointId = 0.0
             var trackId = 0
             var lat = 0.0
             var lon = 0.0
             var ele: Double? = null
             var time: String? = null
+            var hasEmitedTrack = false
 
             while (eventType != XmlPullParser.END_DOCUMENT) {
                 when (eventType) {
@@ -57,9 +66,14 @@ class GpxParser : TrackParser {
                             "trkseg" -> trackId++
 
                             "trkpt" -> {
+                                if (!hasEmitedTrack) {
+                                    emit(ParsedData.TrackMetadata(Track(0, name, "", 0, null)))
+                                    hasEmitedTrack = true
+                                }
+
                                 lat = parser.getAttributeValue(null, "lat").toDouble()
                                 lon = parser.getAttributeValue(null, "lon").toDouble()
-                                ele = null // reset elevation for this point
+                                ele = null
                             }
 
                             "ele" -> {
@@ -89,16 +103,31 @@ class GpxParser : TrackParser {
                         if (parser.name == "trkpt") {
                             waypoints.add(Waypoint(waypointId, lat, lon, ele, time, trackId))
                             waypointId++
+
+                            if (waypoints.size >= batchSize) {
+                                emit(ParsedData.Waypoints(waypoints))
+                                waypoints.clear()
+                            }
                         }
                     }
                 }
+
+                // Emit progress every 1000 waypoints
+                if (totalFileSize > 0 && waypointId % 1000 == 0.0) {
+                    val progressPercent = (countingStream.bytesRead * 100 / totalFileSize).toInt()
+                    emit(ParsedData.Progress(progressPercent))
+                }
+
                 eventType = parser.next()
             }
 
+            if (waypoints.isNotEmpty()) {
+                emit(ParsedData.Waypoints(waypoints))
+            }
 
-            Log.d("GpxParser", "Track parsed successfully: $name with ${waypoints.size} waypoints")
-            //TODO set real values
-            return Track(0,name, "",0, waypoints)
+
+            // Emit 100% progress on finish
+            emit(ParsedData.Progress(100))
 
         } catch (e: XmlPullParserException) {
             Log.e("GpxParser", "XML parsing error: ${e.message}", e)
@@ -112,8 +141,6 @@ class GpxParser : TrackParser {
             } catch (ignored: IOException) {
             }
         }
-
-        // Return null on error
-        return null
     }
+
 }

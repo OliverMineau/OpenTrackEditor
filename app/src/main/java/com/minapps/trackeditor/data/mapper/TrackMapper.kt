@@ -2,9 +2,7 @@ package com.minapps.trackeditor.data.mapper
 
 import com.minapps.trackeditor.core.domain.model.Track
 import com.minapps.trackeditor.data.local.WaypointEntity
-import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.data.local.TrackEntity
-import kotlin.Long
 
 /**
  * Converts a domain Track object into a database TrackEntity.

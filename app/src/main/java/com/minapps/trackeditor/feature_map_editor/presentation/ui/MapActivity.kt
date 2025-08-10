@@ -2,18 +2,15 @@ package com.minapps.trackeditor.feature_map_editor.presentation.ui
 
 import ToolboxPopup
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
-import android.widget.EditText
-import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -39,8 +36,11 @@ import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import androidx.core.view.size
 import androidx.core.view.get
+import com.google.android.gms.location.LocationServices
 import com.minapps.trackeditor.feature_map_editor.presentation.EditState
+import com.minapps.trackeditor.feature_map_editor.presentation.ProgressData
 import com.minapps.trackeditor.feature_track_export.presentation.utils.showSaveFileDialog
+import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 
 @AndroidEntryPoint
 class MapActivity : AppCompatActivity(), MapListener {
@@ -58,7 +58,8 @@ class MapActivity : AppCompatActivity(), MapListener {
         ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
-            importTrackViewModel.importTrack(it)
+            //importTrackViewModel.importTrack(it)
+            mapViewModel.importTrack(it)
         }
     }
 
@@ -75,7 +76,7 @@ class MapActivity : AppCompatActivity(), MapListener {
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            //if (isGranted) setupMyLocation()
+            if (isGranted) centerMapOnMyLocationOnce()
         }
 
 
@@ -96,13 +97,16 @@ class MapActivity : AppCompatActivity(), MapListener {
         binding.osmmap.addMapListener(this)
 
         // Request location permission here or check it
-        //requestLocationPermissionIfNeeded()
+        requestLocationPermissionIfNeeded()
 
         // Setup map event listeners (tap, long press)
         setupMapClickListener()
 
         // Setup bottom navigation UI and event listeners
         setupBottomNav()
+
+        // Setup the zoom
+        setupZoom()
 
         // Initialize toolbox popup
         toolboxPopup =
@@ -121,7 +125,7 @@ class MapActivity : AppCompatActivity(), MapListener {
         ) {
             requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         } else {
-            //setupMyLocation()
+            centerMapOnMyLocationOnce()
         }
     }
 
@@ -191,69 +195,6 @@ class MapActivity : AppCompatActivity(), MapListener {
         }
     }
 
-/*
-    private fun setupBottomNavs() {
-
-        val navBinding = BottomNavigationBinding.bind(binding.root)
-        val mainNav = navBinding.mainBottomNavigation
-        val editNav = navBinding.editBottomNavigation
-
-        mainNav.setOnItemSelectedListener {
-            editNav.visibility = View.GONE
-            toolboxPopup.hide()
-            when (it.itemId) {
-                R.id.nav_edit -> {
-                    editNav.visibility = View.VISIBLE
-                }
-
-                R.id.nav_add_track -> {
-                    mapViewModel.selectedTool(ActionType.NONE)
-                    openFileExplorer()
-                }
-
-                else -> {
-
-                }
-            }
-
-            mapRenderer.unselectPolyline()
-            mMap.invalidate()
-            mapViewModel.selectedTool(ActionType.NONE)
-            true
-        }
-
-        editNav.setOnItemSelectedListener {
-
-            mapRenderer.unselectPolyline()
-            mMap.invalidate()
-
-            when (it.itemId) {
-                R.id.nav_toolbox -> {
-                    mapViewModel.selectedTool(ActionType.NONE)
-                    toolboxPopup.show()
-                    true
-                }
-
-                R.id.nav_add -> {
-                    mapViewModel.selectedTool(ActionType.ADD)
-                    true
-                }
-
-                R.id.nav_remove -> {
-                    mapViewModel.selectedTool(ActionType.REMOVE)
-                    true
-                }
-
-                else -> {
-                    //hidePopup()
-                    mapViewModel.selectedTool(ActionType.NONE)
-                    toolboxPopup.hide()
-                    true
-                }
-            }
-        }
-    }*/
-
     private fun observeViewModel() {
 
         lifecycleScope.launch {
@@ -297,6 +238,12 @@ class MapActivity : AppCompatActivity(), MapListener {
                         )
                     }
                 }
+
+                launch {
+                    mapViewModel.progressState.collect { progressData ->
+                        handleProgressEvent(progressData)
+                    }
+                }
             }
         }
     }
@@ -322,6 +269,25 @@ class MapActivity : AppCompatActivity(), MapListener {
     fun handleEditStateEvents(event: EditState) {
         toolboxPopup.toolSelected(event.currentSelectedTool)
         updateSelectedToolUI(event.currentSelectedTool)
+    }
+
+    fun handleProgressEvent(data: ProgressData){
+
+        val progressBar = binding.progressBar
+        val progressTextView = binding.progressTextView
+        if(data.isDisplayed){
+            progressBar.visibility = View.VISIBLE
+            progressTextView.visibility = View.VISIBLE
+        }else{
+            progressBar.visibility = View.GONE
+            progressTextView.visibility = View.GONE
+            progressBar.setProgress(0, true)
+            progressTextView.text = "0%"
+            return
+        }
+
+        progressBar.setProgress(data.progress, true)
+        progressTextView.text = "${data.progress}%"
     }
 
     private fun updateSelectedToolUI(tool: ActionType) {
@@ -351,339 +317,57 @@ class MapActivity : AppCompatActivity(), MapListener {
         filePicker.launch(mimeType)
     }
 
-
     override fun onScroll(event: ScrollEvent?): Boolean = false
     override fun onZoom(event: ZoomEvent?): Boolean = false
 
-}
+    fun setupZoom(){
+        binding.plusBtn.setOnClickListener {
+            binding.osmmap.controller.zoomIn()
+        }
+        binding.minusBtn.setOnClickListener {
+            binding.osmmap.controller.zoomOut()
+        }
+    }
 
-    /*override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        // Load osmdroid configuration *before* setContentView
-        Configuration.getInstance().load(
-            applicationContext,
-            getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE)
-        )
-
-        binding = ActivityMapBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        // Setup osmmap
-        mMap = binding.osmmap
-        mapRenderer = MapOverlayRenderer(mMap, mapViewModel)
-        mapRenderer.setSettings()
-
-        // Request location permission before enabling overlay
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED) {
-            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+    private fun centerMapOnMyLocationOnce() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            // Permission granted, get location
+            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                location?.let {
+                    val geoPoint = GeoPoint(it.latitude, it.longitude)
+                    binding.osmmap.controller.setCenter(geoPoint)
+                    binding.osmmap.controller.animateTo(geoPoint)
+                }
+            }
         } else {
-            //setupMyLocation()
-        }
-
-        mMap.addMapListener(this)
-
-        // Add map click listener that calls viewmodel
-        val mapEventsReceiver = object : MapEventsReceiver {
-            //map to mapViewModel singleTap
-            override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
-                p?.let {
-                    lifecycleScope.launch {
-                        mapViewModel.singleTapConfirmed(it)
-                    }
-                }
-                return true
-            }
-
-            //map to mapViewModel longPress
-            override fun longPressHelper(p: GeoPoint?): Boolean {
-                return false
-            }
-        }
-        val overlayEvents = MapEventsOverlay(mapEventsReceiver)
-        mMap.overlays.add(overlayEvents)
-
-        setupBottomNavs()
-        toolboxPopup = ToolboxPopup(findViewById(R.id.popup_container), layoutInflater, lifecycleScope)
-
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                //Safely collect waypoint events from the ViewModel, only while the Activity is visible
-                launch {
-                    mapViewModel.waypointEvents.collect { event ->
-                        when (event) {
-                            is WaypointUpdate.Added -> handleWaypointAdded(event.trackId, event.point)
-                            is WaypointUpdate.AddedList -> handleWaypointAddedList(event.trackId, event.points)
-                            is WaypointUpdate.Removed -> handleWaypointRemoved(event.trackId, event.index)
-                            is WaypointUpdate.Moved -> handleWaypointMoved(event.trackId, event.points)
-                            is WaypointUpdate.Cleared -> handleTrackCleared(event.trackId)
-                            is WaypointUpdate.MovedDone -> handleWaypointMovedDone(event.trackId, event.pointId, event.point)
-                        }
-                    }
-                }
-
-                launch {
-                    mapViewModel.actions.collect { actionMap ->
-                        actionMap.forEach { (destination, actions) ->
-                            when (destination) {
-                                DataDestination.EDIT_TOOL_POPUP -> handleToolAdded(actions)
-                                DataDestination.EDIT_BOTTOM_NAV -> TODO()
-                            }
-                        }
-
-                    }
-                }
-
-                launch {
-                    mapViewModel.editState.collect { state ->
-                        Log.d("debug", "Received click")
-                        toolboxPopup.toolSelected(state.currentSelectedTool)
-                        toolSelected(state.currentSelectedTool)
-                    }
-                }
-            }
-        }
-    }*/
-    /*
-
-
-fun toolSelected(tool: ActionType) {
-    val navBinding = BottomNavigationBinding.bind(binding.root)
-    val editNav = navBinding.editBottomNavigation
-
-    if (tool.group == 1) {
-
-        // Uncheck all menu if not type items
-        for (i in 0 until editNav.menu.size) {
-            val item = editNav.menu[i]
-
-            if (item.itemId == R.id.nav_add && tool == ActionType.ADD) {
-                item.isChecked = true
-                return
-            } else if (item.itemId == R.id.nav_remove && tool == ActionType.REMOVE) {
-                item.isChecked = true
-                return
-            } else if (item.itemId == R.id.nav_toolbox && tool != ActionType.REMOVE && tool != ActionType.ADD) {
-                item.isChecked = true
-                return
-            }
+            // Request permission if not granted
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                LOCATION_PERMISSION_REQUEST_CODE
+            )
         }
     }
-}
 
-
-/**
- * Init Navigation bars
- *
- */
-private fun setupBottomNavs() {
-
-    val navBinding = BottomNavigationBinding.bind(binding.root)
-    val mainNav = navBinding.mainBottomNavigation
-    val editNav = navBinding.editBottomNavigation
-
-    mainNav.setOnItemSelectedListener {
-        editNav.visibility = View.GONE
-        toolboxPopup.hide()
-        when (it.itemId) {
-            R.id.nav_edit -> {
-                editNav.visibility = View.VISIBLE
-            }
-
-            R.id.nav_add_track -> {
-                mapViewModel.selectedTool(ActionType.NONE)
-                openFileExplorer()
-            }
-
-            else -> {
-
-            }
-        }
-
-        mapRenderer.unselectPolyline()
-        mMap.invalidate()
-        mapViewModel.selectedTool(ActionType.NONE)
-        true
-    }
-
-    editNav.setOnItemSelectedListener {
-
-        mapRenderer.unselectPolyline()
-        mMap.invalidate()
-
-        when (it.itemId) {
-            R.id.nav_toolbox -> {
-                mapViewModel.selectedTool(ActionType.NONE)
-                toolboxPopup.show()
-                true
-            }
-
-            R.id.nav_add -> {
-                mapViewModel.selectedTool(ActionType.ADD)
-                true
-            }
-
-            R.id.nav_remove -> {
-                mapViewModel.selectedTool(ActionType.REMOVE)
-                true
-            }
-
-            else -> {
-                //hidePopup()
-                mapViewModel.selectedTool(ActionType.NONE)
-                toolboxPopup.hide()
-                true
-            }
-        }
-    }
-}
-
-/**
- * Setup location of user
- */
-private fun setupMyLocation() {
-    mMyLocationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(this), mMap)
-    mMyLocationOverlay.enableMyLocation()
-    mMyLocationOverlay.enableFollowLocation()
-    mMyLocationOverlay.isDrawAccuracyEnabled = true
-
-    mMyLocationOverlay.runOnFirstFix {
-        runOnUiThread {
-            mMyLocationOverlay.myLocation?.let { loc ->
-                val geoPoint = GeoPoint(loc.latitude, loc.longitude)
-                /*controller.setCenter(geoPoint)
-                controller.animateTo(geoPoint)*/
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                centerMapOnMyLocationOnce()
+            } else {
+                // Permission denied, handle accordingly (show message or fallback)
             }
         }
     }
 
-    mMap.overlays.add(mMyLocationOverlay)
-}
-
-override fun onScroll(event: ScrollEvent?): Boolean {
-    event?.source?.mapCenter?.let { center ->
+    companion object {
+        private const val LOCATION_PERMISSION_REQUEST_CODE = 1001
     }
-    return true
+
+
 }
-
-/**
- * TODO Trigger largeFileDisplayMethods
- *
- * @param event
- * @return
- */
-override fun onZoom(event: ZoomEvent?): Boolean {
-    return true
-}
-
-
-/**
- * TODO : Change for selection of predetermined visible colors
- * Get random color for track
- *
- * @param trackId
- * @return Color (Int)
- */
-private fun randomColorForTrack(trackId: Int): Int {
-    // Return some distinct colors per trackId
-    // Or use a fixed palette cycling through colors
-    return when (trackId % 5) {
-        0 -> Color.BLUE
-        1 -> Color.RED
-        2 -> Color.GREEN
-        3 -> Color.MAGENTA
-        else -> Color.CYAN
-    }
-}
-
-/**
- * TODO
- * Called When Map clicked
- * Add point to polyline in optimised way
- *
- * @param trackId
- * @param point
- */
-private fun handleWaypointAdded(trackId: Int, point: Pair<Double, Double>) {
-    mapRenderer.displayNewAddedPoint(point, trackId)
-    Log.d("debug", "Added point")
-}
-
-
-/**
- * Render list of points
- *
- * @param trackId
- * @param points
- */
-private fun handleWaypointAddedList(trackId: Int, points: List<Pair<Double, Double>>) {
-    mapRenderer.displayTrack(points, trackId, Color.RED, true)
-}
-
-/**
- * Render moved point
- *
- * @param trackId
- * @param points
- */
-private fun handleWaypointMoved(trackId: Int, points: List<Pair<Double, Double>>) {
-    mapRenderer.displayLiveModification(points, trackId, Color.rgb(255, 128, 0))
-}
-
-/**
- * Render final point move
- *
- * @param trackId
- * @param pointId
- * @param point
- */
-private fun handleWaypointMovedDone(trackId: Int, pointId: Int, point: Pair<Double, Double>) {
-    mapRenderer.displayLiveModificationDone(point, trackId, pointId)
-}
-
-/**
- * Remove point
- *
- * @param trackId
- * @param index
- */
-private fun handleWaypointRemoved(trackId: Int, index: Int) {
-    polylines[trackId]?.apply {
-        actualPoints.removeAt(index)
-        mMap.invalidate()
-    }
-}
-
-/**
- * Remove track
- *
- * @param trackId
- */
-private fun handleTrackCleared(trackId: Int) {
-    polylines[trackId]?.let {
-        mMap.overlays.remove(it)
-        polylines.remove(trackId)
-        mMap.invalidate()
-    }
-}
-
-/**
- * Function to open file picker
- *
- * @param mimeType
- */
-/* openFileExplorer(mimeType: String = "*/*") {
-    filePicker.launch(mimeType)
-}
-
-/* /**
- * Function used when listening for action updates (Tool usecases)
- *
- * @param actions
- */
-fun handleToolAdded(actions: List<ActionDescriptor>) {
-    toolboxPopup.menuItems = actions
-}
-*/*/
-

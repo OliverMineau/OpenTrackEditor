@@ -6,9 +6,22 @@ import java.io.OutputStream
 import java.util.Locale
 import kotlin.text.iterator
 
+/**
+ * GPX Exporter
+ * Creates GPX file from in app data
+ *
+ * TODO Populate all possible GPX metadata
+ * TODO Make it work for multiple tracks
+ *
+ */
 class GpxExporter @Inject constructor() : TrackExporter {
 
     override fun export(track: Track, outputStream: OutputStream) {
+
+        //TODO track null and waypoint nulls send error message ?
+        if(track.waypoints == null){
+            return
+        }
 
         outputStream.writer().use { writer ->
 

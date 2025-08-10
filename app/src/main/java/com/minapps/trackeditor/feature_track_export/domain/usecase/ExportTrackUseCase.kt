@@ -17,8 +17,9 @@ class ExportTrackUseCase @Inject constructor(
 ) {
 
     suspend operator fun invoke(trackId: Int, fileName: String, format: ExportFormat): Boolean {
+
         val track = repository.getTrack(trackId) ?: return false
-        if (track.waypoints.isEmpty()) return false
+        if (track.waypoints == null || track.waypoints.isEmpty()) return false
 
         val exporter = exporterFactory.getExporter(format)
 

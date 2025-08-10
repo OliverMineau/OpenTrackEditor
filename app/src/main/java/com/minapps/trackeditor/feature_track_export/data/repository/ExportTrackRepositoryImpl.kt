@@ -17,7 +17,13 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
 
-
+/**
+ * Export Track called by usecase,
+ * communicates with dao, retrieves track object to
+ * TODO
+ *
+ * @property trackDao
+ */
 @ViewModelScoped
 class ExportTrackRepositoryImpl @Inject constructor(
     private val trackDao: TrackDao,

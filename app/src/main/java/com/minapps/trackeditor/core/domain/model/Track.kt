@@ -14,5 +14,5 @@ data class Track(
     val name: String,
     val description: String?,
     val createdAt: Long,
-    val waypoints: List<Waypoint>
+    val waypoints: List<Waypoint>?
 )

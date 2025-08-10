@@ -20,8 +20,8 @@ class AddImportedTrackUseCase @Inject constructor(
      * @param track
      * @return
      */
-    suspend operator fun invoke(track: Track): Track {
-        return repository.addImportedTrack(track)
+    suspend operator fun invoke(trackId: Int): Boolean{
+        return repository.addImportedTrack(trackId)
     }
 
 

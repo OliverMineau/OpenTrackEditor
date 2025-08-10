@@ -38,7 +38,7 @@ abstract class DataModule {
         impl: EditTrackRepositoryImpl
     ): EditTrackRepositoryItf
 
-    /**
+    /*/**
      * Bind impl with itf
      *
      * @param impl
@@ -48,7 +48,7 @@ abstract class DataModule {
     @Singleton
     abstract fun bindTrackImportRepository(
         impl: TrackImportRepositoryImpl
-    ): TrackImportRepository
+    ): TrackImportRepository*/
 
     companion object {
 

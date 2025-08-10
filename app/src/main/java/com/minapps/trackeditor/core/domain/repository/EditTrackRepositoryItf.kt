@@ -61,7 +61,7 @@ interface EditTrackRepositoryItf {
      *
      * @param track The domain track to add
      */
-    suspend fun addImportedTrack(track: Track) : Track
+    suspend fun addImportedTrack(trackId: Int): Boolean
 
     /**
      * Add a list of waypoints to the database.

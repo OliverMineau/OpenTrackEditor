@@ -102,22 +102,18 @@ class EditTrackRepositoryImpl @Inject constructor(
      * @param track The domain track to add
      * @return Track
      */
-    override suspend fun addImportedTrack(track: Track): Track {
-        // Insert track to DB
-        val trackId = dao.insertTrack(track.toEntity())
+    override suspend fun addImportedTrack(trackId: Int) : Boolean{
+        //TODO DEBUG purposes : No need of track now in the future
 
-        // Remap waypoint to given trackID
-        val waypointsWithTrackId = track.waypoints.map {
-            it.copy(trackId = trackId.toInt())
+
+        var track = dao.getTrackById(trackId)?.toDomain(dao.getTrackWaypoints(trackId))
+
+        if(track == null){
+            return false
         }
-
-        // Insert waypoints
-        dao.insertWaypoints(waypointsWithTrackId.map { it.toEntity() })
-
         // Emit track for MapViewModel
-        val newTrack = Track(id = trackId.toInt(), name = track.name, description = track.description, createdAt = 0, waypoints = waypointsWithTrackId)
-        _addedTracks.emit(newTrack)
-        return newTrack
+        _addedTracks.emit(track)
+        return true
     }
 
 }
