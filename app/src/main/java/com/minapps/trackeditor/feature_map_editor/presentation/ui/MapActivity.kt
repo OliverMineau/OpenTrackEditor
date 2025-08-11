@@ -4,6 +4,7 @@ import ToolboxPopup
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,7 +23,6 @@ import com.minapps.trackeditor.feature_map_editor.presentation.ActionType
 import com.minapps.trackeditor.feature_map_editor.presentation.DataDestination
 import com.minapps.trackeditor.feature_map_editor.presentation.overlay.MapOverlayRenderer
 import com.minapps.trackeditor.feature_map_editor.presentation.MapViewModel
-import com.minapps.trackeditor.feature_track_import.presentation.ImportTrackViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
@@ -51,7 +51,6 @@ class MapActivity : AppCompatActivity(), MapListener {
     private lateinit var toolboxPopup: ToolboxPopup
 
     private val mapViewModel: MapViewModel by viewModels()
-    private val importTrackViewModel: ImportTrackViewModel by viewModels()
 
     //When file picked call viewmodel's importTrack
     private val filePicker = registerForActivityResult(
@@ -280,11 +279,11 @@ class MapActivity : AppCompatActivity(), MapListener {
             progressBar.visibility = View.VISIBLE
             progressTextView.visibility = View.VISIBLE
         }else{
-            progressBar.setProgress(0, true)
+            Log.d("debug", "Mapacti, set progress 0")
+            progressBar.setProgress(0, false)
             progressTextView.text = "0%"
             progressBar.visibility = View.GONE
             progressTextView.visibility = View.GONE
-
             return
         }
 

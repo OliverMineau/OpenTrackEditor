@@ -1,8 +1,6 @@
 package com.minapps.trackeditor.feature_map_editor.domain.usecase
 
-import com.minapps.trackeditor.core.domain.model.Track
-import com.minapps.trackeditor.core.domain.model.Waypoint
-import com.minapps.trackeditor.core.domain.repository.EditTrackRepositoryItf
+import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
 import jakarta.inject.Inject
 
 /**
@@ -10,8 +8,8 @@ import jakarta.inject.Inject
  *
  * @property repository Repository used to add the waypoint to the data source.
  */
-class AddImportedTrackUseCase @Inject constructor(
-    private val repository: EditTrackRepositoryItf
+class DisplayTrackUseCase @Inject constructor(
+    private val repository: EditTrackRepository
 ) {
 
     /**

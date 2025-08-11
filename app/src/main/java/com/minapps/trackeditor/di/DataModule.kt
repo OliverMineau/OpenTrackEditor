@@ -3,12 +3,10 @@ package com.minapps.trackeditor.di
 
 import android.content.Context
 import androidx.room.Room
-import com.minapps.trackeditor.core.domain.repository.EditTrackRepositoryItf
+import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
 import com.minapps.trackeditor.data.local.AppDatabase
 import com.minapps.trackeditor.data.local.TrackDao
 import com.minapps.trackeditor.data.repository.EditTrackRepositoryImpl
-import com.minapps.trackeditor.feature_track_import.data.repository.TrackImportRepositoryImpl
-import com.minapps.trackeditor.feature_track_import.domain.repository.TrackImportRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -36,7 +34,7 @@ abstract class DataModule {
     @Singleton
     abstract fun bindWaypointRepository(
         impl: EditTrackRepositoryImpl
-    ): EditTrackRepositoryItf
+    ): EditTrackRepository
 
     /*/**
      * Bind impl with itf

@@ -1,4 +1,4 @@
-package com.minapps.trackeditor.feature_track_import.domain.repository
+package com.minapps.trackeditor.core.domain.repository
 
 import android.net.Uri
 import com.minapps.trackeditor.feature_track_import.domain.usecase.DataStreamProgress

@@ -10,7 +10,7 @@ import com.minapps.trackeditor.data.mapper.toEntity
 import com.minapps.trackeditor.feature_track_import.data.factory.ImporterFactory
 import com.minapps.trackeditor.feature_track_import.data.parser.ParsedData
 import com.minapps.trackeditor.feature_track_import.domain.model.ImportFormat
-import com.minapps.trackeditor.feature_track_import.domain.repository.TrackImportRepository
+import com.minapps.trackeditor.core.domain.repository.TrackImportRepository
 import com.minapps.trackeditor.feature_track_import.domain.usecase.DataStreamProgress
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -38,8 +38,7 @@ class TrackImportRepositoryImpl @Inject constructor(
      * Detects the file format and uses appropriate parser.
      *
      * @param fileUri The Uri of the file to import.
-     * @return ImportedTrack instance or null if import fails.
-     * @throws IllegalArgumentException if the file format is unsupported.
+     * @return Flow DataStreamProgress
      */
     override suspend fun importTrack(fileUri: Uri): Flow<DataStreamProgress> = flow {
         val fileName = getFileName(context, fileUri)
@@ -48,6 +47,7 @@ class TrackImportRepositoryImpl @Inject constructor(
 
         val format = detectFileFormat(context, fileUri)
 
+        // Format error
         if (format == null) {
             emit(DataStreamProgress.Error("Couldn't read / determine $fileName's format."))
             return@flow

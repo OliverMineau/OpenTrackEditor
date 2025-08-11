@@ -1,7 +1,7 @@
 package com.minapps.trackeditor.feature_track_export.di
 
 import com.minapps.trackeditor.feature_track_export.data.repository.ExportTrackRepositoryImpl
-import com.minapps.trackeditor.feature_track_export.domain.repository.ExportTrackRepository
+import com.minapps.trackeditor.core.domain.repository.ExportTrackRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

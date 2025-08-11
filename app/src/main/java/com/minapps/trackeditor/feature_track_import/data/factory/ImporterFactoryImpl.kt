@@ -8,6 +8,11 @@ import com.minapps.trackeditor.feature_track_import.data.parser.TrackParser
 import com.minapps.trackeditor.feature_track_import.domain.model.ImportFormat
 import jakarta.inject.Inject
 
+/**
+ * Factory returns gpx, kml ... parsers
+ *
+ * @property gpxParser
+ */
 class ImporterFactoryImpl @Inject constructor(
     private val gpxParser: GpxParser,
     //TODO add kml

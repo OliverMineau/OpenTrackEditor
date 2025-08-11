@@ -1,6 +1,6 @@
 package com.minapps.trackeditor.feature_map_editor.domain.usecase
 
-import com.minapps.trackeditor.core.domain.repository.EditTrackRepositoryItf
+import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
 import jakarta.inject.Inject
 
 /**
@@ -9,7 +9,7 @@ import jakarta.inject.Inject
  * @property repository
  */
 class ClearAllUseCase @Inject constructor(
-    private val repository: EditTrackRepositoryItf
+    private val repository: EditTrackRepository
 ) {
 
     suspend operator fun invoke() {

@@ -65,6 +65,7 @@ class GpxParser : TrackParser {
                             "trkseg" -> trackId++
 
                             "trkpt" -> {
+                                // TODO Has to be changed, only parses one track
                                 if (!hasEmitedTrack) {
                                     emit(ParsedData.TrackMetadata(Track(0, name, "", 0, null)))
                                     hasEmitedTrack = true
@@ -99,10 +100,13 @@ class GpxParser : TrackParser {
                     }
 
                     XmlPullParser.END_TAG -> {
+
+                        // If waypoint read, add to list
                         if (parser.name == "trkpt") {
                             waypoints.add(Waypoint(waypointId, lat, lon, ele, time, trackId))
                             waypointId++
 
+                            // If list full (chunkSize), send it to be added to database
                             if (waypoints.size >= chunkSize) {
                                 emit(ParsedData.Waypoints(waypoints))
                                 waypoints.clear()

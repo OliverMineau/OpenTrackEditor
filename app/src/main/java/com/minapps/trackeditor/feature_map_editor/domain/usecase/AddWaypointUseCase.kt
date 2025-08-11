@@ -1,20 +1,19 @@
 package com.minapps.trackeditor.feature_map_editor.domain.usecase
 
-import android.util.Log
 import com.minapps.trackeditor.core.domain.model.Waypoint
-import com.minapps.trackeditor.core.domain.repository.EditTrackRepositoryItf
+import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
 import jakarta.inject.Inject
 
 /**
  * Use case responsible for adding a new waypoint to a specific track.
  *
  * This encapsulates the logic required to create a [Waypoint] and delegate
- * the persistence to the [EditTrackRepositoryItf].
+ * the persistence to the [EditTrackRepository].
  *
  * @property repository Repository used to add the waypoint to the data source.
  */
 class AddWaypointUseCase @Inject constructor(
-    private val repository: EditTrackRepositoryItf
+    private val repository: EditTrackRepository
 ) {
 
     /**

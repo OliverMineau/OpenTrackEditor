@@ -3,7 +3,7 @@ package com.minapps.trackeditor.data.repository
 import android.util.Log
 import com.minapps.trackeditor.core.domain.model.Track
 import com.minapps.trackeditor.core.domain.model.Waypoint
-import com.minapps.trackeditor.core.domain.repository.EditTrackRepositoryItf
+import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
 import com.minapps.trackeditor.data.local.TrackDao
 import com.minapps.trackeditor.data.local.TrackEntity
 import com.minapps.trackeditor.data.mapper.toDomain
@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
  */
 class EditTrackRepositoryImpl @Inject constructor(
     private val dao: TrackDao
-) : EditTrackRepositoryItf {
+) : EditTrackRepository {
 
     private val _addedTracks = MutableSharedFlow<Track>()
     override val addedTracks: Flow<Track> = _addedTracks
@@ -103,14 +103,15 @@ class EditTrackRepositoryImpl @Inject constructor(
      * @return Track
      */
     override suspend fun addImportedTrack(trackId: Int) : Boolean{
-        //TODO DEBUG purposes : No need of track now in the future
-
+        //TODO DEBUG purposes : No need of track in the future
+        // only get number of points proportional to zoom
 
         var track = dao.getTrackById(trackId)?.toDomain(dao.getTrackWaypoints(trackId))
 
         if(track == null){
             return false
         }
+
         // Emit track for MapViewModel
         _addedTracks.emit(track)
         return true

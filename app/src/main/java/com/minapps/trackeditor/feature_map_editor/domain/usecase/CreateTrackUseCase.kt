@@ -1,6 +1,6 @@
 package com.minapps.trackeditor.feature_map_editor.domain.usecase
 
-import com.minapps.trackeditor.core.domain.repository.EditTrackRepositoryItf
+import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
 import com.minapps.trackeditor.data.local.TrackEntity
 import jakarta.inject.Inject
 
@@ -10,7 +10,7 @@ import jakarta.inject.Inject
  * @property trackRepository
  */
 class CreateTrackUseCase @Inject constructor(
-    private val trackRepository: EditTrackRepositoryItf
+    private val trackRepository: EditTrackRepository
 ) {
 
     /**

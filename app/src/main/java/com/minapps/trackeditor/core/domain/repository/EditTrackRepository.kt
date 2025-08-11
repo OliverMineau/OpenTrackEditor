@@ -1,6 +1,5 @@
 package com.minapps.trackeditor.core.domain.repository
 
-import androidx.room.Insert
 import com.minapps.trackeditor.core.domain.model.Track
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.data.local.TrackEntity
@@ -14,7 +13,7 @@ import kotlinx.coroutines.flow.Flow
  * Keeps the domain layer independent from specific data sources
  * (Room, network, etc.).
  */
-interface EditTrackRepositoryItf {
+interface EditTrackRepository {
 
     val addedTracks: Flow<Track>
 

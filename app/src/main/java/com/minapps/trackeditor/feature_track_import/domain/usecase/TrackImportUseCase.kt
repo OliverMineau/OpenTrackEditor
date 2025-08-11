@@ -2,7 +2,7 @@ package com.minapps.trackeditor.feature_track_import.domain.usecase
 
 import android.net.Uri
 import android.util.Log
-import com.minapps.trackeditor.feature_track_import.domain.repository.TrackImportRepository
+import com.minapps.trackeditor.core.domain.repository.TrackImportRepository
 import dagger.hilt.android.scopes.ViewModelScoped
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -18,21 +18,10 @@ class TrackImportUseCase @Inject constructor(
 ) {
 
     /**
-     * Invokes the use case to import a track asynchronously.
+     * Invokes the use case to import a track.
      *
      * @param fileUri The Uri pointing to the track file to import.
      */
-    /*suspend operator fun invoke(fileUri: Uri): ImportProgress{
-        val importedTrack = trackImportRepository.importTrack(fileUri)
-        Log.d("debug", "Track imported ${if (importedTrack != null) "successfully" else "unsuccessfully"} id:${importedTrack?.id}, (${importedTrack?.waypoints?.size} waypoints) e.g. ${importedTrack?.waypoints?.get(0)}}")
-
-        if(importedTrack == null){
-            Log.d("debug", "Track import error")
-        }
-
-        return importedTrack
-    }*/
-
     operator fun invoke(file: Uri): Flow<DataStreamProgress> = flow {
 
         repository.importTrack(file).collect { importProgress ->
@@ -40,16 +29,16 @@ class TrackImportUseCase @Inject constructor(
             when (importProgress) {
                 is DataStreamProgress.Completed -> {
                     Log.d("debug", "Done")
-                    emit(DataStreamProgress.Completed(importProgress.trackId))
+                    emit(importProgress)
                 }
 
                 is DataStreamProgress.Error -> {
                     Log.d("debug", "Parse error")
-                    emit(DataStreamProgress.Error(importProgress.message))
+                    emit(importProgress)
                     return@collect
                 }
 
-                is DataStreamProgress.Progress -> emit(DataStreamProgress.Progress(importProgress.percent))
+                is DataStreamProgress.Progress -> emit(importProgress)
             }
 
         }

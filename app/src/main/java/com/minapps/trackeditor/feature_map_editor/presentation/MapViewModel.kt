@@ -7,12 +7,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minapps.trackeditor.R
 import com.minapps.trackeditor.core.domain.model.Waypoint
-import com.minapps.trackeditor.core.domain.repository.EditTrackRepositoryItf
+import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
 import com.minapps.trackeditor.feature_track_export.domain.usecase.ExportTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.ClearAllUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.CreateTrackUseCase
-import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddImportedTrackUseCase
+import com.minapps.trackeditor.feature_map_editor.domain.usecase.DisplayTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackLastWaypointIndexUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackWaypointsUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.UIAction
@@ -107,12 +107,12 @@ data class ProgressData(
 
 @HiltViewModel
 class MapViewModel @Inject constructor(
-    private val repository: EditTrackRepositoryItf,
+    private val repository: EditTrackRepository,
     private val addWaypointUseCase: AddWaypointUseCase,
     private val clearAllUseCase: ClearAllUseCase,
     private val createTrackUseCase: CreateTrackUseCase,
     private val getTrackWaypointsUseCase: GetTrackWaypointsUseCase,
-    private val addImportedTrackUseCase: AddImportedTrackUseCase,
+    private val displayTrackUseCase: DisplayTrackUseCase,
     private val exportTrackUseCase: ExportTrackUseCase,
     private val getTrackLastWaypointIndexUseCase: GetTrackLastWaypointIndexUseCase,
     private val trackImportUseCase: TrackImportUseCase,
@@ -479,16 +479,20 @@ class MapViewModel @Inject constructor(
                 return@launch
             }
 
+            Log.d("debug", "Progress show")
             _progressState.update { it.copy(isDisplayed = true) }
+
             exportTrackUseCase(trackId, fileName, format).collect { exportResult ->
                 when(exportResult){
                     is DataStreamProgress.Completed -> {
                         Log.d("debug", "export success, mapvm")
+                        Log.d("debug", "Progress close")
                         _progressState.update { it.copy(isDisplayed = false) }
                     }
                     is DataStreamProgress.Error -> {
                         //_exportResult.emit(Result.failure(exportResult.message))
                         Log.d("debug", "export fail : ${exportResult.message}")
+                        _progressState.update { it.copy(isDisplayed = false) }
                     }
                     is DataStreamProgress.Progress -> {
                         Log.d("debug", "export progress ${exportResult.percent}, mapvm")
@@ -507,11 +511,14 @@ class MapViewModel @Inject constructor(
 
                 when(importProgress){
                     is DataStreamProgress.Completed -> {
-                        val displayed = addImportedTrackUseCase(importProgress.trackId)
+                        val displayed = displayTrackUseCase(importProgress.trackId)
                         _progressState.update { it.copy(isDisplayed = false) }
                         Log.d("debug", "VM received finished, trackID:${importProgress.trackId}, displayed:$displayed")
                     }
-                    is DataStreamProgress.Error -> Log.d("debug", "VM received ERROR! ${importProgress.message}")
+                    is DataStreamProgress.Error -> {
+                        Log.d("debug", "VM received ERROR! ${importProgress.message}")
+                        _progressState.update { it.copy(isDisplayed = false) }
+                    }
                     is DataStreamProgress.Progress -> {
                         Log.d("debug", "VM received progress : ${importProgress.percent}%")
                         _progressState.update { it.copy(progress = importProgress.percent) }
