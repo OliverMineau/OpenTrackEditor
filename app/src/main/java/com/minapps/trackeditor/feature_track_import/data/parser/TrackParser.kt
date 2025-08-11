@@ -2,7 +2,6 @@ package com.minapps.trackeditor.feature_track_import.data.parser
 
 import android.content.Context
 import android.net.Uri
-import com.minapps.trackeditor.core.domain.model.Track
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -18,7 +17,7 @@ interface TrackParser {
      * @param fileUri Uri of the file to parse.
      * @return ImportedTrack if parsing is successful, or null if parsing fails.
      */
-    suspend fun parse(context: Context, fileUri: Uri, fileSize: Long, batchSize: Int): Flow<ParsedData>
+    suspend fun parse(context: Context, fileUri: Uri, fileSize: Long, chunkSize: Int): Flow<ParsedData>
 
     /**
      * Check whether this parser can handle the given file Uri.

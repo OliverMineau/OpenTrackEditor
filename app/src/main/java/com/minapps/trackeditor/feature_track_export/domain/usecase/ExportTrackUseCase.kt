@@ -4,28 +4,36 @@ import com.minapps.trackeditor.feature_track_export.data.factory.ExporterFactory
 import com.minapps.trackeditor.feature_track_export.data.formatter.GpxExporter
 import com.minapps.trackeditor.feature_track_export.domain.model.ExportFormat
 import com.minapps.trackeditor.feature_track_export.domain.repository.ExportTrackRepository
+import com.minapps.trackeditor.feature_track_import.domain.usecase.DataStreamProgress
 import dagger.hilt.android.scopes.ViewModelScoped
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flow
 
 
 @ViewModelScoped
 class ExportTrackUseCase @Inject constructor(
     private val repository: ExportTrackRepository,
-    private val exporterFactory: ExporterFactory,
 ) {
 
-    suspend operator fun invoke(trackId: Int, fileName: String, format: ExportFormat): Boolean {
+    operator fun invoke(
+        trackId: Int,
+        fileName: String,
+        exportFormat: ExportFormat,
+    ): Flow<DataStreamProgress> = flow {
 
-        val track = repository.getTrack(trackId) ?: return false
-        if (track.waypoints == null || track.waypoints.isEmpty()) return false
-
-        val exporter = exporterFactory.getExporter(format)
-
-        return repository.saveExportedTrack(fileName) { outputStream ->
-            exporter.export(track, outputStream)
+        repository.saveExportedTrack(trackId, fileName, exportFormat).collect { exportProgress ->
+            when(exportProgress){
+                is DataStreamProgress.Completed -> emit(DataStreamProgress.Completed(exportProgress.trackId))
+                is DataStreamProgress.Error -> emit(DataStreamProgress.Error(exportProgress.message))
+                is DataStreamProgress.Progress -> emit(DataStreamProgress.Progress(exportProgress.percent))
+            }
         }
+    }.catch { e ->
+        emit(DataStreamProgress.Error(e.message ?: "Unknown export error"))
     }
+
 
 }

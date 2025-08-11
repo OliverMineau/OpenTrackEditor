@@ -1,6 +1,7 @@
 package com.minapps.trackeditor.data.local
 
 import androidx.room.*
+import com.minapps.trackeditor.core.domain.model.Waypoint
 
 /**
  * DAO (Data Access Object) for Tracks and Waypoints.
@@ -91,8 +92,11 @@ interface TrackDao {
     suspend fun deleteWaypoint(waypoint: WaypointEntity)
 
 
+    @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId = :trackId")
+    suspend fun countWaypointsForTrack(trackId: Int): Int
 
-
+    @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId ORDER BY waypointId ASC LIMIT :chunkSize OFFSET :offset")
+    suspend fun getWaypointsByChunk(trackId: Int, chunkSize: Int, offset: Int): List<WaypointEntity>
 
     /**
      * Delete all waypoints from the database.

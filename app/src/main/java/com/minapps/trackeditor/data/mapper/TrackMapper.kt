@@ -31,10 +31,10 @@ fun Track.toEntity(): TrackEntity{
  * @param waypoints List of WaypointEntity objects that belong to this track
  * @return Track (domain model)
  */
-fun TrackEntity.toDomain(waypoints: List<WaypointEntity>): Track = Track(
+fun TrackEntity.toDomain(waypoints: List<WaypointEntity>?): Track = Track(
     id = this.trackId,
     name = this.name,
     description = this.description,
     createdAt = this.createdAt,
-    waypoints = waypoints.map { it.toDomain() }
+    waypoints = waypoints?.map { it.toDomain() }
 )

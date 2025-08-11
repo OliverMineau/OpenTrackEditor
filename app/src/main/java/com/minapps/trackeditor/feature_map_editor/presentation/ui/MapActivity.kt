@@ -271,6 +271,7 @@ class MapActivity : AppCompatActivity(), MapListener {
         updateSelectedToolUI(event.currentSelectedTool)
     }
 
+    //TODO BUG progress somewhere
     fun handleProgressEvent(data: ProgressData){
 
         val progressBar = binding.progressBar
@@ -279,10 +280,11 @@ class MapActivity : AppCompatActivity(), MapListener {
             progressBar.visibility = View.VISIBLE
             progressTextView.visibility = View.VISIBLE
         }else{
-            progressBar.visibility = View.GONE
-            progressTextView.visibility = View.GONE
             progressBar.setProgress(0, true)
             progressTextView.text = "0%"
+            progressBar.visibility = View.GONE
+            progressTextView.visibility = View.GONE
+
             return
         }
 

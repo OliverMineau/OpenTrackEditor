@@ -1,8 +1,11 @@
 package com.minapps.trackeditor.feature_track_export.data.formatter
 
 import com.minapps.trackeditor.core.domain.model.Track
+import com.minapps.trackeditor.core.domain.model.Waypoint
+import com.minapps.trackeditor.feature_track_import.data.parser.ParsedData
 import jakarta.inject.Inject
 import java.io.OutputStream
+import java.io.Writer
 import java.util.Locale
 import kotlin.text.iterator
 
@@ -16,55 +19,65 @@ import kotlin.text.iterator
  */
 class GpxExporter @Inject constructor() : TrackExporter {
 
-    override fun export(track: Track, outputStream: OutputStream) {
+    override fun exportHeader(
+        track: Track,
+        writer: Writer
+    ) {
+        writer.write("""<?xml version="1.0" encoding="UTF-8"?>""")
+        writer.write("\n")
+        writer.write(
+            """<gpx version="1.1" creator="OpenTrackEditorApp" xmlns="http://www.topografix.com/GPX/1/1">"""
+        )
+        writer.write("\n")
+    }
 
-        //TODO track null and waypoint nulls send error message ?
-        if(track.waypoints == null){
-            return
-        }
+    override fun exportTrackSegmentHeader(name: String, writer: Writer) {
+        writer.write("<trk>")
+        writer.write("\n")
 
-        outputStream.writer().use { writer ->
+        writer.write("  <name>${escapeXml(name)}</name>")
+        writer.write("\n")
+        writer.write("  <trkseg>")
+        writer.write("\n")
+    }
 
-            writer.write("""<?xml version="1.0" encoding="UTF-8"?>""")
+
+    override fun exportWaypoints(waypoints: List<Waypoint>, writer: Writer) {
+
+        for (wp in waypoints) {
+            val latStr = String.format(Locale.US, "%f", wp.lat)
+            val lonStr = String.format(Locale.US, "%f", wp.lng)
+
+            writer.write("    <trkpt lat=\"$latStr\" lon=\"$lonStr\">")
             writer.write("\n")
-            writer.write(
-                """<gpx version="1.1" creator="TrackEditorApp" xmlns="http://www.topografix.com/GPX/1/1">"""
-            )
-            writer.write("\n")
-
-            writer.write("<trk>")
-            writer.write("\n")
-
-            writer.write("  <name>${escapeXml(track.name)}</name>")
-            writer.write("\n")
-            writer.write("  <trkseg>")
-            writer.write("\n")
-
-            for (wp in track.waypoints) {
-                val latStr = String.format(Locale.US, "%f", wp.lat)
-                val lonStr = String.format(Locale.US, "%f", wp.lng)
-
-                writer.write("    <trkpt lat=\"$latStr\" lon=\"$lonStr\">")
-                writer.write("\n")
-                wp.elv?.let {
-                    writer.write("      <ele>${String.format(Locale.US, "%f", it)}</ele>")
-                    writer.write("\n")
-                }
-
-                wp.time?.let { writer.write("      <time>$it</time>")
-                    writer.write("\n") }
-
-                writer.write("    </trkpt>")
+            wp.elv?.let {
+                writer.write("      <ele>${String.format(Locale.US, "%f", it)}</ele>")
                 writer.write("\n")
             }
 
-            writer.write("  </trkseg>")
-            writer.write("\n")
-            writer.write("</trk>")
-            writer.write("\n")
-            writer.write("</gpx>")
+            wp.time?.let {
+                writer.write("      <time>$it</time>")
+                writer.write("\n")
+            }
+
+            writer.write("    </trkpt>")
             writer.write("\n")
         }
+
+
+    }
+
+    override fun exportTrackSegmentFooter(writer: Writer) {
+        writer.write("  </trkseg>")
+        writer.write("\n")
+        writer.write("</trk>")
+        writer.write("\n")
+    }
+
+
+    override fun exportFooter(writer: Writer) {
+        writer.write("</gpx>")
+        writer.write("\n")
     }
 
     private fun escapeXml(input: String?): String {

@@ -3,7 +3,6 @@ package com.minapps.trackeditor.feature_track_import.data.parser
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import androidx.collection.emptyIntSet
 import com.minapps.trackeditor.core.domain.model.Track
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.feature_map_editor.presentation.util.CountingInputStream
@@ -32,7 +31,7 @@ class GpxParser : TrackParser {
      * Parses the GPX file, extracting track name and waypoints.
      * Handles XML parsing exceptions and returns null if parsing fails.
      */
-    override suspend fun parse(context: Context, fileUri: Uri, fileSize : Long, batchSize: Int): Flow<ParsedData> = flow {
+    override suspend fun parse(context: Context, fileUri: Uri, fileSize : Long, chunkSize: Int): Flow<ParsedData> = flow {
         val waypoints = mutableListOf<Waypoint>()
         var inputStream: InputStream? = null
 
@@ -104,7 +103,7 @@ class GpxParser : TrackParser {
                             waypoints.add(Waypoint(waypointId, lat, lon, ele, time, trackId))
                             waypointId++
 
-                            if (waypoints.size >= batchSize) {
+                            if (waypoints.size >= chunkSize) {
                                 emit(ParsedData.Waypoints(waypoints))
                                 waypoints.clear()
                             }

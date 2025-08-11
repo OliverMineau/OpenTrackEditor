@@ -12,15 +12,13 @@ import com.minapps.trackeditor.feature_track_export.domain.usecase.ExportTrackUs
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.ClearAllUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.CreateTrackUseCase
-import com.minapps.trackeditor.core.domain.usecase.GetFullTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddImportedTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackLastWaypointIndexUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackWaypointsUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.UIAction
 import com.minapps.trackeditor.feature_map_editor.presentation.util.vibrate
 import com.minapps.trackeditor.feature_track_export.domain.model.ExportFormat
-import com.minapps.trackeditor.feature_track_import.data.parser.ParsedData
-import com.minapps.trackeditor.feature_track_import.domain.usecase.ImportProgress
+import com.minapps.trackeditor.feature_track_import.domain.usecase.DataStreamProgress
 import com.minapps.trackeditor.feature_track_import.domain.usecase.TrackImportUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -260,31 +258,7 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    fun toolExport(fileName: String) {
 
-        val format = ExportFormat.GPX
-
-        viewModelScope.launch {
-            val trackId = editState.value.currentselectedTrack
-            if (trackId == null) {
-                _exportResult.emit(Result.failure(Exception("No track selected")))
-                return@launch
-            }
-
-            try {
-                val success = exportTrackUseCase(trackId, fileName, format)
-                if (success) {
-                    Log.d("debug", "export success, mapvm")
-                    //_exportResult.emit(Result.success(Unit))
-                } else {
-                    Log.d("debug", "export fail, mapvm")
-                    //_exportResult.emit(Result.failure(Exception("Export failed")))
-                }
-            } catch (e: Exception) {
-                _exportResult.emit(Result.failure(e))
-            }
-        }
-    }
 
 
     /*fun toolExport(name: String) {
@@ -494,6 +468,37 @@ class MapViewModel @Inject constructor(
         }
     }
 
+    fun toolExport(fileName: String) {
+
+        val format = ExportFormat.GPX
+
+        viewModelScope.launch {
+            val trackId = editState.value.currentselectedTrack
+            if (trackId == null) {
+                _exportResult.emit(Result.failure(Exception("No track selected")))
+                return@launch
+            }
+
+            _progressState.update { it.copy(isDisplayed = true) }
+            exportTrackUseCase(trackId, fileName, format).collect { exportResult ->
+                when(exportResult){
+                    is DataStreamProgress.Completed -> {
+                        Log.d("debug", "export success, mapvm")
+                        _progressState.update { it.copy(isDisplayed = false) }
+                    }
+                    is DataStreamProgress.Error -> {
+                        //_exportResult.emit(Result.failure(exportResult.message))
+                        Log.d("debug", "export fail : ${exportResult.message}")
+                    }
+                    is DataStreamProgress.Progress -> {
+                        Log.d("debug", "export progress ${exportResult.percent}, mapvm")
+                        _progressState.update { it.copy(progress = exportResult.percent) }
+                    }
+                }
+            }
+        }
+    }
+
     fun importTrack(uri: Uri) {
 
         viewModelScope.launch {
@@ -501,13 +506,13 @@ class MapViewModel @Inject constructor(
                 _progressState.update { it.copy(isDisplayed = true) }
 
                 when(importProgress){
-                    is ImportProgress.Completed -> {
+                    is DataStreamProgress.Completed -> {
                         val displayed = addImportedTrackUseCase(importProgress.trackId)
                         _progressState.update { it.copy(isDisplayed = false) }
                         Log.d("debug", "VM received finished, trackID:${importProgress.trackId}, displayed:$displayed")
                     }
-                    is ImportProgress.Error -> Log.d("debug", "VM received ERROR! ${importProgress.message}")
-                    is ImportProgress.Progress -> {
+                    is DataStreamProgress.Error -> Log.d("debug", "VM received ERROR! ${importProgress.message}")
+                    is DataStreamProgress.Progress -> {
                         Log.d("debug", "VM received progress : ${importProgress.percent}%")
                         _progressState.update { it.copy(progress = importProgress.percent) }
                     }

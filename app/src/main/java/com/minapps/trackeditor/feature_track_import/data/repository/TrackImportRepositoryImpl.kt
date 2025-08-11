@@ -4,22 +4,15 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
-import androidx.core.net.toFile
-import com.minapps.trackeditor.core.domain.model.Track
-import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.data.local.TrackDao
 import com.minapps.trackeditor.data.local.TrackEntity
 import com.minapps.trackeditor.data.mapper.toEntity
 import com.minapps.trackeditor.feature_track_import.data.factory.ImporterFactory
-import com.minapps.trackeditor.feature_track_import.data.factory.ImporterFactoryImpl
-import com.minapps.trackeditor.feature_track_import.data.parser.GpxParser
 import com.minapps.trackeditor.feature_track_import.data.parser.ParsedData
-import com.minapps.trackeditor.feature_track_import.data.parser.TrackParser
 import com.minapps.trackeditor.feature_track_import.domain.model.ImportFormat
 import com.minapps.trackeditor.feature_track_import.domain.repository.TrackImportRepository
-import com.minapps.trackeditor.feature_track_import.domain.usecase.ImportProgress
+import com.minapps.trackeditor.feature_track_import.domain.usecase.DataStreamProgress
 import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.android.scopes.ViewModelScoped
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
@@ -38,7 +31,7 @@ class TrackImportRepositoryImpl @Inject constructor(
     private val importerFactory: ImporterFactory,
 ) : TrackImportRepository {
 
-    private val batchSize = 50000
+    private val chunkSize = 50000
 
     /**
      * Import a track from the given file Uri.
@@ -48,7 +41,7 @@ class TrackImportRepositoryImpl @Inject constructor(
      * @return ImportedTrack instance or null if import fails.
      * @throws IllegalArgumentException if the file format is unsupported.
      */
-    override suspend fun importTrack(fileUri: Uri): Flow<ImportProgress> = flow {
+    override suspend fun importTrack(fileUri: Uri): Flow<DataStreamProgress> = flow {
         val fileName = getFileName(context, fileUri)
         val fileSize = getFileSize(context, fileUri)
         var progress = 0
@@ -56,7 +49,7 @@ class TrackImportRepositoryImpl @Inject constructor(
         val format = detectFileFormat(context, fileUri)
 
         if (format == null) {
-            emit(ImportProgress.Error("Couldn't read / determine $fileName's format."))
+            emit(DataStreamProgress.Error("Couldn't read / determine $fileName's format."))
             return@flow
         }
 
@@ -64,7 +57,7 @@ class TrackImportRepositoryImpl @Inject constructor(
         val parser = importerFactory.getImporter(format)
 
         var trackId: Int? = null
-        parser.parse(context, fileUri, fileSize, batchSize).collect { parsedData ->
+        parser.parse(context, fileUri, fileSize, chunkSize).collect { parsedData ->
             when (parsedData) {
 
                 // Send track metadata
@@ -97,7 +90,7 @@ class TrackImportRepositoryImpl @Inject constructor(
                 is ParsedData.Progress -> {
                     if (parsedData.progress != progress) {
                         progress = parsedData.progress
-                        emit(ImportProgress.Progress(parsedData.progress))
+                        emit(DataStreamProgress.Progress(parsedData.progress))
                     }
                 }
             }
@@ -105,10 +98,10 @@ class TrackImportRepositoryImpl @Inject constructor(
 
         Log.d("debug", "Finished")
         val tid = trackId ?: -1
-        emit(ImportProgress.Completed(tid))
+        emit(DataStreamProgress.Completed(tid))
 
     }.catch { e ->
-        emit(ImportProgress.Error(e.message ?: "Unknown Error"))
+        emit(DataStreamProgress.Error(e.message ?: "Unknown Error"))
     }
 
 

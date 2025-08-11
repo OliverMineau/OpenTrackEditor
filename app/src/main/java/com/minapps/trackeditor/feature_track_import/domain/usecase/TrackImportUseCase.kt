@@ -2,8 +2,6 @@ package com.minapps.trackeditor.feature_track_import.domain.usecase
 
 import android.net.Uri
 import android.util.Log
-import com.minapps.trackeditor.core.domain.model.Track
-import com.minapps.trackeditor.core.domain.repository.EditTrackRepositoryItf
 import com.minapps.trackeditor.feature_track_import.domain.repository.TrackImportRepository
 import dagger.hilt.android.scopes.ViewModelScoped
 import jakarta.inject.Inject
@@ -35,28 +33,28 @@ class TrackImportUseCase @Inject constructor(
         return importedTrack
     }*/
 
-    operator fun invoke(file: Uri): Flow<ImportProgress> = flow {
+    operator fun invoke(file: Uri): Flow<DataStreamProgress> = flow {
 
         repository.importTrack(file).collect { importProgress ->
 
             when (importProgress) {
-                is ImportProgress.Completed -> {
+                is DataStreamProgress.Completed -> {
                     Log.d("debug", "Done")
-                    emit(ImportProgress.Completed(importProgress.trackId))
+                    emit(DataStreamProgress.Completed(importProgress.trackId))
                 }
 
-                is ImportProgress.Error -> {
+                is DataStreamProgress.Error -> {
                     Log.d("debug", "Parse error")
-                    emit(ImportProgress.Error(importProgress.message))
+                    emit(DataStreamProgress.Error(importProgress.message))
                     return@collect
                 }
 
-                is ImportProgress.Progress -> emit(ImportProgress.Progress(importProgress.percent))
+                is DataStreamProgress.Progress -> emit(DataStreamProgress.Progress(importProgress.percent))
             }
 
         }
 
     }.catch { e ->
-        emit(ImportProgress.Error(e.message ?: "Unknown error"))
+        emit(DataStreamProgress.Error(e.message ?: "Unknown import error"))
     }
 }
