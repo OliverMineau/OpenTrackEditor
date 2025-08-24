@@ -31,10 +31,10 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE
         )
     ],
+    primaryKeys = ["trackOwnerId", "waypointId"],
     indices = [Index("trackOwnerId")]
 )
 data class WaypointEntity(
-    @PrimaryKey()
     val waypointId: Double = 0.0,
     val latitude: Double,
     val longitude: Double,

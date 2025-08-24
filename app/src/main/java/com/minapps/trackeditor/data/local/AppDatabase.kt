@@ -14,7 +14,7 @@ import androidx.room.RoomDatabase
  */
 @Database(
     entities = [TrackEntity::class, WaypointEntity::class],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
