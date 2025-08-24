@@ -2,6 +2,7 @@ package com.minapps.trackeditor.data.local
 
 import androidx.room.*
 import com.minapps.trackeditor.core.domain.model.Waypoint
+import com.minapps.trackeditor.data.mapper.toDomain
 
 /**
  * DAO (Data Access Object) for Tracks and Waypoints.
@@ -29,6 +30,16 @@ interface TrackDao {
 
     @Query("""SELECT MAX(waypointId) FROM waypoints WHERE trackOwnerId = :trackId""")
     suspend fun getTrackLastWaypointIndex(trackId: Int): Double
+
+    @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId = :trackId AND latitude BETWEEN :latSouth AND :latNorth AND longitude BETWEEN :lonWest AND :lonEast")
+    suspend fun getVisibleTrackWaypointsCount(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): Double
+
+    @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId AND latitude BETWEEN :latSouth AND :latNorth AND longitude BETWEEN :lonWest AND :lonEast ORDER BY waypointId ASC")
+    suspend fun getVisibleTrackWaypoints(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): List<WaypointEntity>
+
+    @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId AND latitude BETWEEN :latSouth AND :latNorth AND longitude BETWEEN :lonWest AND :lonEast ORDER BY waypointId ASC LIMIT :chunkSize OFFSET :offset")
+    suspend fun getVisibleTrackWaypointsChunk(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double, chunkSize: Int, offset: Int): List<WaypointEntity>
+
 
     /**
      * Insert a waypoint into the database.
@@ -77,6 +88,8 @@ interface TrackDao {
     @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId ORDER BY waypointId ASC")
     suspend fun getTrackWaypoints(trackId: Int): List<WaypointEntity>
 
+    @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId AND waypointId % :sampleRate = 0 ORDER BY waypointId ASC")
+    suspend fun getTrackWaypointsSample(trackId: Int, sampleRate: Int): List<WaypointEntity>
 
 
     /**
@@ -119,4 +132,21 @@ interface TrackDao {
         clearWaypoints()
         clearTracks()
     }
+
+    @Query("""
+        SELECT * FROM waypoints
+        WHERE trackOwnerId = :trackId
+          AND latitude BETWEEN :south AND :north
+          AND longitude BETWEEN :west AND :east
+          AND (:step = 1 OR (CAST(waypointId AS INTEGER) % :step) = 0)
+        ORDER BY waypointId
+    """)
+    suspend fun getWaypointsInBoundingBox(
+        trackId: Int,
+        south: Double,
+        north: Double,
+        west: Double,
+        east: Double,
+        step: Int = 1
+    ): List<WaypointEntity>
 }

@@ -3,6 +3,7 @@ package com.minapps.trackeditor.feature_map_editor.presentation.ui
 import ToolboxPopup
 import android.Manifest
 import android.content.pm.PackageManager
+import android.database.Cursor
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -40,6 +41,11 @@ import com.google.android.gms.location.LocationServices
 import com.minapps.trackeditor.feature_map_editor.presentation.EditState
 import com.minapps.trackeditor.feature_map_editor.presentation.ProgressData
 import com.minapps.trackeditor.feature_track_export.presentation.utils.showSaveFileDialog
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import org.osmdroid.util.BoundingBox
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 
 @AndroidEntryPoint
@@ -51,6 +57,8 @@ class MapActivity : AppCompatActivity(), MapListener {
     private lateinit var toolboxPopup: ToolboxPopup
 
     private val mapViewModel: MapViewModel by viewModels()
+    private var debounceJob: Job? = null
+
 
     //When file picked call viewmodel's importTrack
     private val filePicker = registerForActivityResult(
@@ -273,6 +281,10 @@ class MapActivity : AppCompatActivity(), MapListener {
     //TODO BUG progress somewhere
     fun handleProgressEvent(data: ProgressData){
 
+        if(data.message != null){
+            Toast.makeText(this, data.message, Toast.LENGTH_SHORT).show()
+        }
+
         val progressBar = binding.progressBar
         val progressTextView = binding.progressTextView
         if(data.isDisplayed){
@@ -318,8 +330,44 @@ class MapActivity : AppCompatActivity(), MapListener {
         filePicker.launch(mimeType)
     }
 
-    override fun onScroll(event: ScrollEvent?): Boolean = false
-    override fun onZoom(event: ZoomEvent?): Boolean = false
+    override fun onScroll(event: ScrollEvent?): Boolean {
+
+        debounce(250) {
+            val latNorth = binding.osmmap.boundingBox.latNorth
+            val latSouth = binding.osmmap.boundingBox.latSouth
+            val lonWest = binding.osmmap.boundingBox.lonWest
+            val lonEast = binding.osmmap.boundingBox.lonEast
+            mapViewModel.viewChanged(latNorth, latSouth, lonWest, lonEast)
+        }
+        return true
+    }
+
+    override fun onZoom(event: ZoomEvent?): Boolean{
+        debounce(250){
+            if(event == null){
+                return@debounce
+            }
+
+            //Log.d("zoom", "Zoom : ${event.zoomLevel}")
+
+            val latNorth = binding.osmmap.boundingBox.latNorth
+            val latSouth = binding.osmmap.boundingBox.latSouth
+            val lonWest = binding.osmmap.boundingBox.lonWest
+            val lonEast = binding.osmmap.boundingBox.lonEast
+            mapViewModel.viewChanged(latNorth, latSouth, lonWest, lonEast)
+        }
+
+        return true
+    }
+
+    private fun debounce(delayMs: Long, action: () -> Unit) {
+        debounceJob?.cancel()
+        debounceJob = CoroutineScope(Dispatchers.Main).launch {
+            delay(delayMs)
+            action()
+        }
+    }
+
 
     fun setupZoom(){
         binding.plusBtn.setOnClickListener {

@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.Flow
  */
 interface EditTrackRepository {
 
-    val addedTracks: Flow<Track>
+    val addedTracks: Flow<Int>
 
     /**
      * Add a single waypoint to a track.
@@ -39,7 +39,13 @@ interface EditTrackRepository {
      */
     suspend fun getTrackWaypoints(trackId: Int): List<Waypoint>
 
-    /**
+    suspend fun getTrackWaypointsChunk(trackId: Int, chunkSize: Int, offset: Int): List<Waypoint>
+
+
+    suspend fun getTrackWaypointsSample(trackId: Int, sampleRate: Int): List<Waypoint>
+
+
+            /**
      * Insert a new track into the database.
      *
      * @param track TrackEntity object to insert.
@@ -71,4 +77,9 @@ interface EditTrackRepository {
     suspend fun addWaypoints(waypoints: List<Waypoint>)
 
     suspend fun getTrackLastWaypointIndex(trackId: Int): Double
+    suspend fun getVisibleTrackWaypointsCount(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): Double
+    suspend fun getVisibleTrackWaypoints(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): List<Waypoint>
+
+    suspend fun getVisibleTrackWaypointsChunk(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double, chunkSize: Int, offset: Int): List<Waypoint>
+
 }

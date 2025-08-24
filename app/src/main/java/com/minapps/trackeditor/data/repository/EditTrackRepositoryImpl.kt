@@ -23,8 +23,8 @@ class EditTrackRepositoryImpl @Inject constructor(
     private val dao: TrackDao
 ) : EditTrackRepository {
 
-    private val _addedTracks = MutableSharedFlow<Track>()
-    override val addedTracks: Flow<Track> = _addedTracks
+    private val _addedTracks = MutableSharedFlow<Int>()
+    override val addedTracks: Flow<Int> = _addedTracks
 
     /**
      * Add a waypoint to the database.
@@ -69,10 +69,35 @@ class EditTrackRepositoryImpl @Inject constructor(
         return dao.getTrackWaypoints(trackId).map { it.toDomain() }
     }
 
+    override suspend fun getTrackWaypointsChunk(trackId: Int, chunkSize: Int, offset: Int): List<Waypoint>{
+        return dao.getWaypointsByChunk(trackId, chunkSize, offset).map { it.toDomain() }
+    }
+
+
+    override suspend fun getTrackWaypointsSample(trackId: Int, sampleRate: Int): List<Waypoint>{
+        return dao.getTrackWaypointsSample(trackId, sampleRate).map { it.toDomain() }
+    }
+
+
 
     override suspend fun getTrackLastWaypointIndex(trackId: Int): Double {
         return dao.getTrackLastWaypointIndex(trackId)
     }
+
+
+    override suspend fun getVisibleTrackWaypointsCount(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): Double{
+        return dao.getVisibleTrackWaypointsCount(trackId, latNorth, latSouth, lonWest, lonEast)
+    }
+
+    override suspend fun getVisibleTrackWaypoints(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): List<Waypoint>{
+        return dao.getVisibleTrackWaypoints(trackId, latNorth, latSouth, lonWest, lonEast).map { it.toDomain() }
+    }
+
+    override suspend fun getVisibleTrackWaypointsChunk(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double, chunkSize: Int, offset: Int): List<Waypoint>{
+        return dao.getVisibleTrackWaypointsChunk(trackId, latNorth, latSouth, lonWest, lonEast, chunkSize, offset).map { it.toDomain() }
+    }
+
+
 
     /**
      * Insert a new Track entity into the database.
@@ -106,14 +131,15 @@ class EditTrackRepositoryImpl @Inject constructor(
         //TODO DEBUG purposes : No need of track in the future
         // only get number of points proportional to zoom
 
-        var track = dao.getTrackById(trackId)?.toDomain(dao.getTrackWaypoints(trackId))
+        //var track = dao.getTrackById(trackId)?.toDomain(dao.getTrackWaypoints(trackId))
 
-        if(track == null){
+        /*if(track == null){
             return false
-        }
+        }*/
 
         // Emit track for MapViewModel
-        _addedTracks.emit(track)
+        //_addedTracks.emit(track)
+        _addedTracks.emit(trackId)
         return true
     }
 
