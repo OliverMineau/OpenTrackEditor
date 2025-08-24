@@ -426,6 +426,9 @@ class MapViewModel @Inject constructor(
      */
     fun movePoint(waypointList: List<Waypoint>, pointId: Int?, isPointSet: Boolean = false) {
 
+        //val currentTool = editState.value.currentSelectedTool
+        //if(currentTool == ActionType.NONE)
+
         viewModelScope.launch {
             val trackId = waypointList.first().trackId
 
@@ -459,7 +462,7 @@ class MapViewModel @Inject constructor(
      * @param trackId
      * @param vibrate
      */
-    fun selectedTrack(trackId: Int, vibrate: Boolean = false) {
+    fun selectedTrack(trackId: Int?, vibrate: Boolean = false) {
         Log.d("debug", "Selected track $trackId")
         _editState.update { it.copy(currentselectedTrack = trackId, version = System.nanoTime()) }
 

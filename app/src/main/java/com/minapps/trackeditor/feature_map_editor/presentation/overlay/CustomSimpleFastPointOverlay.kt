@@ -41,6 +41,8 @@ class CustomSimpleFastPointOverlay(
         if(pointId > 0) selectedBundle.previousPoint = points.get(pointId-1)
         if(pointId+1 < points.size()) selectedBundle.nextPoint = points.get(pointId+1)
 
+        listener.onPointClicked(selectedBundle)
+
     }
 
 

@@ -326,14 +326,19 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
 
         polyline.setOnClickListener{ polyline, mapView, eventPos ->
 
-            if(selectedPolyline == trackId){
+            if (selectedPolyline == trackId) {
+                // deselect
+                unselectPolyline()
                 selectedPolyline = null
-            }else{
+                mapViewModel.selectedTrack(null) // if you want VM cleared
+            } else {
+                // select this one
+                unselectPolyline()
                 selectedPolyline = trackId
+                polyline.outlinePaint.color = selectedColor
+                mapViewModel.selectedTrack(trackId)
             }
-            unselectPolyline(selectedPolyline)
             mMap.invalidate()
-            selectTrack(trackId)
             true
         }
 
@@ -389,18 +394,35 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         return Color.HSVToColor(alpha, hsv)
     }
 
-    fun unselectPolyline(trackId: Int? = null, forceUpdate: Boolean? = false){
+    fun unselectPolyline(trackId: Int? = null, forceUpdate: Boolean? = false) {
         displayedPolylines.forEach { id, p1 ->
-            if(trackId == null || id != trackId){
+            if (trackId == null || id != trackId) {
                 p1.first.outlinePaint.color = Color.RED
-            }else{
-                p1.first.outlinePaint.color = Color.YELLOW
             }
         }
-
-        if(forceUpdate == true){
+        if (forceUpdate == true) {
             mMap.invalidate()
         }
+    }
+
+    override fun onPointClicked(selectedBundle: MovingPointBundle) {
+        // Ignore if no actual point is selected
+        if (selectedBundle.selectedPoint == null) return
+
+        val trackId = selectedBundle.trackId
+
+        // Deselect all others
+        unselectPolyline()
+
+        // Select this track
+        displayedPolylines[trackId]?.first?.outlinePaint?.color = Color.YELLOW
+        selectedPolyline = trackId
+
+        // Notify ViewModel
+        mapViewModel.selectedTrack(trackId)
+
+        // Redraw
+        mMap.invalidate()
     }
 
 

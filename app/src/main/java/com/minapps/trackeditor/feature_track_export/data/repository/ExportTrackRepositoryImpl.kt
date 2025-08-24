@@ -72,7 +72,10 @@ class ExportTrackRepositoryImpl @Inject constructor(
 
             // Write header and track segment header
             exporter.exportHeader(track, writer)
-            exporter.exportTrackSegmentHeader(track.name, writer)
+
+            var name = track.name
+            if(name.isEmpty()) name = "OpenTrackEditorTrack"
+            exporter.exportTrackSegmentHeader(name, writer)
 
             var offset = 0 // Index to start getting waypoints
             var writtenPoints = 0 // Total exported wpts

@@ -21,14 +21,25 @@ fun showSaveFileDialog(context: Context, onFileNameEntered: (String) -> Unit) {
         .setView(input)
         .setPositiveButton("Save") { dialog, _ ->
             val fileName = input.text.toString().trim()
-            if (fileName.isNotEmpty()) {
-                // Append extension here, e.g. ".gpx"
+            if (fileName.isNotEmpty() && isAllowed(fileName)) {
+
+                // TODO : Move it somewhere later !!!!! Here append .gpx or . kml ?
                 onFileNameEntered("$fileName.gpx")
+
             } else {
-                Toast.makeText(context, "File name cannot be empty", Toast.LENGTH_SHORT).show()
+                if (fileName.isEmpty()){
+                        Toast.makeText(context, "File name cannot be empty", Toast.LENGTH_SHORT).show()
+                }else{
+                    Toast.makeText(context, "Illegal characters in file name.\nOnly use alphanumeric characters.", Toast.LENGTH_SHORT).show()
+                }
             }
             dialog.dismiss()
         }
         .setNegativeButton("Cancel") { dialog, _ -> dialog.cancel() }
         .show()
+}
+
+fun isAllowed(fileName: String): Boolean{
+    val pattern = Regex("[\\w._-]+")
+    return pattern.matches(fileName)
 }
