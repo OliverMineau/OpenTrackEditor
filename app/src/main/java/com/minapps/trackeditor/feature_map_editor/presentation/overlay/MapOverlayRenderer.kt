@@ -112,6 +112,8 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
 
         // Add track to display list
         displayedPolylines[trackId] = polylinePair
+
+        mMap.invalidate()
     }
 
     /**
@@ -535,6 +537,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
     }
 
     private fun handleWaypointViewChanged(trackId: Int, points: List<Pair<Double, Double>>) {
+        Log.d("debugOpti", "Sent To update")
         displayTrack(points, trackId, Color.RED, false)
     }
 

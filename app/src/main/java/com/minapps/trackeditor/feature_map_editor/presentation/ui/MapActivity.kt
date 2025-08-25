@@ -45,6 +45,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
@@ -60,6 +61,9 @@ class MapActivity : AppCompatActivity(), MapListener {
     private val mapViewModel: MapViewModel by viewModels()
 
     private var lastUpdateTime: Long = 0L
+    private var trailingJob: Job? = null
+    private val updateInterval = 400L // 200ms
+
 
 
     //When file picked call viewmodel's importTrack
@@ -212,7 +216,7 @@ class MapActivity : AppCompatActivity(), MapListener {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 //Safely collect waypoint events from the ViewModel, only while the Activity is visible
                 launch {
-                    mapViewModel.waypointEvents.collect { event ->
+                    mapViewModel.waypointEvents.collectLatest { event ->
                         mapRenderer.handleWaypointEvents(event)
                     }
                 }
@@ -345,7 +349,7 @@ class MapActivity : AppCompatActivity(), MapListener {
     override fun onScroll(event: ScrollEvent?): Boolean {
         if (event == null) return true
 
-        updateDelay(500){
+        /*updateDelay(500){
 
             val latNorth = binding.osmmap.boundingBox.latNorth
             val latSouth = binding.osmmap.boundingBox.latSouth
@@ -359,7 +363,10 @@ class MapActivity : AppCompatActivity(), MapListener {
                 lonEast,
                 binding.osmmap.zoomLevelDouble
             )
-        }
+        }*/
+
+        scheduleUpdate()
+
 
         return true
     }
@@ -368,7 +375,7 @@ class MapActivity : AppCompatActivity(), MapListener {
         if (event == null) return true
 
 
-        updateDelay(500) {
+        /*updateDelay(500) {
             val latNorth = binding.osmmap.boundingBox.latNorth
             val latSouth = binding.osmmap.boundingBox.latSouth
             val lonWest = binding.osmmap.boundingBox.lonWest
@@ -380,7 +387,10 @@ class MapActivity : AppCompatActivity(), MapListener {
                 lonEast,
                 binding.osmmap.zoomLevelDouble
             )
-        }
+        }*/
+
+        scheduleUpdate()
+
 
         return true
     }
@@ -397,6 +407,39 @@ class MapActivity : AppCompatActivity(), MapListener {
             false
         }
     }
+
+    private fun scheduleUpdate() {
+        val now = System.currentTimeMillis()
+
+        // Leading call: only if last update was more than updateInterval ago
+        if (now - lastUpdateTime > updateInterval) {
+            //triggerUpdate()
+            lastUpdateTime = now
+        }
+
+        // Trailing call: after user stops interacting
+        trailingJob?.cancel()
+        trailingJob = lifecycleScope.launch {
+            delay(updateInterval * 2) // wait for ms after last event
+            triggerUpdate() // final update
+            lastUpdateTime = System.currentTimeMillis()
+        }
+    }
+
+    private fun triggerUpdate() {
+        val latNorth = binding.osmmap.boundingBox.latNorth
+        val latSouth = binding.osmmap.boundingBox.latSouth
+        val lonWest = binding.osmmap.boundingBox.lonWest
+        val lonEast = binding.osmmap.boundingBox.lonEast
+        mapViewModel.viewChanged(
+            latNorth,
+            latSouth,
+            lonWest,
+            lonEast,
+            binding.osmmap.zoomLevelDouble
+        )
+    }
+
 
 
 

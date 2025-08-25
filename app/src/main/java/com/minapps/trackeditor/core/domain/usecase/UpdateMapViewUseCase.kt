@@ -18,6 +18,7 @@ class UpdateMapViewUseCase @Inject constructor(
         lonWest: Double,
         lonEast: Double,
         showOutline: Boolean,
+        showFull: Boolean,
     ): List<Pair<Int, List<Waypoint>>>? {
 
         val count =
@@ -33,7 +34,7 @@ class UpdateMapViewUseCase @Inject constructor(
 
         // Update only if possible, maybe only update once we can load all points on screen (zoomed in)
         // and add that to the track outline ?
-        if (count < 10000 && !showOutline) {
+        if (showFull){//count < 10000 && !showOutline) {
             val tracks =
                 repository.getTracksWithVisibleWaypoints(latNorth, latSouth, lonWest, lonEast)
 

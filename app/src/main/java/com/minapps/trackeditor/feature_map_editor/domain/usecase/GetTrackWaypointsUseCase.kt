@@ -12,9 +12,9 @@ class GetTrackWaypointsUseCase @Inject constructor(
     private val trackSimplifier: TrackSimplifier
 ) {
 
-    private val DISPLAY_POINT_COUNT_MAX = 11000
+    private val DISPLAY_POINT_COUNT_MAX = 3000
     private val INITIAL_TOLERANCE = 500.0 // meters
-    private val TOLERANCE_MULTIPLIER = 1.5
+    private val TOLERANCE_MULTIPLIER = 5
     private val CHUNK_SIZE = 10_000
 
     /**

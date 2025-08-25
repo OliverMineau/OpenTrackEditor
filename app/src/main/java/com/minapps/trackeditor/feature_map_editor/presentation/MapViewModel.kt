@@ -24,6 +24,7 @@ import com.minapps.trackeditor.feature_track_import.domain.usecase.TrackImportUs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -31,8 +32,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.osmdroid.util.GeoPoint
-import kotlin.math.abs
 
 sealed class WaypointUpdate {
     data class Added(val trackId: Int, val point: Pair<Double, Double>) : WaypointUpdate()
@@ -537,10 +538,11 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    private var changed = false
+    private var hasDisplayedFull = false
+    private var hasDisplayedOutline = false
 
     // TODO replace track in view and set new visible track
-    fun viewChanged(latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double, zoom: Double){
+    /*fun viewChanged(latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double, zoom: Double){
 
         Log.d("viewchanged", "View changed : $latNorth, $latSouth, $lonWest, $lonEast")
 
@@ -548,50 +550,150 @@ class MapViewModel @Inject constructor(
         //  and display them
 
         // Add padding
-        val padding = 0.009   // ~1 km padding (depends on latitude!)
+        val padding = 0.01   // ~1 km padding (depends on latitude!)
 
         val latNorthPadded = latNorth + padding
         val latSouthPadded = latSouth - padding
         val lonWestPadded = lonWest - padding
         val lonEastPadded = lonEast + padding
 
-        var updateZoom = false
-        val step = 3
-        val snappedZoom = (zoom.toInt() / step) * step
-        if (lastZoom == null || lastZoom!!.toInt() != snappedZoom) {
-            lastZoom = snappedZoom
-            updateZoom = true
-            changed = true
-            Log.d("ZOOM", "ZOOM updating full track, zoom at : $lastZoom")
-        }
+        var showOutline = false
+        var showFull = false
+        var hasChangedZoom = false
+        var tooManyPoints = false
+
 
 
         viewModelScope.launch {
 
-            Log.d("opti", "LOADING NEW TRACK")
-            if(changed && updateMapViewUseCase.getVisiblePointCount(latNorthPadded, latSouthPadded, lonWestPadded, lonEastPadded) >= 10000){
-                updateZoom = true
-                changed = false
+            val waypointsTBD = updateMapViewUseCase.getVisiblePointCount(latNorthPadded, latSouthPadded, lonWestPadded, lonEastPadded)
+
+            // If Zoom changed
+            val step = 3
+            val snappedZoom = (zoom.toInt() / step) * step
+            if (lastZoom == null || lastZoom!!.toInt() != snappedZoom) {
+                lastZoom = snappedZoom
+                hasChangedZoom = true
+                //Log.d("ZOOM", "ZOOM updating full track, zoom at : $lastZoom")
             }
-            val tracks = updateMapViewUseCase(latNorthPadded, latSouthPadded, lonWestPadded, lonEastPadded, updateZoom)
+
+            // Has too many points
+            if(waypointsTBD >= 5000){
+                tooManyPoints = true
+            }
+
+            // Display Outline
+            if(tooManyPoints && hasChangedZoom || tooManyPoints && hasDisplayedFull || (tooManyPoints && !hasDisplayedFull && !hasDisplayedOutline)){
+                showOutline = true
+            }
+
+            // Display Full
+            if(!tooManyPoints && !showOutline){
+                showFull = true
+            }
+
+            Log.d("debugOpti", "hasChangedZoom: $hasChangedZoom")
+            Log.d("debugOpti", "tooManyPoints: $tooManyPoints")
+            Log.d("debugOpti", "pts count: $waypointsTBD")
+            Log.d("debugOpti", "showOutline: $showOutline")
+            Log.d("debugOpti", "showFull: $showFull")
+            Log.d("debugOpti", "hasDisplayedFull: $hasDisplayedFull")
+            Log.d("debugOpti", "hasDisplayedOutline: $hasDisplayedOutline")
+
+
+            hasDisplayedFull = showFull
+            hasDisplayedOutline = showOutline
+            val tracks = updateMapViewUseCase(latNorthPadded, latSouthPadded, lonWestPadded, lonEastPadded, showOutline, showFull)
 
             if(tracks != null && tracks.isNotEmpty()){
 
                 val trackId = tracks.first().first
                 val waypoints = tracks.first().second
                 val points = waypoints.map { wp -> Pair(wp.lat, wp.lng) }
-                _waypointEvents.emit(WaypointUpdate.ViewChanged(trackId, points))
+                _waypointEvents.tryEmit(WaypointUpdate.ViewChanged(trackId, points))
             }
-            /*if (waypoints.isNotEmpty()) {
-                //Reemit points for mapActivity
-                val points = waypoints.map { wp -> Pair(wp.lat, wp.lng) }
-                _waypointEvents.emit(WaypointUpdate.AddedList(trackId, points))
-            }*/
+            Log.d("debugOpti", "\n\n")
         }
 
 
 
+    }*/
+
+    fun viewChanged(
+        latNorth: Double,
+        latSouth: Double,
+        lonWest: Double,
+        lonEast: Double,
+        zoom: Double
+    ) {
+        Log.d("viewchanged", "View changed: $latNorth, $latSouth, $lonWest, $lonEast")
+
+        // Add padding (~1 km, depends on latitude)
+        val padding = 0.01
+        val latNorthPadded = latNorth + padding
+        val latSouthPadded = latSouth - padding
+        val lonWestPadded = lonWest - padding
+        val lonEastPadded = lonEast + padding
+
+        viewModelScope.launch {
+            // Run heavy computation in background
+            val tracksData = withContext(Dispatchers.Default) {
+
+                var showOutline = false
+                var showFull = false
+                var hasChangedZoom = false
+                var tooManyPoints = false
+
+                // Count waypoints in visible area
+                val waypointsTBD = updateMapViewUseCase.getVisiblePointCount(
+                    latNorthPadded, latSouthPadded, lonWestPadded, lonEastPadded
+                )
+
+                // Check zoom change
+                val step = 3
+                val snappedZoom = (zoom.toInt() / step) * step
+                if (lastZoom == null || lastZoom!!.toInt() != snappedZoom) {
+                    lastZoom = snappedZoom
+                    hasChangedZoom = true
+                }
+
+                // Too many points?
+                tooManyPoints = waypointsTBD >= 5000
+
+                // Decide display mode
+                showOutline = (tooManyPoints && hasChangedZoom) ||
+                        (tooManyPoints && hasDisplayedFull) ||
+                        (tooManyPoints && !hasDisplayedFull && !hasDisplayedOutline)
+                showFull = !tooManyPoints && !showOutline
+
+                Log.d("debugOpti", "hasChangedZoom: $hasChangedZoom")
+                Log.d("debugOpti", "tooManyPoints: $tooManyPoints")
+                Log.d("debugOpti", "pts count: $waypointsTBD")
+                Log.d("debugOpti", "showOutline: $showOutline")
+                Log.d("debugOpti", "showFull: $showFull")
+                Log.d("debugOpti", "hasDisplayedFull: $hasDisplayedFull")
+                Log.d("debugOpti", "hasDisplayedOutline: $hasDisplayedOutline")
+
+                hasDisplayedFull = showFull
+                hasDisplayedOutline = showOutline
+
+                // Fetch tracks (heavy work)
+                updateMapViewUseCase(
+                    latNorthPadded, latSouthPadded, lonWestPadded, lonEastPadded,
+                    showOutline, showFull
+                )
+            }
+
+            // Emit on main thread immediately after background work
+            tracksData?.firstOrNull()?.let { (trackId, waypoints) ->
+                val points = waypoints.map { wp -> wp.lat to wp.lng }
+                _waypointEvents.emit(WaypointUpdate.ViewChanged(trackId, points))
+            }
+
+            Log.d("debugOpti", "\n\n")
+        }
     }
+
 
 
 }
