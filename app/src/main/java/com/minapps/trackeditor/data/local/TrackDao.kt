@@ -40,6 +40,62 @@ interface TrackDao {
     @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId AND latitude BETWEEN :latSouth AND :latNorth AND longitude BETWEEN :lonWest AND :lonEast ORDER BY waypointId ASC LIMIT :chunkSize OFFSET :offset")
     suspend fun getVisibleTrackWaypointsChunk(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double, chunkSize: Int, offset: Int): List<WaypointEntity>
 
+   /* @Transaction
+    @Query("""
+    SELECT * FROM tracks
+    WHERE trackId IN (
+        SELECT DISTINCT trackOwnerId FROM waypoints
+        WHERE latitude BETWEEN :latSouth AND :latNorth
+        AND longitude BETWEEN :lonWest AND :lonEast
+    )
+""")
+    suspend fun getTracksWithVisibleWaypoints(
+        latNorth: Double,
+        latSouth: Double,
+        lonWest: Double,
+        lonEast: Double
+    ): List<TrackWithWaypoints>*/
+
+    @Query("""
+    SELECT * FROM waypoints
+    WHERE latitude BETWEEN :latSouth AND :latNorth
+      AND longitude BETWEEN :lonWest AND :lonEast
+    ORDER BY trackOwnerId ASC, waypointId ASC
+""")
+    suspend fun getTracksWithVisibleWaypoints(
+        latNorth: Double,
+        latSouth: Double,
+        lonWest: Double,
+        lonEast: Double
+    ): List<WaypointEntity>
+
+    @Query("""
+    SELECT COUNT(*) FROM waypoints
+    WHERE latitude BETWEEN :latSouth AND :latNorth
+      AND longitude BETWEEN :lonWest AND :lonEast
+    ORDER BY trackOwnerId ASC, waypointId ASC
+""")
+    suspend fun getTracksWithVisibleWaypointsCount(
+        latNorth: Double,
+        latSouth: Double,
+        lonWest: Double,
+        lonEast: Double
+    ): Double
+
+    @Query("""
+    SELECT DISTINCT trackOwnerId FROM waypoints
+    WHERE latitude BETWEEN :latSouth AND :latNorth
+      AND longitude BETWEEN :lonWest AND :lonEast
+    ORDER BY trackOwnerId ASC
+""")
+    suspend fun getTrackIdsWithVisibleWaypoints(
+        latNorth: Double,
+        latSouth: Double,
+        lonWest: Double,
+        lonEast: Double
+    ): List<Int>
+
+
 
     /**
      * Insert a waypoint into the database.

@@ -502,6 +502,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         when (event) {
             is WaypointUpdate.Added -> handleWaypointAdded(event.trackId, event.point)
             is WaypointUpdate.AddedList -> handleWaypointAddedList(event.trackId, event.points)
+            is WaypointUpdate.ViewChanged -> handleWaypointViewChanged(event.trackId, event.points)
             is WaypointUpdate.Removed -> handleWaypointRemoved(event.trackId, event.index)
             is WaypointUpdate.Moved -> handleWaypointMoved(event.trackId, event.points)
             is WaypointUpdate.Cleared -> handleTrackCleared(event.trackId)
@@ -531,6 +532,10 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
      */
     private fun handleWaypointAddedList(trackId: Int, points: List<Pair<Double, Double>>) {
         displayTrack(points, trackId, Color.RED, true)
+    }
+
+    private fun handleWaypointViewChanged(trackId: Int, points: List<Pair<Double, Double>>) {
+        displayTrack(points, trackId, Color.RED, false)
     }
 
     /**

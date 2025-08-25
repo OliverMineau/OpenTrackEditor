@@ -1,5 +1,6 @@
 package com.minapps.trackeditor.feature_map_editor.domain.usecase
 
+import android.util.Log
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
 import com.minapps.trackeditor.core.domain.util.TrackSimplifier
@@ -33,13 +34,15 @@ class GetTrackWaypointsUseCase @Inject constructor(
             waypointCount = repository.getVisibleTrackWaypointsCount(trackId, latNorth,latSouth, lonWest, lonEast)
         }
 
+        //Log.d("opti", "Waypoints importing : $waypointCount")
+
         // Small track → just return all points
         if (waypointCount < DISPLAY_POINT_COUNT_MAX) {
             return repository.getTrackWaypoints(trackId)
         }
 
         val chunkSize = 10_000
-        val tolerance = 2.0 //Good for huge tracks
+        val tolerance = 500.0 // This is in meters //Good for huge tracks, more is less points
         val simplifiedPoints = mutableListOf<Waypoint>()
 
         var offset = 0
@@ -48,11 +51,10 @@ class GetTrackWaypointsUseCase @Inject constructor(
             //val chunk = repository.getVisibleTrackWaypointsChunk(trackId, latNorth,latSouth, lonWest, lonEast, chunkSize + 1, offset)
 
             var chunk = listOf<Waypoint>()
-            if(latNorth == null || latSouth == null || lonWest == null || lonEast == null){
-                chunk = repository.getTrackWaypointsChunk(trackId,chunkSize + 1, offset)
-
+            chunk = if(latNorth == null || latSouth == null || lonWest == null || lonEast == null){
+                repository.getTrackWaypointsChunk(trackId,chunkSize + 1, offset)
             }else{
-                chunk = repository.getVisibleTrackWaypointsChunk(trackId, latNorth,latSouth, lonWest, lonEast, chunkSize + 1, offset)
+                repository.getVisibleTrackWaypointsChunk(trackId, latNorth,latSouth, lonWest, lonEast, chunkSize + 1, offset)
             }
 
 
@@ -74,7 +76,9 @@ class GetTrackWaypointsUseCase @Inject constructor(
         }
 
         // 4. Optional: final pass to smooth across chunks
-        return trackSimplifier.simplify(simplifiedPoints, tolerance)
+        val resultTrack = trackSimplifier.simplify(simplifiedPoints, tolerance)
+        Log.d("opti", "Track simplified to ${resultTrack.size}points")
+        return resultTrack
     }
 
 }

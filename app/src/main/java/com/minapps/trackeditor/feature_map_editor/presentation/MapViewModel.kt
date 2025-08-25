@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.minapps.trackeditor.R
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
+import com.minapps.trackeditor.core.domain.usecase.UpdateMapViewUseCase
 import com.minapps.trackeditor.feature_track_export.domain.usecase.ExportTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.ClearAllUseCase
@@ -31,9 +32,11 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
+import kotlin.math.abs
 
 sealed class WaypointUpdate {
     data class Added(val trackId: Int, val point: Pair<Double, Double>) : WaypointUpdate()
+    data class ViewChanged(val trackId: Int, val points: List<Pair<Double, Double>>) : WaypointUpdate()
     data class AddedList(val trackId: Int, val points: List<Pair<Double, Double>>) :
         WaypointUpdate()
 
@@ -116,6 +119,7 @@ class MapViewModel @Inject constructor(
     private val displayTrackUseCase: DisplayTrackUseCase,
     private val exportTrackUseCase: ExportTrackUseCase,
     private val getTrackLastWaypointIndexUseCase: GetTrackLastWaypointIndexUseCase,
+    private val updateMapViewUseCase: UpdateMapViewUseCase,
     private val trackImportUseCase: TrackImportUseCase,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
@@ -140,6 +144,8 @@ class MapViewModel @Inject constructor(
     private val _exportResult = MutableSharedFlow<Result<Uri>>()
     val exportResult = _exportResult.asSharedFlow()
 
+    private val zoomStages = listOf<Double>(5.0, 10.0, 15.0, 20.0, 25.0)
+    private var lastZoom: Int? = null
 
     private val trackWaypointIndexes = mutableMapOf<Int, Double>()
 
@@ -533,12 +539,49 @@ class MapViewModel @Inject constructor(
     }
 
     // TODO replace track in view and set new visible track
-    fun viewChanged(latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double){
+    fun viewChanged(latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double, zoom: Double){
 
         Log.d("viewchanged", "View changed : $latNorth, $latSouth, $lonWest, $lonEast")
 
         // TODO get list of all visible tracks and their waypoints
         //  and display them
+
+        // Add padding
+        val padding = 0.009   // ~1 km padding (depends on latitude!)
+
+        val latNorthPadded = latNorth + padding
+        val latSouthPadded = latSouth - padding
+        val lonWestPadded = lonWest - padding
+        val lonEastPadded = lonEast + padding
+
+        var updateZoom = false
+        val step = 3
+        val snappedZoom = (zoom.toInt() / step) * step
+        if (lastZoom == null || lastZoom!!.toInt() != snappedZoom) {
+            lastZoom = snappedZoom
+            updateZoom = true
+            Log.d("ZOOM", "ZOOM updating full track, zoom at : $lastZoom")
+        }
+
+
+        viewModelScope.launch {
+            val tracks = updateMapViewUseCase(latNorthPadded, latSouthPadded, lonWestPadded, lonEastPadded, updateZoom)
+
+            if(tracks != null && tracks.isNotEmpty()){
+
+                val trackId = tracks.first().first
+                val waypoints = tracks.first().second
+                val points = waypoints.map { wp -> Pair(wp.lat, wp.lng) }
+                _waypointEvents.emit(WaypointUpdate.ViewChanged(trackId, points))
+            }
+            /*if (waypoints.isNotEmpty()) {
+                //Reemit points for mapActivity
+                val points = waypoints.map { wp -> Pair(wp.lat, wp.lng) }
+                _waypointEvents.emit(WaypointUpdate.AddedList(trackId, points))
+            }*/
+        }
+
+
 
     }
 

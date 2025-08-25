@@ -97,6 +97,42 @@ class EditTrackRepositoryImpl @Inject constructor(
         return dao.getVisibleTrackWaypointsChunk(trackId, latNorth, latSouth, lonWest, lonEast, chunkSize, offset).map { it.toDomain() }
     }
 
+   /* override suspend fun getTracksWithVisibleWaypoints(latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): List<Pair<Int, List<Waypoint>>>{
+        return dao.getTracksWithVisibleWaypoints(latNorth, latSouth, lonWest, lonEast).map { it.toDomain() }
+    }*/
+
+    override suspend fun getTracksWithVisibleWaypoints(
+        latNorth: Double,
+        latSouth: Double,
+        lonWest: Double,
+        lonEast: Double
+    ): List<Pair<Int, List<Waypoint>>> {
+        val waypoints = dao.getTracksWithVisibleWaypoints(latNorth, latSouth, lonWest, lonEast)
+        return waypoints
+            .map { it.toDomain() }
+            .groupBy { it.trackId }  // group domain waypoints by track
+            .toList()
+    }
+
+    override suspend fun getTracksWithVisibleWaypointsCount(
+        latNorth: Double,
+        latSouth: Double,
+        lonWest: Double,
+        lonEast: Double
+    ): Double {
+        val count = dao.getTracksWithVisibleWaypointsCount(latNorth, latSouth, lonWest, lonEast)
+        return count
+    }
+
+    override suspend fun getTrackIdsWithVisibleWaypoints(
+        latNorth: Double,
+        latSouth: Double,
+        lonWest: Double,
+        lonEast: Double
+    ): List<Int> {
+        val ids = dao.getTrackIdsWithVisibleWaypoints(latNorth, latSouth, lonWest, lonEast)
+        return ids
+    }
 
 
     /**

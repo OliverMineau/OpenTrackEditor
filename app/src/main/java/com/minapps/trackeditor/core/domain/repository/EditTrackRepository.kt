@@ -79,6 +79,9 @@ interface EditTrackRepository {
     suspend fun getTrackLastWaypointIndex(trackId: Int): Double
     suspend fun getVisibleTrackWaypointsCount(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): Double
     suspend fun getVisibleTrackWaypoints(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): List<Waypoint>
+    suspend fun getTracksWithVisibleWaypoints(latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): List<Pair<Int, List<Waypoint>>>
+    suspend fun getTracksWithVisibleWaypointsCount(latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): Double
+    suspend fun getTrackIdsWithVisibleWaypoints(latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): List<Int>
 
     suspend fun getVisibleTrackWaypointsChunk(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double, chunkSize: Int, offset: Int): List<Waypoint>
 

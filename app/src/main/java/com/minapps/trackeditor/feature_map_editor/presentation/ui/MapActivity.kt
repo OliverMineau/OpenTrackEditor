@@ -45,6 +45,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 
@@ -57,7 +58,8 @@ class MapActivity : AppCompatActivity(), MapListener {
     private lateinit var toolboxPopup: ToolboxPopup
 
     private val mapViewModel: MapViewModel by viewModels()
-    private var debounceJob: Job? = null
+
+    private var lastUpdateTime: Long = 0L
 
 
     //When file picked call viewmodel's importTrack
@@ -122,7 +124,6 @@ class MapActivity : AppCompatActivity(), MapListener {
         // Start observing ViewModel state flows
         observeViewModel()
 
-
     }
 
 
@@ -184,14 +185,17 @@ class MapActivity : AppCompatActivity(), MapListener {
                     mapViewModel.selectTool(ActionType.NONE)
                     true
                 }
+
                 R.id.nav_add -> {
                     mapViewModel.selectTool(ActionType.ADD)
                     true
                 }
+
                 R.id.nav_remove -> {
                     mapViewModel.selectTool(ActionType.REMOVE)
                     true
                 }
+
                 else -> {
                     mapViewModel.selectedTool(ActionType.NONE)
                     toolboxPopup.hide()
@@ -237,10 +241,18 @@ class MapActivity : AppCompatActivity(), MapListener {
                     mapViewModel.exportResult.collect { result ->
                         result.fold(
                             onSuccess = { uri ->
-                                Toast.makeText(this@MapActivity, "Exported to: $uri", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    this@MapActivity,
+                                    "Exported to: $uri",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             },
                             onFailure = { error ->
-                                Toast.makeText(this@MapActivity, "Export failed: ${error.message}", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    this@MapActivity,
+                                    "Export failed: ${error.message}",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         )
                     }
@@ -279,18 +291,18 @@ class MapActivity : AppCompatActivity(), MapListener {
     }
 
     //TODO BUG progress somewhere
-    fun handleProgressEvent(data: ProgressData){
+    fun handleProgressEvent(data: ProgressData) {
 
-        if(data.message != null){
+        if (data.message != null) {
             Toast.makeText(this, data.message, Toast.LENGTH_SHORT).show()
         }
 
         val progressBar = binding.progressBar
         val progressTextView = binding.progressTextView
-        if(data.isDisplayed){
+        if (data.isDisplayed) {
             progressBar.visibility = View.VISIBLE
             progressTextView.visibility = View.VISIBLE
-        }else{
+        } else {
             Log.d("debug", "Mapacti, set progress 0")
             progressBar.setProgress(0, false)
             progressTextView.text = "0%"
@@ -331,45 +343,64 @@ class MapActivity : AppCompatActivity(), MapListener {
     }
 
     override fun onScroll(event: ScrollEvent?): Boolean {
+        if (event == null) return true
 
-        debounce(250) {
-            val latNorth = binding.osmmap.boundingBox.latNorth
-            val latSouth = binding.osmmap.boundingBox.latSouth
-            val lonWest = binding.osmmap.boundingBox.lonWest
-            val lonEast = binding.osmmap.boundingBox.lonEast
-            mapViewModel.viewChanged(latNorth, latSouth, lonWest, lonEast)
-        }
-        return true
-    }
-
-    override fun onZoom(event: ZoomEvent?): Boolean{
-        debounce(250){
-            if(event == null){
-                return@debounce
-            }
-
-            //Log.d("zoom", "Zoom : ${event.zoomLevel}")
+        updateDelay(500){
 
             val latNorth = binding.osmmap.boundingBox.latNorth
             val latSouth = binding.osmmap.boundingBox.latSouth
             val lonWest = binding.osmmap.boundingBox.lonWest
             val lonEast = binding.osmmap.boundingBox.lonEast
-            mapViewModel.viewChanged(latNorth, latSouth, lonWest, lonEast)
+
+            mapViewModel.viewChanged(
+                latNorth,
+                latSouth,
+                lonWest,
+                lonEast,
+                binding.osmmap.zoomLevelDouble
+            )
         }
 
         return true
     }
 
-    private fun debounce(delayMs: Long, action: () -> Unit) {
-        debounceJob?.cancel()
-        debounceJob = CoroutineScope(Dispatchers.Main).launch {
-            delay(delayMs)
+    override fun onZoom(event: ZoomEvent?): Boolean {
+        if (event == null) return true
+
+
+        updateDelay(500) {
+            val latNorth = binding.osmmap.boundingBox.latNorth
+            val latSouth = binding.osmmap.boundingBox.latSouth
+            val lonWest = binding.osmmap.boundingBox.lonWest
+            val lonEast = binding.osmmap.boundingBox.lonEast
+            mapViewModel.viewChanged(
+                latNorth,
+                latSouth,
+                lonWest,
+                lonEast,
+                binding.osmmap.zoomLevelDouble
+            )
+        }
+
+        return true
+    }
+
+
+
+    private fun updateDelay(periodMs: Long, action: () -> Unit): Boolean {
+        val now = System.currentTimeMillis()
+        return if (now - lastUpdateTime >= periodMs) {
+            lastUpdateTime = now
             action()
+            true
+        } else {
+            false
         }
     }
 
 
-    fun setupZoom(){
+
+    fun setupZoom() {
         binding.plusBtn.setOnClickListener {
             binding.osmmap.controller.zoomIn()
         }
@@ -379,7 +410,11 @@ class MapActivity : AppCompatActivity(), MapListener {
     }
 
     private fun centerMapOnMyLocationOnce() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
             // Permission granted, get location
             val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
             fusedLocationClient.lastLocation.addOnSuccessListener { location ->
