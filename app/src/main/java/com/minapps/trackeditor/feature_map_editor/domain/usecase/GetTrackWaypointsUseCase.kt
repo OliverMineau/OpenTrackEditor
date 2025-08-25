@@ -5,64 +5,55 @@ import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
 import com.minapps.trackeditor.core.domain.util.TrackSimplifier
 import jakarta.inject.Inject
+import kotlin.math.max
 
-/**
- * Use case responsible for getting all waypoints from a given track
- *
- * @property repository
- */
 class GetTrackWaypointsUseCase @Inject constructor(
     private val repository: EditTrackRepository,
     private val trackSimplifier: TrackSimplifier
 ) {
 
-    val DISPLAY_POINT_COUNT_MAX = 11000
-
+    private val DISPLAY_POINT_COUNT_MAX = 11000
+    private val INITIAL_TOLERANCE = 500.0 // meters
+    private val TOLERANCE_MULTIPLIER = 1.5
+    private val CHUNK_SIZE = 10_000
 
     /**
-     * Retrieves all waypoints of track from database
-     *
-     * @param trackId
-     * @return List of waypoints associated to given trackId
+     * Retrieves all waypoints of a track, simplified if necessary
      */
-    suspend operator fun invoke(trackId: Int, latNorth: Double?, latSouth: Double?, lonWest: Double?, lonEast: Double?): List<Waypoint> {
-        var waypointCount = 0.0
-        if(latNorth == null || latSouth == null || lonWest == null || lonEast == null){
-            waypointCount = repository.getTrackLastWaypointIndex(trackId)
+    suspend operator fun invoke(
+        trackId: Int,
+        latNorth: Double?,
+        latSouth: Double?,
+        lonWest: Double?,
+        lonEast: Double?
+    ): List<Waypoint> {
 
-        }else{
-            waypointCount = repository.getVisibleTrackWaypointsCount(trackId, latNorth,latSouth, lonWest, lonEast)
+        val waypointCount = if (latNorth == null || latSouth == null || lonWest == null || lonEast == null) {
+            repository.getTrackLastWaypointIndex(trackId)
+        } else {
+            repository.getVisibleTrackWaypointsCount(trackId, latNorth, latSouth, lonWest, lonEast)
         }
 
-        //Log.d("opti", "Waypoints importing : $waypointCount")
-
         // Small track → just return all points
-        if (waypointCount < DISPLAY_POINT_COUNT_MAX) {
+        if (waypointCount <= DISPLAY_POINT_COUNT_MAX) {
             return repository.getTrackWaypoints(trackId)
         }
 
-        val chunkSize = 10_000
-        val tolerance = 500.0 // This is in meters //Good for huge tracks, more is less points
+        // Load track in chunks and simplify
         val simplifiedPoints = mutableListOf<Waypoint>()
-
         var offset = 0
         while (offset < waypointCount) {
-            // 1. Load a chunk
-            //val chunk = repository.getVisibleTrackWaypointsChunk(trackId, latNorth,latSouth, lonWest, lonEast, chunkSize + 1, offset)
 
-            var chunk = listOf<Waypoint>()
-            chunk = if(latNorth == null || latSouth == null || lonWest == null || lonEast == null){
-                repository.getTrackWaypointsChunk(trackId,chunkSize + 1, offset)
-            }else{
-                repository.getVisibleTrackWaypointsChunk(trackId, latNorth,latSouth, lonWest, lonEast, chunkSize + 1, offset)
+            val chunk = if (latNorth == null || latSouth == null || lonWest == null || lonEast == null) {
+                repository.getTrackWaypointsChunk(trackId, CHUNK_SIZE + 1, offset)
+            } else {
+                repository.getVisibleTrackWaypointsChunk(trackId, latNorth, latSouth, lonWest, lonEast, CHUNK_SIZE + 1, offset)
             }
 
-
             if (chunk.isNotEmpty()) {
-                // 2. Simplify this chunk
-                val simplifiedChunk = trackSimplifier.simplify(chunk, tolerance)
+                val simplifiedChunk = trackSimplifier.simplify(chunk, INITIAL_TOLERANCE)
 
-                // 3. Merge with previous results (avoid duplicates at boundaries)
+                // Merge with previous, avoid duplicates at boundaries
                 if (simplifiedPoints.isNotEmpty() && simplifiedChunk.isNotEmpty()) {
                     if (simplifiedPoints.last().id == simplifiedChunk.first().id) {
                         simplifiedChunk.removeAt(0)
@@ -72,13 +63,25 @@ class GetTrackWaypointsUseCase @Inject constructor(
                 simplifiedPoints.addAll(simplifiedChunk)
             }
 
-            offset += chunkSize
+            offset += CHUNK_SIZE
         }
 
-        // 4. Optional: final pass to smooth across chunks
-        val resultTrack = trackSimplifier.simplify(simplifiedPoints, tolerance)
-        Log.d("opti", "Track simplified to ${resultTrack.size}points")
+        // Final simplification pass with adaptive tolerance
+        var tolerance = INITIAL_TOLERANCE
+        var resultTrack = trackSimplifier.simplify(simplifiedPoints, tolerance)
+
+        while (resultTrack.size > DISPLAY_POINT_COUNT_MAX) {
+            tolerance *= TOLERANCE_MULTIPLIER
+            resultTrack = trackSimplifier.simplify(simplifiedPoints, tolerance)
+        }
+
+        // Final fallback subsample if still too many points
+        if (resultTrack.size > DISPLAY_POINT_COUNT_MAX) {
+            val step = max(1, resultTrack.size / DISPLAY_POINT_COUNT_MAX)
+            resultTrack = resultTrack.filterIndexed { index, _ -> index % step == 0 }.toMutableList()
+        }
+
+        Log.d("opti", "Track simplified to ${resultTrack.size} points (tolerance=$tolerance m)")
         return resultTrack
     }
-
 }

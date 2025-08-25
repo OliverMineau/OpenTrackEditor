@@ -3,18 +3,20 @@ package com.minapps.trackeditor.core.domain.util
 import android.view.WindowInsetsAnimation
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import jakarta.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sqrt
 
 class TrackSimplifier @Inject constructor(){
 
-    fun simplify(points: List<Waypoint>, tolerance: Double): MutableList<Waypoint> {
+    suspend fun simplify(points: List<Waypoint>, tolerance: Double): MutableList<Waypoint> {
         if (points.size < 3) return points.toMutableList()
         return douglasPeucker(points, tolerance)
     }
 
-    private fun douglasPeucker(points: List<Waypoint>, epsilon: Double): MutableList<Waypoint> {
+    /*private fun douglasPeucker(points: List<Waypoint>, epsilon: Double): MutableList<Waypoint> {
         if (points.size < 3) return points.toMutableList()
 
         var maxDistance = 0.0
@@ -38,6 +40,46 @@ class TrackSimplifier @Inject constructor(){
         } else {
             mutableListOf(points.first(), points.last())
         }
+    }*/
+
+    suspend fun douglasPeucker(
+        points: List<Waypoint>,
+        epsilon: Double
+    ): MutableList<Waypoint> = withContext(Dispatchers.Default) {
+        if (points.size < 3) return@withContext points.toMutableList()
+
+        val stack = ArrayDeque<Pair<Int, Int>>() // index ranges to process
+        val keep = BooleanArray(points.size) { false }
+
+        // Always keep endpoints
+        keep[0] = true
+        keep[points.lastIndex] = true
+        stack.addFirst(0 to points.lastIndex)
+
+        while (stack.isNotEmpty()) {
+            val (start, end) = stack.removeFirst()
+
+            var maxDistance = 0.0
+            var index = -1
+            val a = points[start]
+            val b = points[end]
+
+            for (i in (start + 1) until end) {
+                val d = perpendicularDistance(points[i], a, b)
+                if (d > maxDistance) {
+                    maxDistance = d
+                    index = i
+                }
+            }
+
+            if (maxDistance > epsilon && index != -1) {
+                keep[index] = true
+                stack.addFirst(start to index)
+                stack.addFirst(index to end)
+            }
+        }
+
+        points.filterIndexed { i, _ -> keep[i] }.toMutableList()
     }
 
     private fun perpendicularDistance(p: Waypoint, start: Waypoint, end: Waypoint): Double {

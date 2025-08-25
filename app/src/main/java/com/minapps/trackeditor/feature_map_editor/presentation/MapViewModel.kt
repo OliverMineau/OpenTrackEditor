@@ -144,7 +144,6 @@ class MapViewModel @Inject constructor(
     private val _exportResult = MutableSharedFlow<Result<Uri>>()
     val exportResult = _exportResult.asSharedFlow()
 
-    private val zoomStages = listOf<Double>(5.0, 10.0, 15.0, 20.0, 25.0)
     private var lastZoom: Int? = null
 
     private val trackWaypointIndexes = mutableMapOf<Int, Double>()
@@ -538,6 +537,8 @@ class MapViewModel @Inject constructor(
         }
     }
 
+    private var changed = false
+
     // TODO replace track in view and set new visible track
     fun viewChanged(latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double, zoom: Double){
 
@@ -560,11 +561,18 @@ class MapViewModel @Inject constructor(
         if (lastZoom == null || lastZoom!!.toInt() != snappedZoom) {
             lastZoom = snappedZoom
             updateZoom = true
+            changed = true
             Log.d("ZOOM", "ZOOM updating full track, zoom at : $lastZoom")
         }
 
 
         viewModelScope.launch {
+
+            Log.d("opti", "LOADING NEW TRACK")
+            if(changed && updateMapViewUseCase.getVisiblePointCount(latNorthPadded, latSouthPadded, lonWestPadded, lonEastPadded) >= 10000){
+                updateZoom = true
+                changed = false
+            }
             val tracks = updateMapViewUseCase(latNorthPadded, latSouthPadded, lonWestPadded, lonEastPadded, updateZoom)
 
             if(tracks != null && tracks.isNotEmpty()){
