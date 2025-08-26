@@ -21,20 +21,17 @@ class UpdateMapViewUseCase @Inject constructor(
         showFull: Boolean,
     ): List<Pair<Int, List<Waypoint>>>? {
 
-        val count =
-            repository.getTracksWithVisibleWaypointsCount(latNorth, latSouth, lonWest, lonEast)
-
+        // Get ids of visible tracks (in view)
         val trackIds =
             repository.getTrackIdsWithVisibleWaypoints(latNorth, latSouth, lonWest, lonEast)
-        //Log.d("optimise", "Total DB visible points : $count points, ids:$trackIds")
 
-        if(trackIds.isEmpty()){
+        // If not tracks return
+        if (trackIds.isEmpty()) {
             return null
         }
 
-        // Update only if possible, maybe only update once we can load all points on screen (zoomed in)
-        // and add that to the track outline ?
-        if (showFull){//count < 10000 && !showOutline) {
+        // Show full track precision
+        if (showFull) {
             val tracks =
                 repository.getTracksWithVisibleWaypoints(latNorth, latSouth, lonWest, lonEast)
 
@@ -44,20 +41,28 @@ class UpdateMapViewUseCase @Inject constructor(
                     "Display non filtered points: ${track.first} : ${track.second.size}points"
                 )
             }
-
             return tracks
-        } else if (showOutline) {
 
+        }
+        // Show rough track outline
+        else if (showOutline) {
+
+            // Create return list
             var retList = mutableListOf<Pair<Int, List<Waypoint>>>()
 
-            var waypoints =
-                getTrackWaypointsUseCase(trackIds[0], latNorth, latSouth, lonWest, lonEast)
-            retList.add(Pair(trackIds[0], waypoints))
+            for (id in trackIds) {
 
-            Log.d(
-                "optimise",
-                "Display DouglasPeucker points: ${trackIds} : ${waypoints.size}points"
-            )
+                // Get all visible waypoints
+                var waypoints =
+                    getTrackWaypointsUseCase(id, latNorth, latSouth, lonWest, lonEast)
+
+                retList.add(Pair(id, waypoints))
+
+                Log.d(
+                    "optimise",
+                    "Display DouglasPeucker points: ${trackIds} : ${waypoints.size}points"
+                )
+            }
 
             return retList
         }
@@ -65,6 +70,15 @@ class UpdateMapViewUseCase @Inject constructor(
         return null
     }
 
+    /**
+     * Get number of potentially visible points in view
+     *
+     * @param latNorth
+     * @param latSouth
+     * @param lonWest
+     * @param lonEast
+     * @return
+     */
     suspend fun getVisiblePointCount(
         latNorth: Double,
         latSouth: Double,

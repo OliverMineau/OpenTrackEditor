@@ -348,80 +348,36 @@ class MapActivity : AppCompatActivity(), MapListener {
 
     override fun onScroll(event: ScrollEvent?): Boolean {
         if (event == null) return true
-
-        /*updateDelay(500){
-
-            val latNorth = binding.osmmap.boundingBox.latNorth
-            val latSouth = binding.osmmap.boundingBox.latSouth
-            val lonWest = binding.osmmap.boundingBox.lonWest
-            val lonEast = binding.osmmap.boundingBox.lonEast
-
-            mapViewModel.viewChanged(
-                latNorth,
-                latSouth,
-                lonWest,
-                lonEast,
-                binding.osmmap.zoomLevelDouble
-            )
-        }*/
-
         scheduleUpdate()
-
-
         return true
     }
 
     override fun onZoom(event: ZoomEvent?): Boolean {
         if (event == null) return true
-
-
-        /*updateDelay(500) {
-            val latNorth = binding.osmmap.boundingBox.latNorth
-            val latSouth = binding.osmmap.boundingBox.latSouth
-            val lonWest = binding.osmmap.boundingBox.lonWest
-            val lonEast = binding.osmmap.boundingBox.lonEast
-            mapViewModel.viewChanged(
-                latNorth,
-                latSouth,
-                lonWest,
-                lonEast,
-                binding.osmmap.zoomLevelDouble
-            )
-        }*/
-
         scheduleUpdate()
-
-
         return true
     }
 
-
-
-    private fun updateDelay(periodMs: Long, action: () -> Unit): Boolean {
-        val now = System.currentTimeMillis()
-        return if (now - lastUpdateTime >= periodMs) {
-            lastUpdateTime = now
-            action()
-            true
-        } else {
-            false
-        }
-    }
-
+    /**
+     * Merge updates from scroll and zoom
+     *
+     */
     private fun scheduleUpdate() {
+
+        // Only call if last update was more than updateInterval ago
+        // For smoothish updates (disabled for now, I have to optimise loading points before)
+        /*
         val now = System.currentTimeMillis()
-
-        // Leading call: only if last update was more than updateInterval ago
         if (now - lastUpdateTime > updateInterval) {
-            //triggerUpdate()
+            triggerUpdate()
             lastUpdateTime = now
-        }
+        }*/
 
-        // Trailing call: after user stops interacting
+        // Call when scrolling and zooming stopped
         trailingJob?.cancel()
         trailingJob = lifecycleScope.launch {
-            delay(updateInterval * 2) // wait for ms after last event
-            triggerUpdate() // final update
+            delay(updateInterval * 2)
+            triggerUpdate()
             lastUpdateTime = System.currentTimeMillis()
         }
     }
@@ -439,9 +395,6 @@ class MapActivity : AppCompatActivity(), MapListener {
             binding.osmmap.zoomLevelDouble
         )
     }
-
-
-
 
     fun setupZoom() {
         binding.plusBtn.setOnClickListener {

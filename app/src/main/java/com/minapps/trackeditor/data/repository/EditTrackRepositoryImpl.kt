@@ -97,10 +97,6 @@ class EditTrackRepositoryImpl @Inject constructor(
         return dao.getVisibleTrackWaypointsChunk(trackId, latNorth, latSouth, lonWest, lonEast, chunkSize, offset).map { it.toDomain() }
     }
 
-   /* override suspend fun getTracksWithVisibleWaypoints(latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): List<Pair<Int, List<Waypoint>>>{
-        return dao.getTracksWithVisibleWaypoints(latNorth, latSouth, lonWest, lonEast).map { it.toDomain() }
-    }*/
-
     override suspend fun getTracksWithVisibleWaypoints(
         latNorth: Double,
         latSouth: Double,

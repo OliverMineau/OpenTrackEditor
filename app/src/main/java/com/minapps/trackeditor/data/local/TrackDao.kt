@@ -40,22 +40,6 @@ interface TrackDao {
     @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId AND latitude BETWEEN :latSouth AND :latNorth AND longitude BETWEEN :lonWest AND :lonEast ORDER BY waypointId ASC LIMIT :chunkSize OFFSET :offset")
     suspend fun getVisibleTrackWaypointsChunk(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double, chunkSize: Int, offset: Int): List<WaypointEntity>
 
-   /* @Transaction
-    @Query("""
-    SELECT * FROM tracks
-    WHERE trackId IN (
-        SELECT DISTINCT trackOwnerId FROM waypoints
-        WHERE latitude BETWEEN :latSouth AND :latNorth
-        AND longitude BETWEEN :lonWest AND :lonEast
-    )
-""")
-    suspend fun getTracksWithVisibleWaypoints(
-        latNorth: Double,
-        latSouth: Double,
-        lonWest: Double,
-        lonEast: Double
-    ): List<TrackWithWaypoints>*/
-
     @Query("""
     SELECT * FROM waypoints
     WHERE latitude BETWEEN :latSouth AND :latNorth

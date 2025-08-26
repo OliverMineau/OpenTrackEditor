@@ -9,6 +9,7 @@ import com.minapps.trackeditor.R
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
 import com.minapps.trackeditor.core.domain.usecase.UpdateMapViewUseCase
+import com.minapps.trackeditor.core.domain.util.MapUpdateViewHelper
 import com.minapps.trackeditor.feature_track_export.domain.usecase.ExportTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.ClearAllUseCase
@@ -122,6 +123,7 @@ class MapViewModel @Inject constructor(
     private val getTrackLastWaypointIndexUseCase: GetTrackLastWaypointIndexUseCase,
     private val updateMapViewUseCase: UpdateMapViewUseCase,
     private val trackImportUseCase: TrackImportUseCase,
+    private val mapUpdateViewHelper: MapUpdateViewHelper,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
@@ -540,85 +542,10 @@ class MapViewModel @Inject constructor(
 
     private var hasDisplayedFull = false
     private var hasDisplayedOutline = false
-
-    // TODO replace track in view and set new visible track
-    /*fun viewChanged(latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double, zoom: Double){
-
-        Log.d("viewchanged", "View changed : $latNorth, $latSouth, $lonWest, $lonEast")
-
-        // TODO get list of all visible tracks and their waypoints
-        //  and display them
-
-        // Add padding
-        val padding = 0.01   // ~1 km padding (depends on latitude!)
-
-        val latNorthPadded = latNorth + padding
-        val latSouthPadded = latSouth - padding
-        val lonWestPadded = lonWest - padding
-        val lonEastPadded = lonEast + padding
-
-        var showOutline = false
-        var showFull = false
-        var hasChangedZoom = false
-        var tooManyPoints = false
+    private var hasStartedCalculationsInThread = false
 
 
-
-        viewModelScope.launch {
-
-            val waypointsTBD = updateMapViewUseCase.getVisiblePointCount(latNorthPadded, latSouthPadded, lonWestPadded, lonEastPadded)
-
-            // If Zoom changed
-            val step = 3
-            val snappedZoom = (zoom.toInt() / step) * step
-            if (lastZoom == null || lastZoom!!.toInt() != snappedZoom) {
-                lastZoom = snappedZoom
-                hasChangedZoom = true
-                //Log.d("ZOOM", "ZOOM updating full track, zoom at : $lastZoom")
-            }
-
-            // Has too many points
-            if(waypointsTBD >= 5000){
-                tooManyPoints = true
-            }
-
-            // Display Outline
-            if(tooManyPoints && hasChangedZoom || tooManyPoints && hasDisplayedFull || (tooManyPoints && !hasDisplayedFull && !hasDisplayedOutline)){
-                showOutline = true
-            }
-
-            // Display Full
-            if(!tooManyPoints && !showOutline){
-                showFull = true
-            }
-
-            Log.d("debugOpti", "hasChangedZoom: $hasChangedZoom")
-            Log.d("debugOpti", "tooManyPoints: $tooManyPoints")
-            Log.d("debugOpti", "pts count: $waypointsTBD")
-            Log.d("debugOpti", "showOutline: $showOutline")
-            Log.d("debugOpti", "showFull: $showFull")
-            Log.d("debugOpti", "hasDisplayedFull: $hasDisplayedFull")
-            Log.d("debugOpti", "hasDisplayedOutline: $hasDisplayedOutline")
-
-
-            hasDisplayedFull = showFull
-            hasDisplayedOutline = showOutline
-            val tracks = updateMapViewUseCase(latNorthPadded, latSouthPadded, lonWestPadded, lonEastPadded, showOutline, showFull)
-
-            if(tracks != null && tracks.isNotEmpty()){
-
-                val trackId = tracks.first().first
-                val waypoints = tracks.first().second
-                val points = waypoints.map { wp -> Pair(wp.lat, wp.lng) }
-                _waypointEvents.tryEmit(WaypointUpdate.ViewChanged(trackId, points))
-            }
-            Log.d("debugOpti", "\n\n")
-        }
-
-
-
-    }*/
-
+    // TODO : Works but should be redesigned (pls)
     fun viewChanged(
         latNorth: Double,
         latSouth: Double,
@@ -628,7 +555,7 @@ class MapViewModel @Inject constructor(
     ) {
         Log.d("viewchanged", "View changed: $latNorth, $latSouth, $lonWest, $lonEast")
 
-        // Add padding (~1 km, depends on latitude)
+        // Add padding to load points off screen
         val padding = 0.01
         val latNorthPadded = latNorth + padding
         val latSouthPadded = latSouth - padding
@@ -636,62 +563,48 @@ class MapViewModel @Inject constructor(
         val lonEastPadded = lonEast + padding
 
         viewModelScope.launch {
-            // Run heavy computation in background
-            val tracksData = withContext(Dispatchers.Default) {
 
-                var showOutline = false
-                var showFull = false
-                var hasChangedZoom = false
-                var tooManyPoints = false
+            if(hasStartedCalculationsInThread) return@launch
+
+            // Do calculations in new thread
+            val tracksData = withContext(Dispatchers.Default) {
+                Log.d("debugOpti", "Started in new thread")
+                hasStartedCalculationsInThread = true
 
                 // Count waypoints in visible area
-                val waypointsTBD = updateMapViewUseCase.getVisiblePointCount(
+                val count = updateMapViewUseCase.getVisiblePointCount(
                     latNorthPadded, latSouthPadded, lonWestPadded, lonEastPadded
                 )
 
-                // Check zoom change
-                val step = 3
-                val snappedZoom = (zoom.toInt() / step) * step
-                if (lastZoom == null || lastZoom!!.toInt() != snappedZoom) {
-                    lastZoom = snappedZoom
-                    hasChangedZoom = true
-                }
+                // Decide how to load points
+                val decision = mapUpdateViewHelper.decide(zoom, count, lastZoom, hasDisplayedFull, hasDisplayedOutline)
 
-                // Too many points?
-                tooManyPoints = waypointsTBD >= 5000
-
-                // Decide display mode
-                showOutline = (tooManyPoints && hasChangedZoom) ||
-                        (tooManyPoints && hasDisplayedFull) ||
-                        (tooManyPoints && !hasDisplayedFull && !hasDisplayedOutline)
-                showFull = !tooManyPoints && !showOutline
-
-                Log.d("debugOpti", "hasChangedZoom: $hasChangedZoom")
-                Log.d("debugOpti", "tooManyPoints: $tooManyPoints")
-                Log.d("debugOpti", "pts count: $waypointsTBD")
-                Log.d("debugOpti", "showOutline: $showOutline")
-                Log.d("debugOpti", "showFull: $showFull")
                 Log.d("debugOpti", "hasDisplayedFull: $hasDisplayedFull")
                 Log.d("debugOpti", "hasDisplayedOutline: $hasDisplayedOutline")
 
-                hasDisplayedFull = showFull
-                hasDisplayedOutline = showOutline
+                // Update state
+                lastZoom = decision.snappedZoom
+                hasDisplayedFull = decision.showFull
+                hasDisplayedOutline = decision.showOutline
 
-                // Fetch tracks (heavy work)
+                // Fetch tracks with chosen methode/mode
                 updateMapViewUseCase(
                     latNorthPadded, latSouthPadded, lonWestPadded, lonEastPadded,
-                    showOutline, showFull
+                    decision.showOutline, decision.showFull
                 )
             }
 
-            // Emit on main thread immediately after background work
             tracksData?.firstOrNull()?.let { (trackId, waypoints) ->
                 val points = waypoints.map { wp -> wp.lat to wp.lng }
                 _waypointEvents.emit(WaypointUpdate.ViewChanged(trackId, points))
             }
 
-            Log.d("debugOpti", "\n\n")
+            hasStartedCalculationsInThread = false
+            Log.d("debugOpti", "Finished in new thread")
+
         }
+
+
     }
 
 

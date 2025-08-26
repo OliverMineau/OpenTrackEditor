@@ -12,7 +12,7 @@ class GetTrackWaypointsUseCase @Inject constructor(
     private val trackSimplifier: TrackSimplifier
 ) {
 
-    private val DISPLAY_POINT_COUNT_MAX = 3000
+    private val DISPLAY_POINT_COUNT_MAX = 10000
     private val INITIAL_TOLERANCE = 500.0 // meters
     private val TOLERANCE_MULTIPLIER = 5
     private val CHUNK_SIZE = 10_000
@@ -28,13 +28,14 @@ class GetTrackWaypointsUseCase @Inject constructor(
         lonEast: Double?
     ): List<Waypoint> {
 
+        // Get number of points in given track or in in view
         val waypointCount = if (latNorth == null || latSouth == null || lonWest == null || lonEast == null) {
             repository.getTrackLastWaypointIndex(trackId)
         } else {
             repository.getVisibleTrackWaypointsCount(trackId, latNorth, latSouth, lonWest, lonEast)
         }
 
-        // Small track → just return all points
+        // If small track display all points
         if (waypointCount <= DISPLAY_POINT_COUNT_MAX) {
             return repository.getTrackWaypoints(trackId)
         }
@@ -44,6 +45,7 @@ class GetTrackWaypointsUseCase @Inject constructor(
         var offset = 0
         while (offset < waypointCount) {
 
+            // Get Chunk of track
             val chunk = if (latNorth == null || latSouth == null || lonWest == null || lonEast == null) {
                 repository.getTrackWaypointsChunk(trackId, CHUNK_SIZE + 1, offset)
             } else {
@@ -51,6 +53,8 @@ class GetTrackWaypointsUseCase @Inject constructor(
             }
 
             if (chunk.isNotEmpty()) {
+
+                // Apply filtering algorithm
                 val simplifiedChunk = trackSimplifier.simplify(chunk, INITIAL_TOLERANCE)
 
                 // Merge with previous, avoid duplicates at boundaries
@@ -70,15 +74,11 @@ class GetTrackWaypointsUseCase @Inject constructor(
         var tolerance = INITIAL_TOLERANCE
         var resultTrack = trackSimplifier.simplify(simplifiedPoints, tolerance)
 
+        // TODO Heavy calculations here
+        //  Simplify track to get less than MAX points
         while (resultTrack.size > DISPLAY_POINT_COUNT_MAX) {
             tolerance *= TOLERANCE_MULTIPLIER
             resultTrack = trackSimplifier.simplify(simplifiedPoints, tolerance)
-        }
-
-        // Final fallback subsample if still too many points
-        if (resultTrack.size > DISPLAY_POINT_COUNT_MAX) {
-            val step = max(1, resultTrack.size / DISPLAY_POINT_COUNT_MAX)
-            resultTrack = resultTrack.filterIndexed { index, _ -> index % step == 0 }.toMutableList()
         }
 
         Log.d("opti", "Track simplified to ${resultTrack.size} points (tolerance=$tolerance m)")
