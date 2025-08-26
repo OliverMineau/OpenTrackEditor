@@ -40,6 +40,7 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import androidx.core.view.size
 import androidx.core.view.get
 import com.google.android.gms.location.LocationServices
+import com.minapps.trackeditor.core.domain.util.ToolGroup
 import com.minapps.trackeditor.feature_map_editor.presentation.EditState
 import com.minapps.trackeditor.feature_map_editor.presentation.ProgressData
 import com.minapps.trackeditor.feature_track_export.presentation.utils.showSaveFileDialog
@@ -189,17 +190,17 @@ class MapActivity : AppCompatActivity(), MapListener {
             when (it.itemId) {
                 R.id.nav_toolbox -> {
                     toolboxPopup.show()
-                    mapViewModel.selectTool(ActionType.NONE)
+                    mapViewModel.selectedTool(ActionType.NONE)
                     true
                 }
 
                 R.id.nav_add -> {
-                    mapViewModel.selectTool(ActionType.ADD)
+                    mapViewModel.selectedTool(ActionType.ADD)
                     true
                 }
 
                 R.id.nav_remove -> {
-                    mapViewModel.selectTool(ActionType.REMOVE)
+                    mapViewModel.selectedTool(ActionType.REMOVE)
                     true
                 }
 
@@ -325,8 +326,9 @@ class MapActivity : AppCompatActivity(), MapListener {
     private fun updateSelectedToolUI(tool: ActionType) {
         val navBinding = BottomNavigationBinding.bind(binding.root)
         val editNav = navBinding.editBottomNavigation
+        val mainNav = navBinding.mainBottomNavigation
 
-        if (tool.group == 1) {
+        if (tool.group == ToolGroup.TRACK_EDITING) {
             // Uncheck all menu if not type items
             for (i in 0 until editNav.menu.size) {
                 val item = editNav.menu[i]
@@ -337,7 +339,18 @@ class MapActivity : AppCompatActivity(), MapListener {
                 } else if (item.itemId == R.id.nav_remove && tool == ActionType.REMOVE) {
                     item.isChecked = true
                     return
-                } else if (item.itemId == R.id.nav_toolbox && tool != ActionType.REMOVE && tool != ActionType.ADD) {
+                } else if (item.itemId == R.id.nav_toolbox && tool != ActionType.REMOVE && tool != ActionType.ADD && tool != ActionType.VIEW) {
+                    item.isChecked = true
+                    return
+                }
+            }
+            for (i in 0 until mainNav.menu.size) {
+                val item = mainNav.menu[i]
+
+                if (item.itemId == R.id.nav_view && tool == ActionType.VIEW) {
+                    item.isChecked = true
+                    return
+                } else if (item.itemId == R.id.nav_edit && tool == ActionType.EDIT) {
                     item.isChecked = true
                     return
                 }

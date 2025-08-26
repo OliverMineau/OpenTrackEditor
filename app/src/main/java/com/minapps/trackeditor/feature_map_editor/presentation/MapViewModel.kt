@@ -6,10 +6,13 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minapps.trackeditor.R
+import com.minapps.trackeditor.core.domain.model.SimpleWaypoint
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
 import com.minapps.trackeditor.core.domain.usecase.UpdateMapViewUseCase
 import com.minapps.trackeditor.core.domain.util.MapUpdateViewHelper
+import com.minapps.trackeditor.core.domain.util.SelectionCount
+import com.minapps.trackeditor.core.domain.util.ToolGroup
 import com.minapps.trackeditor.feature_track_export.domain.usecase.ExportTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.ClearAllUseCase
@@ -37,9 +40,9 @@ import kotlinx.coroutines.withContext
 import org.osmdroid.util.GeoPoint
 
 sealed class WaypointUpdate {
-    data class Added(val trackId: Int, val point: Triple<Double, Double, Double>) : WaypointUpdate()
-    data class ViewChanged(val trackId: Int, val points: List<Triple<Double, Double, Double>>) : WaypointUpdate()
-    data class AddedList(val trackId: Int, val points: List<Triple<Double, Double, Double>>, val center: Boolean) :
+    data class Added(val trackId: Int, val point: SimpleWaypoint) : WaypointUpdate()
+    data class ViewChanged(val trackId: Int, val points: List<SimpleWaypoint>) : WaypointUpdate()
+    data class AddedList(val trackId: Int, val points: List<SimpleWaypoint>, val center: Boolean) :
         WaypointUpdate()
 
     data class Removed(val trackId: Int, val index: Int) : WaypointUpdate()
@@ -54,43 +57,69 @@ data class ActionDescriptor(
     val icon: Int?,
     val label: String?,
     val action: UIAction?,
-    val selectionCount: Int?,
+    val selectionCount: SelectionCount?,
     val type: ActionType,
-    val group: Int?
+    val group: ToolGroup?
 )
+
+
 
 enum class ActionType(
     val icon: Int?,
     val label: String?,
-    val selectionCount: Int?,
-    val group: Int? = 0
+    val selectionCount: SelectionCount?,
+    val group: ToolGroup? = ToolGroup.NONE
 ) {
     // No action
     NONE(null, null, null),
     SPACER(null, null, null),
 
     // File & system actions
-    EXPORT(R.drawable.file_export_24, "Export", 1, 2),
-    SCREENSHOT(R.drawable.mode_landscape_24, "Screenshot", 1, 2),
-    CLEAR(R.drawable.trash_24, "Clear", 1, 2),
+    EXPORT(R.drawable.file_export_24, "Export", SelectionCount.NONE, ToolGroup.FILE_SYSTEM),
+    SCREENSHOT(
+        R.drawable.mode_landscape_24,
+        "Screenshot",
+        SelectionCount.NONE,
+        ToolGroup.FILE_SYSTEM
+    ),
+    CLEAR(R.drawable.trash_24, "Clear", SelectionCount.NONE, ToolGroup.FILE_SYSTEM),
 
     // Visual tools
-    ELEVATION(R.drawable.curve_arrow_24, "Elevation", 1),
-    LAYERS(R.drawable.land_layers_24, "Layers", 1),
+    ELEVATION(R.drawable.curve_arrow_24, "Elevation", SelectionCount.MULTIPLE),
+    LAYERS(R.drawable.land_layers_24, "Layers", SelectionCount.MULTIPLE),
 
     // Editing tools
-    REVERSE(R.drawable.rotate_reverse_24, "Reverse", -1, 1),
-    REMOVE_DUPS(R.drawable.circle_overlap_24, "Remove dups", -1, 1),
-    REMOVE_BUGS(R.drawable.bug_slash_24, "Remove bugs", -1, 1),
-    CUT(R.drawable.scissors_24, "Cut", -1, 1),
-    JOIN(R.drawable.link_alt_24, "Join", -1, 1),
-    REDUCE_NOISE(R.drawable.noise_cancelling_headphones_24, "Reduce noise", -1, 1),
-    FILTER(R.drawable.filter_24, "Filter", -1, 1),
-    MAGIC_FILTER(R.drawable.sweep_24, "Magic filter", -1, 1),
+    REVERSE(R.drawable.rotate_reverse_24, "Reverse", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
+    REMOVE_DUPS(
+        R.drawable.circle_overlap_24,
+        "Remove dups",
+        SelectionCount.ONE,
+        ToolGroup.TRACK_EDITING
+    ),
+    REMOVE_BUGS(
+        R.drawable.bug_slash_24,
+        "Remove bugs",
+        SelectionCount.ONE,
+        ToolGroup.TRACK_EDITING
+    ),
+    CUT(R.drawable.scissors_24, "Cut", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
+    JOIN(R.drawable.link_alt_24, "Join", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
+    REDUCE_NOISE(
+        R.drawable.noise_cancelling_headphones_24,
+        "Reduce noise",
+        SelectionCount.ONE,
+        ToolGroup.TRACK_EDITING
+    ),
+    FILTER(R.drawable.filter_24, "Filter", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
+    MAGIC_FILTER(R.drawable.sweep_24, "Magic filter", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
 
     // Edit Bottom Navigation
-    ADD(R.drawable.map_marker_plus_24, "Add", -1, 1),
-    REMOVE(R.drawable.map_marker_minus_24, "Remove", -1, 1),
+    ADD(R.drawable.map_marker_plus_24, "Add", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
+    REMOVE(R.drawable.map_marker_minus_24, "Remove", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
+
+    // Main Bottom Navigation
+    VIEW(R.drawable.map_marker_24, "", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
+    EDIT(R.drawable.file_edit_24, "", SelectionCount.MULTIPLE, ToolGroup.TRACK_EDITING),
 
 }
 
@@ -98,7 +127,7 @@ data class EditState(
     val currentSelectedTool: ActionType = ActionType.NONE,
     val currentselectedTrack: Int? = null,
     val version: Long = System.nanoTime(),
-    )
+)
 
 enum class DataDestination {
     EDIT_BOTTOM_NAV,
@@ -222,12 +251,6 @@ class MapViewModel @Inject constructor(
 
     }
 
-
-    //TODO Temporary
-    fun selectTool(action: ActionType) {
-        selectedTool(action)
-    }
-
     /**
      * Propagates selected tool to UI
      * /!\ Update version, if same tool selected twice, wont trigger /!\
@@ -267,60 +290,11 @@ class MapViewModel @Inject constructor(
         }
     }
 
-
-
-
-    /*fun toolExport(name: String) {
-
-        viewModelScope.launch {
-
-            /*val trackId = editState.value.currentselectedTrack ?: return@launch
-            val track = getFullTrackUseCase(trackId)
-            if (track == null || track.waypoints.isEmpty()) {
-                Toast.makeText(context, "No waypoints to export", Toast.LENGTH_SHORT).show()
-                Log.d("debug", "No waypoints to export")
-                return@launch
-            }
-
-            // Convert to GPX
-            val exporter = GpxExporter()
-            val gpxString = exporter.export(track)
-
-            val uri = FileExporter.saveTextAndGetUri(context, name, gpxString)
-
-            Toast.makeText(context, "Exported to : $uri", Toast.LENGTH_SHORT).show()*/
-
-        }
-
-    }*/
-
     private suspend fun toolExportTrack() {
         Log.d("debug", "Exporting Track Fun")
 
         // Emit event to UI to show dialog with default filename
         _showExportDialog.emit("track.gpx")
-
-
-        /*val trackId = editState.value.currentselectedTrack ?: return
-        val track = getFullTrackUseCase(trackId)
-        if (track == null || track.waypoints.isEmpty()) {
-            Toast.makeText(context, "No waypoints to export", Toast.LENGTH_SHORT).show()
-            Log.d("debug", "No waypoints to export")
-            return
-        }
-
-        // Convert to GPX
-        val exporter = GpxExporter()
-        val gpxString = exporter.export(track)
-
-        FileExporter.promptFileNameAndExport(context,gpxString)
-        // Save & Share
-        //val uri = FileExporter.saveTextAndGetUri(context, "track_$trackId.gpx", gpxString)
-        //FileExporter.shareFile(context, uri, "application/gpx+xml")
-
-        //Log.d("debug", "Exported to $uri")
-        //Toast.makeText(context, "Exported to : $uri", Toast.LENGTH_SHORT).show()
-    */
     }
 
 
@@ -348,16 +322,21 @@ class MapViewModel @Inject constructor(
 
         viewModelScope.launch {
 
-            val currentIndex =
+            val currentId =
                 trackWaypointIndexes[selectedTrackId] ?: (getTrackLastWaypointIndexUseCase(
                     selectedTrackId
                 ) + 1.0)
 
-            addWaypointUseCase(lat, lng, currentIndex.toDouble(), selectedTrackId)
+            addWaypointUseCase(lat, lng, currentId, selectedTrackId)
             // Notify observers that a waypoint was added
-            _waypointEvents.emit(WaypointUpdate.Added(selectedTrackId, Triple(lat,lng, currentIndex)))
+            _waypointEvents.emit(
+                WaypointUpdate.Added(
+                    selectedTrackId,
+                    SimpleWaypoint(currentId, lat, lng)
+                )
+            )
             // Update index only after successful addition
-            trackWaypointIndexes[selectedTrackId] = currentIndex + 1
+            trackWaypointIndexes[selectedTrackId] = currentId + 1
         }
     }
 
@@ -421,7 +400,7 @@ class MapViewModel @Inject constructor(
 
         if (waypoints.isNotEmpty()) {
             //Reemit points for mapActivity
-            val points = waypoints.map { wp -> Triple(wp.lat, wp.lng, wp.id) }
+            val points = waypoints.map { wp -> SimpleWaypoint(wp.id, wp.lat, wp.lng) }
             _waypointEvents.emit(WaypointUpdate.AddedList(trackId, points, center))
         }
     }
@@ -433,7 +412,12 @@ class MapViewModel @Inject constructor(
      * @param pointId
      * @param isPointSet
      */
-    fun movePoint(waypointList: List<Waypoint>, pointIndex: Int?, pointId: Double?, isPointSet: Boolean = false) {
+    fun movePoint(
+        waypointList: List<Waypoint>,
+        pointIndex: Int?,
+        pointId: Double?,
+        isPointSet: Boolean = false
+    ) {
 
         //val currentTool = editState.value.currentSelectedTool
         //if(currentTool == ActionType.NONE)
@@ -495,20 +479,37 @@ class MapViewModel @Inject constructor(
             _progressState.update { it.copy(isDisplayed = true) }
 
             exportTrackUseCase(trackId, fileName, format).collect { exportResult ->
-                when(exportResult){
+                when (exportResult) {
                     is DataStreamProgress.Completed -> {
                         Log.d("debug", "export success, mapvm")
                         Log.d("debug", "Progress close")
-                        _progressState.update { it.copy(isDisplayed = false, message = "Track exported successfully !") }
+                        _progressState.update {
+                            it.copy(
+                                isDisplayed = false,
+                                message = "Track exported successfully !"
+                            )
+                        }
                     }
+
                     is DataStreamProgress.Error -> {
                         //_exportResult.emit(Result.failure(exportResult.message))
                         Log.d("debug", "export fail : ${exportResult.message}")
-                        _progressState.update { it.copy(isDisplayed = false, message = "Exporting track failed.") }
+                        _progressState.update {
+                            it.copy(
+                                isDisplayed = false,
+                                message = "Exporting track failed."
+                            )
+                        }
                     }
+
                     is DataStreamProgress.Progress -> {
                         Log.d("debug", "export progress ${exportResult.percent}, mapvm")
-                        _progressState.update { it.copy(progress = exportResult.percent, message = null) }
+                        _progressState.update {
+                            it.copy(
+                                progress = exportResult.percent,
+                                message = null
+                            )
+                        }
                     }
                 }
             }
@@ -517,28 +518,50 @@ class MapViewModel @Inject constructor(
 
     fun importTrack(uri: Uri) {
 
+        selectedTool(ActionType.VIEW)
+
         viewModelScope.launch {
             trackImportUseCase(uri).collect { importProgress ->
                 _progressState.update { it.copy(isDisplayed = true) }
 
-                when(importProgress){
+                when (importProgress) {
                     is DataStreamProgress.Completed -> {
 
                         var isFirst = true
-                        for (id in importProgress.trackIds){
+                        for (id in importProgress.trackIds) {
                             val displayed = displayTrackUseCase(id, isFirst)
-                            isFirst=false
-                            _progressState.update { it.copy(isDisplayed = false, message = "Imported track successfully") }
-                            Log.d("debug", "VM received finished, trackID:${id}, displayed:$displayed")
+                            isFirst = false
+                            _progressState.update {
+                                it.copy(
+                                    isDisplayed = false,
+                                    message = "Imported track successfully"
+                                )
+                            }
+                            Log.d(
+                                "debug",
+                                "VM received finished, trackID:${id}, displayed:$displayed"
+                            )
                         }
                     }
+
                     is DataStreamProgress.Error -> {
                         Log.d("debug", "VM received ERROR! ${importProgress.message}")
-                        _progressState.update { it.copy(isDisplayed = false, message = "Importing failed") }
+                        _progressState.update {
+                            it.copy(
+                                isDisplayed = false,
+                                message = "Importing failed"
+                            )
+                        }
                     }
+
                     is DataStreamProgress.Progress -> {
                         Log.d("debug", "VM received progress : ${importProgress.percent}%")
-                        _progressState.update { it.copy(progress = importProgress.percent, message = null) }
+                        _progressState.update {
+                            it.copy(
+                                progress = importProgress.percent,
+                                message = null
+                            )
+                        }
                     }
                 }
             }
@@ -569,7 +592,7 @@ class MapViewModel @Inject constructor(
 
         viewModelScope.launch {
 
-            if(hasStartedCalculationsInThread) return@launch
+            if (hasStartedCalculationsInThread) return@launch
 
             // Do calculations in new thread
             val tracksData = withContext(Dispatchers.Default) {
@@ -582,7 +605,13 @@ class MapViewModel @Inject constructor(
                 )
 
                 // Decide how to load points
-                val decision = mapUpdateViewHelper.decide(zoom, count, lastZoom, hasDisplayedFull, hasDisplayedOutline)
+                val decision = mapUpdateViewHelper.decide(
+                    zoom,
+                    count,
+                    lastZoom,
+                    hasDisplayedFull,
+                    hasDisplayedOutline
+                )
 
                 Log.d("debugOpti", "hasDisplayedFull: $hasDisplayedFull")
                 Log.d("debugOpti", "hasDisplayedOutline: $hasDisplayedOutline")
@@ -601,7 +630,7 @@ class MapViewModel @Inject constructor(
 
 
             tracksData?.forEach { (trackId, waypoints) ->
-                val points = waypoints.map { wp -> Triple(wp.lat, wp.lng, wp.id) }
+                val points = waypoints.map { wp -> SimpleWaypoint(wp.id, wp.lat, wp.lng) }
                 _waypointEvents.emit(WaypointUpdate.ViewChanged(trackId, points))
             }
 
@@ -617,7 +646,6 @@ class MapViewModel @Inject constructor(
 
 
     }
-
 
 
 }

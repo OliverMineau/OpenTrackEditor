@@ -16,6 +16,7 @@ import androidx.core.graphics.ColorUtils
 import androidx.core.view.children
 import androidx.core.view.isEmpty
 import com.minapps.trackeditor.R
+import com.minapps.trackeditor.core.domain.util.ToolGroup
 import com.minapps.trackeditor.feature_map_editor.presentation.ActionDescriptor
 import com.minapps.trackeditor.feature_map_editor.presentation.ActionType
 import com.minapps.trackeditor.feature_map_editor.presentation.util.vibrate
@@ -344,7 +345,7 @@ class ToolboxPopup(
         menuItems.reversed().forEach { item ->
             val itemView = inflater.inflate(R.layout.tool_item, toolboxMenu, false)
 
-            if(item.group != 2){
+            if(item.group != ToolGroup.FILE_SYSTEM){
                 toolViews.add(item to itemView)
             }
 
@@ -403,7 +404,7 @@ class ToolboxPopup(
         toolViews.forEach { item ->
 
             // Type 2 tools don't change colour and affect the ui
-            if (tool.group == 2){
+            if (tool.group == ToolGroup.FILE_SYSTEM){
                 return
             }
 
@@ -413,8 +414,9 @@ class ToolboxPopup(
 
             var color: Int
 
+            // TODO Maybe error here
             // If same group, deselect all except same action/tool or if same tool
-            if(tool.group == 0 && group == 0 && tool == type){
+            if(tool.group == ToolGroup.NONE && group == ToolGroup.NONE && tool == type){
 
                 color = LTGRAY
                 //Selected item once = selected
@@ -425,12 +427,12 @@ class ToolboxPopup(
                 changeColor(item.second, color)
             }
             // If group 0 then nothing is affected
-            else if (group == 0){
+            else if (group == ToolGroup.NONE){
                 return@forEach
             }
 
             // If same group other than 0
-            if(group == tool.group && group != 0){
+            if(group == tool.group && group != ToolGroup.NONE){
                 // If different tools, deselect
                 if(type != tool){
                     color = LTGRAY

@@ -24,9 +24,9 @@ class AddWaypointUseCase @Inject constructor(
      * @param idx The index of the waypoint within the track.
      * @param trackId The ID of the track to which this waypoint will be added.
      */
-    suspend operator fun invoke(lat: Double, lng: Double, idx: Double, trackId: Int) {
+    suspend operator fun invoke(lat: Double, lng: Double, id: Double, trackId: Int) {
         val waypoint = Waypoint(
-            id = idx,
+            id = id,
             lat = lat,
             lng = lng,
             elv = null,
