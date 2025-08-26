@@ -37,9 +37,9 @@ import kotlinx.coroutines.withContext
 import org.osmdroid.util.GeoPoint
 
 sealed class WaypointUpdate {
-    data class Added(val trackId: Int, val point: Pair<Double, Double>) : WaypointUpdate()
-    data class ViewChanged(val trackId: Int, val points: List<Pair<Double, Double>>) : WaypointUpdate()
-    data class AddedList(val trackId: Int, val points: List<Pair<Double, Double>>) :
+    data class Added(val trackId: Int, val point: Triple<Double, Double, Double>) : WaypointUpdate()
+    data class ViewChanged(val trackId: Int, val points: List<Triple<Double, Double, Double>>) : WaypointUpdate()
+    data class AddedList(val trackId: Int, val points: List<Triple<Double, Double, Double>>, val center: Boolean) :
         WaypointUpdate()
 
     data class Removed(val trackId: Int, val index: Int) : WaypointUpdate()
@@ -178,9 +178,9 @@ class MapViewModel @Inject constructor(
             clearAll()
 
             //Make MapViewModel listen to changes on "repository.addedTracks"
-            repository.addedTracks.collect { trackId ->
+            repository.addedTracks.collect { (trackId, center) ->
                 //If added load waypoints of given track id
-                loadTrackWaypoints(trackId)
+                loadTrackWaypoints(trackId, center)
             }
 
         }
@@ -355,7 +355,7 @@ class MapViewModel @Inject constructor(
 
             addWaypointUseCase(lat, lng, currentIndex.toDouble(), selectedTrackId)
             // Notify observers that a waypoint was added
-            _waypointEvents.emit(WaypointUpdate.Added(selectedTrackId, lat to lng))
+            _waypointEvents.emit(WaypointUpdate.Added(selectedTrackId, Triple(lat,lng, currentIndex)))
             // Update index only after successful addition
             trackWaypointIndexes[selectedTrackId] = currentIndex + 1
         }
@@ -416,13 +416,13 @@ class MapViewModel @Inject constructor(
      *
      * @param trackId
      */
-    suspend fun loadTrackWaypoints(trackId: Int) {
+    suspend fun loadTrackWaypoints(trackId: Int, center: Boolean) {
         val waypoints = getTrackWaypointsUseCase(trackId, null, null, null, null)
 
         if (waypoints.isNotEmpty()) {
             //Reemit points for mapActivity
-            val points = waypoints.map { wp -> Pair(wp.lat, wp.lng) }
-            _waypointEvents.emit(WaypointUpdate.AddedList(trackId, points))
+            val points = waypoints.map { wp -> Triple(wp.lat, wp.lng, wp.id) }
+            _waypointEvents.emit(WaypointUpdate.AddedList(trackId, points, center))
         }
     }
 
@@ -433,7 +433,7 @@ class MapViewModel @Inject constructor(
      * @param pointId
      * @param isPointSet
      */
-    fun movePoint(waypointList: List<Waypoint>, pointId: Int?, isPointSet: Boolean = false) {
+    fun movePoint(waypointList: List<Waypoint>, pointIndex: Int?, pointId: Double?, isPointSet: Boolean = false) {
 
         //val currentTool = editState.value.currentSelectedTool
         //if(currentTool == ActionType.NONE)
@@ -442,18 +442,18 @@ class MapViewModel @Inject constructor(
             val trackId = waypointList.first().trackId
 
             // Point is set, update database
-            if (isPointSet && pointId != null) {
+            if (isPointSet && pointId != null && pointIndex != null) {
                 addWaypointUseCase(
                     waypointList.first().lat,
                     waypointList.first().lng,
-                    pointId.toDouble(),
+                    pointId,
                     trackId = trackId
                 )
 
                 _waypointEvents.emit(
                     WaypointUpdate.MovedDone(
                         trackId,
-                        pointId,
+                        pointIndex,
                         waypointList.first().lat to waypointList.first().lng
                     )
                 )
@@ -523,9 +523,14 @@ class MapViewModel @Inject constructor(
 
                 when(importProgress){
                     is DataStreamProgress.Completed -> {
-                        val displayed = displayTrackUseCase(importProgress.trackId)
-                        _progressState.update { it.copy(isDisplayed = false, message = "Imported track successfully") }
-                        Log.d("debug", "VM received finished, trackID:${importProgress.trackId}, displayed:$displayed")
+
+                        var isFirst = true
+                        for (id in importProgress.trackIds){
+                            val displayed = displayTrackUseCase(id, isFirst)
+                            isFirst=false
+                            _progressState.update { it.copy(isDisplayed = false, message = "Imported track successfully") }
+                            Log.d("debug", "VM received finished, trackID:${id}, displayed:$displayed")
+                        }
                     }
                     is DataStreamProgress.Error -> {
                         Log.d("debug", "VM received ERROR! ${importProgress.message}")
@@ -594,10 +599,16 @@ class MapViewModel @Inject constructor(
                 )
             }
 
-            tracksData?.firstOrNull()?.let { (trackId, waypoints) ->
-                val points = waypoints.map { wp -> wp.lat to wp.lng }
+
+            tracksData?.forEach { (trackId, waypoints) ->
+                val points = waypoints.map { wp -> Triple(wp.lat, wp.lng, wp.id) }
                 _waypointEvents.emit(WaypointUpdate.ViewChanged(trackId, points))
             }
+
+            /*tracksData?.firstOrNull()?.let { (trackId, waypoints) ->
+                val points = waypoints.map { wp -> wp.lat to wp.lng }
+                _waypointEvents.emit(WaypointUpdate.ViewChanged(trackId, points))
+            }*/
 
             hasStartedCalculationsInThread = false
             Log.d("debugOpti", "Finished in new thread")

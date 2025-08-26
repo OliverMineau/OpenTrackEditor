@@ -57,12 +57,16 @@ class TrackImportRepositoryImpl @Inject constructor(
         val parser = importerFactory.getImporter(format)
 
         var trackId: Int? = null
+        var trackIds = mutableListOf<Int>()
+
         parser.parse(context, fileUri, fileSize, chunkSize).collect { parsedData ->
             when (parsedData) {
 
                 // Send track metadata
                 is ParsedData.TrackMetadata -> {
-                    trackId = dao.insertTrack((parsedData.metadata).toEntity()).toInt()
+                    val id = dao.insertTrack((parsedData.metadata).toEntity()).toInt()
+                    trackId = id
+                    trackIds.add(id)
                 }
 
                 // Send waypoints
@@ -77,6 +81,7 @@ class TrackImportRepositoryImpl @Inject constructor(
                                 createdAt = 0
                             )
                         ).toInt()
+                        trackIds.add(trackId)
                     }
 
                     dao.insertWaypoints((parsedData.waypoints).map {
@@ -97,8 +102,7 @@ class TrackImportRepositoryImpl @Inject constructor(
         }
 
         Log.d("debug", "Finished")
-        val tid = trackId ?: -1
-        emit(DataStreamProgress.Completed(tid))
+        emit(DataStreamProgress.Completed(trackIds))
 
     }.catch { e ->
         emit(DataStreamProgress.Error(e.message ?: "Unknown Error"))

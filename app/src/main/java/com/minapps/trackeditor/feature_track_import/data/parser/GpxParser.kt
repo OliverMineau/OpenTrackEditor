@@ -51,7 +51,7 @@ class GpxParser : TrackParser {
             var eventType = parser.eventType
             var name = "Imported GPX Track"
             var waypointId = 0.0
-            var trackId = 0
+            //var trackId = 0
             var lat = 0.0
             var lon = 0.0
             var ele: Double? = null
@@ -62,14 +62,20 @@ class GpxParser : TrackParser {
                 when (eventType) {
                     XmlPullParser.START_TAG -> {
                         when (parser.name) {
-                            "trkseg" -> trackId++
+
+                            // If start of segment get track id
+                            "trkseg" -> {
+                                //trackId++
+                                waypointId = 0.0
+                                emit(ParsedData.TrackMetadata(Track(0, name, "", 0, null)))
+                            }
 
                             "trkpt" -> {
                                 // TODO Has to be changed, only parses one track
-                                if (!hasEmitedTrack) {
+                                /*if (!hasEmitedTrack) {
                                     emit(ParsedData.TrackMetadata(Track(0, name, "", 0, null)))
                                     hasEmitedTrack = true
-                                }
+                                }*/
 
                                 lat = parser.getAttributeValue(null, "lat").toDouble()
                                 lon = parser.getAttributeValue(null, "lon").toDouble()
@@ -103,7 +109,7 @@ class GpxParser : TrackParser {
 
                         // If waypoint read, add to list
                         if (parser.name == "trkpt") {
-                            waypoints.add(Waypoint(waypointId, lat, lon, ele, time, trackId))
+                            waypoints.add(Waypoint(waypointId, lat, lon, ele, time, 0))
                             waypointId++
 
                             // If list full (chunkSize), send it to be added to database
@@ -111,6 +117,15 @@ class GpxParser : TrackParser {
                                 emit(ParsedData.Waypoints(waypoints))
                                 waypoints.clear()
                             }
+                        }
+
+                        // If end of segment flush waypoints
+                        if (parser.name == "trkseg") {
+                            if (waypoints.isNotEmpty()) {
+                                emit(ParsedData.Waypoints(waypoints))
+                                waypoints.clear()
+                            }
+                            waypointId = 0.0
                         }
                     }
                 }

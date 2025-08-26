@@ -22,9 +22,9 @@ class DisplayTrackUseCase @Inject constructor(
      * @param track
      * @return
      */
-    suspend operator fun invoke(trackId: Int): Boolean{
+    suspend operator fun invoke(trackId: Int, center: Boolean = true): Boolean{
 
-        return repository.addImportedTrack(trackId)
+        return repository.addImportedTrack(trackId, center)
 
         /*var rtval = false
         val waypointCounts = repository.getTrackLastWaypointIndex(trackId)

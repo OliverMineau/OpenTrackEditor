@@ -12,6 +12,7 @@ import com.minapps.trackeditor.feature_map_editor.presentation.interaction.Point
 import com.minapps.trackeditor.feature_map_editor.presentation.util.vibrate
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.simplefastpoint.LabelledGeoPoint
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlay
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlayOptions
 
@@ -33,11 +34,14 @@ class CustomSimpleFastPointOverlay(
 
     override fun onClick(points: PointAdapter, pointId: Int) {
         val geoPoint = points.get(pointId)
-        Log.d("debug","Clicked point index: $pointId at (${geoPoint.latitude}, ${geoPoint.longitude})")
+        val realId = (geoPoint as? LabelledGeoPoint)?.label?.toDouble()
+
+        Log.d("debug","Clicked point real index: $realId, fake index: $pointId at (${geoPoint.latitude}, ${geoPoint.longitude})")
 
         selectedBundle.clear()
         selectedBundle.selectedPointIdx = pointId
         selectedBundle.selectedPoint = points.get(pointId)
+        selectedBundle.selectedPointRealId = realId
         if(pointId > 0) selectedBundle.previousPoint = points.get(pointId-1)
         if(pointId+1 < points.size()) selectedBundle.nextPoint = points.get(pointId+1)
 

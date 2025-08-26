@@ -60,7 +60,7 @@ class UpdateMapViewUseCase @Inject constructor(
 
                 Log.d(
                     "optimise",
-                    "Display DouglasPeucker points: ${trackIds} : ${waypoints.size}points"
+                    "Display DouglasPeucker points: ${id} : ${waypoints.size}points"
                 )
             }
 

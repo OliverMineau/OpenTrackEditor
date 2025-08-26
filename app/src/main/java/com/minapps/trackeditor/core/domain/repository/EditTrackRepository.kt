@@ -4,6 +4,7 @@ import com.minapps.trackeditor.core.domain.model.Track
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.data.local.TrackEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 
 
 /**
@@ -15,8 +16,7 @@ import kotlinx.coroutines.flow.Flow
  */
 interface EditTrackRepository {
 
-    val addedTracks: Flow<Int>
-
+    val addedTracks: Flow<Pair<Int, Boolean>>
     /**
      * Add a single waypoint to a track.
      *
@@ -66,7 +66,7 @@ interface EditTrackRepository {
      *
      * @param track The domain track to add
      */
-    suspend fun addImportedTrack(trackId: Int): Boolean
+    suspend fun addImportedTrack(trackId: Int, center: Boolean): Boolean
 
     /**
      * Add a list of waypoints to the database.

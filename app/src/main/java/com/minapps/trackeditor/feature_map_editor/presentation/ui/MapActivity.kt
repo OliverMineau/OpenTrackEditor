@@ -4,6 +4,8 @@ import ToolboxPopup
 import android.Manifest
 import android.content.pm.PackageManager
 import android.database.Cursor
+import android.graphics.Color
+import android.graphics.Paint
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -48,6 +50,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import org.osmdroid.util.BoundingBox
+import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 
 @AndroidEntryPoint
@@ -387,6 +390,7 @@ class MapActivity : AppCompatActivity(), MapListener {
         val latSouth = binding.osmmap.boundingBox.latSouth
         val lonWest = binding.osmmap.boundingBox.lonWest
         val lonEast = binding.osmmap.boundingBox.lonEast
+
         mapViewModel.viewChanged(
             latNorth,
             latSouth,

@@ -23,8 +23,8 @@ class EditTrackRepositoryImpl @Inject constructor(
     private val dao: TrackDao
 ) : EditTrackRepository {
 
-    private val _addedTracks = MutableSharedFlow<Int>()
-    override val addedTracks: Flow<Int> = _addedTracks
+    private val _addedTracks = MutableSharedFlow<Pair<Int, Boolean>>()
+    override val addedTracks: Flow<Pair<Int, Boolean>> = _addedTracks
 
     /**
      * Add a waypoint to the database.
@@ -159,7 +159,7 @@ class EditTrackRepositoryImpl @Inject constructor(
      * @param track The domain track to add
      * @return Track
      */
-    override suspend fun addImportedTrack(trackId: Int) : Boolean{
+    override suspend fun addImportedTrack(trackId: Int, center: Boolean) : Boolean{
         //TODO DEBUG purposes : No need of track in the future
         // only get number of points proportional to zoom
 
@@ -171,7 +171,7 @@ class EditTrackRepositoryImpl @Inject constructor(
 
         // Emit track for MapViewModel
         //_addedTracks.emit(track)
-        _addedTracks.emit(trackId)
+        _addedTracks.emit(Pair(trackId, center))
         return true
     }
 

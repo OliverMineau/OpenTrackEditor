@@ -108,7 +108,8 @@ class ExportTrackRepositoryImpl @Inject constructor(
         }
 
         // Send completed notif
-        emit(DataStreamProgress.Completed(trackId))
+        var trackIds = mutableListOf<Int>(trackId)
+        emit(DataStreamProgress.Completed(trackIds))
     }
 
 
