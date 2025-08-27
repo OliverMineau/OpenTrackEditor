@@ -399,7 +399,8 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         val trackId = selectedBundle.trackId
 
         // Notify ViewModel
-        selectTrack(trackId, true)
+        selectTrack(trackId, true, selectedBundle.selectedPointRealId)
+
 
         // Redraw
         mMap.invalidate()
@@ -574,7 +575,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         // TODO
     }
 
-    fun selectTrack(trackId: Int?, select: Boolean) {
+    fun selectTrack(trackId: Int?, select: Boolean, pointId: Double?=null) {
 
         if (trackId != null) {
 
@@ -608,7 +609,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             selectedPolylines.clear()
         }
 
-        mapViewModel.selectedTrack(selectedPolylines)
+        mapViewModel.selectedTrack(selectedPolylines, true, pointId)
         colorTracks()
     }
 

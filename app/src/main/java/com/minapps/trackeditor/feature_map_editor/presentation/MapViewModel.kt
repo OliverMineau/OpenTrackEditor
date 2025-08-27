@@ -126,6 +126,7 @@ enum class ActionType(
 data class EditState(
     val currentSelectedTool: ActionType = ActionType.NONE,
     val currentselectedTracks: MutableList<Int> = mutableListOf(),
+    val currentselectedPoints: MutableList<Pair<Int, Double>> = mutableListOf(),
     val version: Long = System.nanoTime(),
 )
 
@@ -284,7 +285,7 @@ class MapViewModel @Inject constructor(
             when (action) {
                 ActionType.EXPORT -> toolExportTrack()
                 ActionType.SCREENSHOT -> toolGetScreenshot()
-               else -> {}
+                else -> {}
             }
         }
     }
@@ -467,10 +468,48 @@ class MapViewModel @Inject constructor(
      * @param trackId
      * @param vibrate
      */
-    fun selectedTrack(trackIds: List<Int>, vibrate: Boolean = false) {
-        _editState.update { it.copy( currentselectedTracks = trackIds.toMutableList(), version = System.nanoTime()) }
+    fun selectedTrack(trackIds: List<Int>, vibrate: Boolean = false, pointId: Double?) {
 
-        Log.d("debug", "Selected track ${editState.value.currentselectedTracks}")
+        // If no selected point, empty
+        var selectedPoints = mutableListOf<Pair<Int, Double>>()
+        Log.d("ddde", "pointId : $pointId")
+
+        if (pointId != null) {
+
+            val pairPoint = Pair(trackIds.first(), pointId)
+
+            // If multiple points selection
+            if (editState.value.currentSelectedTool == ActionType.JOIN) {
+                selectedPoints = editState.value.currentselectedPoints
+
+                // If point not in list and list is < 2 : add
+                if(!selectedPoints.contains(pairPoint) && selectedPoints.size < 2){
+                    selectedPoints.add(pairPoint)
+                }
+                // If point not in list and list full : clear list and add point
+                else if(!selectedPoints.contains(pairPoint) && selectedPoints.size >= 2){
+                    selectedPoints = mutableListOf(pairPoint)
+                }
+            }
+
+            // If single point selection
+            else if (editState.value.currentSelectedTool == ActionType.ADD) {
+                selectedPoints = mutableListOf(Pair(trackIds.first(), pointId))
+            }
+        }
+
+        _editState.update {
+            it.copy(
+                currentselectedTracks = trackIds.toMutableList(),
+                currentselectedPoints = selectedPoints,
+                version = System.nanoTime()
+            )
+        }
+
+        Log.d(
+            "debug",
+            "Selected track ${editState.value.currentselectedTracks}\nSelected points: ${editState.value.currentselectedPoints}"
+        )
 
         if (vibrate) {
             context.vibrate(30)
