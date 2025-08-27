@@ -330,10 +330,12 @@ class MapViewModel @Inject constructor(
 
         viewModelScope.launch {
 
-            val currentId =
+            /*val currentId =
                 trackWaypointIndexes[selectedTrackId] ?: (getTrackLastWaypointIndexUseCase(
                     selectedTrackId
-                ) + 1.0)
+                ) + 1.0)*/
+
+            val currentId = addWaypointUseCase.getNextId(selectedTrackId)
 
             addWaypointUseCase(lat, lng, currentId, selectedTrackId)
             // Notify observers that a waypoint was added
@@ -343,7 +345,8 @@ class MapViewModel @Inject constructor(
                     SimpleWaypoint(currentId, lat, lng)
                 )
             )
-            // Update index only after successful addition
+
+            // Update index only after successful addition TODO DELETE
             trackWaypointIndexes[selectedTrackId] = currentId + 1
         }
     }
@@ -356,7 +359,7 @@ class MapViewModel @Inject constructor(
      */
     suspend fun createNewTrackIfNeeded(): Int {
 
-        var selectedTrackIds = editState.value.currentselectedTracks
+        val selectedTrackIds = editState.value.currentselectedTracks
         var selectedTrackId: Int? = null
 
         // If no track selected
@@ -497,6 +500,10 @@ class MapViewModel @Inject constructor(
             )
         }
 
+        viewModelScope.launch {
+            toggleSelectedPoints()
+        }
+
         Log.d(
             "debug",
             "Selected track ${editState.value.currentselectedTracks}\nSelected points: ${editState.value.currentselectedPoints}"
@@ -576,6 +583,23 @@ class MapViewModel @Inject constructor(
         return selectedPoints
     }
 
+    /**
+     * Called when point selection changed
+     *
+     */
+    private suspend fun toggleSelectedPoints(){
+        when(editState.value.currentSelectedTool){
+            ActionType.JOIN -> {
+                Log.d("Join", "Call JoinTrackUseCase points :${editState.value.currentselectedPoints}")
+            }
+            ActionType.ADD -> {
+                if(editState.value.currentselectedPoints.isNotEmpty()){
+                    addWaypointUseCase.updateMarker(editState.value.currentselectedPoints.first().first, editState.value.currentselectedPoints.first().second)
+                }
+            }
+            else -> {}
+        }
+    }
 
     fun toolExport(fileName: String) {
 

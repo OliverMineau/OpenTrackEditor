@@ -28,6 +28,9 @@ interface TrackDao {
     suspend fun getTrackById(id: Int): TrackEntity?
 
 
+    @Query("""SELECT MIN(waypointId) FROM waypoints WHERE trackOwnerId = :trackId""")
+    suspend fun getTrackFirstWaypointIndex(trackId: Int): Double
+
     @Query("""SELECT MAX(waypointId) FROM waypoints WHERE trackOwnerId = :trackId""")
     suspend fun getTrackLastWaypointIndex(trackId: Int): Double
 

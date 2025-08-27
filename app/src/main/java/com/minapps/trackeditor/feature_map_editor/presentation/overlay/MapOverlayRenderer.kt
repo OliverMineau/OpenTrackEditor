@@ -177,7 +177,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         trackId: Int,
     ) {
 
-        val polyline = displayedPolylines[trackId]?.first
+        var polyline = displayedPolylines[trackId]?.first
 
         // First point of track : Create it
         if (polyline == null) {
@@ -188,7 +188,18 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
                 center = false
             )
         } else {
-            polyline.addPoint(GeoPoint(waypoint.lat, waypoint.lng))
+
+            // TODO There will be a problem here for adding points inside the track and not at the edges
+            //  how do we link ids and indexes ?
+            //  Maybe get index of point before
+            if(waypoint.id < 0){
+                var points = polyline.actualPoints.toMutableList()
+                points.add(0,GeoPoint(waypoint.lat, waypoint.lng))
+                polyline.setPoints(points)
+            }else{
+                polyline.addPoint(GeoPoint(waypoint.lat, waypoint.lng))
+            }
+
             displayTrack(
                 trackId = trackId,
                 color = Color.RED,
@@ -257,33 +268,19 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             modifyingPolylines.remove(trackId)
         }
 
+        Log.d("point", "Point id set : $pointId")
+
         selectTrack(trackId, true)
 
-        // Get the displayed polyline and clickable overlay and update its point
+        // Get the displayed polyline update its point
         val polyline = displayedPolylines[trackId]?.first ?: return
-        val overlay = displayedPolylines[trackId]?.second ?: return
-
         val updatedPolylinePoints = polyline.actualPoints.toMutableList()
         updatedPolylinePoints[pointId] = GeoPoint(waypoint.first, waypoint.second)
+
         polyline.setPoints(updatedPolylinePoints)
 
-        // Get the adapter and update its data
-        val adapter = overlay.pointAdapter
-        adapter.updatePoint(pointId, GeoPoint(waypoint.first, waypoint.second))
 
-        // Force rebuild the overlay
-        mMap.overlayManager.remove(overlay)
-
-        val pointOptions = overlay.style
-        val newOverlay = CustomSimpleFastPointOverlay(adapter, pointOptions, this, trackId)
-
-        mMap.overlayManager.add(newOverlay)
-
-        // Replace in stored data
-        displayedPolylines[trackId] = MutablePair(polyline, newOverlay)
-
-        // Redraw
-        mMap.invalidate()
+        displayTrack(trackId, Color.YELLOW, false)
     }
 
     /**

@@ -80,6 +80,10 @@ class EditTrackRepositoryImpl @Inject constructor(
 
 
 
+    override suspend fun getTrackFirstWaypointIndex(trackId: Int): Double {
+        return dao.getTrackFirstWaypointIndex(trackId)
+    }
+
     override suspend fun getTrackLastWaypointIndex(trackId: Int): Double {
         return dao.getTrackLastWaypointIndex(trackId)
     }
