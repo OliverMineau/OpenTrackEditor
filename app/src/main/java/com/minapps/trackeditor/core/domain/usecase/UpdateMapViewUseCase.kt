@@ -32,6 +32,7 @@ class UpdateMapViewUseCase @Inject constructor(
 
         // Show full track precision
         if (showFull) {
+
             val tracks =
                 repository.getTracksWithVisibleWaypoints(latNorth, latSouth, lonWest, lonEast)
 

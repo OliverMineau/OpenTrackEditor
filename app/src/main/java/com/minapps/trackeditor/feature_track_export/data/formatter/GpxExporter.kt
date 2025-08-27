@@ -19,7 +19,7 @@ class GpxExporter @Inject constructor() : TrackExporter {
 
     // Export File Header
     override fun exportHeader(
-        track: Track, writer: Writer
+        writer: Writer
     ) {
         writer.write("""<?xml version="1.0" encoding="UTF-8"?>""")
         writer.write("\n")

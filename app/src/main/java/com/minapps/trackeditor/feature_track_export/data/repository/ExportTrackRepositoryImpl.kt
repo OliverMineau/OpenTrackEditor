@@ -40,7 +40,7 @@ class ExportTrackRepositoryImpl @Inject constructor(
 
 
     override suspend fun saveExportedTrack(
-        trackId: Int,
+        trackIds: List<Int>,
         fileName: String,
         exportFormat: ExportFormat
     ): Flow<DataStreamProgress> = flow {
@@ -49,18 +49,18 @@ class ExportTrackRepositoryImpl @Inject constructor(
         val file = File(folder, fileName)
 
         // Get total number of waypoints to estimate progress
-        val totalPoints = dao.countWaypointsForTrack(trackId)
+        val totalPoints = dao.countWaypointsForTracks(trackIds)
         if (totalPoints == 0) {
-            emit(DataStreamProgress.Error("No points found for track $trackId"))
+            emit(DataStreamProgress.Error("No points found for tracks $trackIds"))
             return@flow
         }
 
         // Only get track metadata
-        val track = dao.getTrackById(trackId)?.toDomain(null)
+        /*val track = dao.getTrackById(trackId)?.toDomain(null)
         if (track == null) {
             emit(DataStreamProgress.Error("No track found for track $trackId"))
             return@flow
-        }
+        }*/
 
         // Get exporter (GPX, KML..)
         val exporter = exporterFactory.getExporter(exportFormat)
@@ -71,45 +71,59 @@ class ExportTrackRepositoryImpl @Inject constructor(
             val writer = outputStream.writer()
 
             // Write header and track segment header
-            exporter.exportHeader(track, writer)
+            exporter.exportHeader(writer)
 
-            var name = track.name
-            if(name.isEmpty()) name = "OpenTrackEditorTrack"
-            exporter.exportTrackSegmentHeader(name, writer)
+            for (tid in trackIds) {
 
-            var offset = 0 // Index to start getting waypoints
-            var writtenPoints = 0 // Total exported wpts
-            var lastProgress = -1 // Last progress percentage
-
-            while (true) {
-
-                // Get chunk of wpts
-                val waypoints = dao.getWaypointsByChunk(trackId, chunkSize, offset).map { it.toDomain() }
-                if (waypoints.isEmpty()) break
-
-                // Parse and export directly in exporter
-                exporter.exportWaypoints(waypoints, writer)
-
-                writtenPoints += waypoints.size
-                offset += chunkSize
-
-                // Calculate progress notification
-                val currentProgress = (writtenPoints.toDouble() / totalPoints * 100).toInt()
-                if (currentProgress != lastProgress) {
-                    lastProgress = currentProgress
-                    emit(DataStreamProgress.Progress(currentProgress))
+                val track = dao.getTrackById(tid)?.toDomain(null)
+                // If track not found, skip
+                if (track == null) {
+                    emit(DataStreamProgress.Error("No track found for track $tid"))
+                    continue
                 }
+
+                var name = track.name
+                if (name.isEmpty()) name = "OpenTrackEditorTrack"
+                exporter.exportTrackSegmentHeader(name, writer)
+
+                var offset = 0 // Index to start getting waypoints
+                var writtenPoints = 0 // Total exported wpts
+                var lastProgress = -1 // Last progress percentage
+
+                while (true) {
+
+                    // Get chunk of wpts
+                    val waypoints =
+                        dao.getWaypointsByChunk(tid, chunkSize, offset).map { it.toDomain() }
+                    if (waypoints.isEmpty()) break
+
+                    // Parse and export directly in exporter
+                    exporter.exportWaypoints(waypoints, writer)
+
+                    writtenPoints += waypoints.size
+                    offset += chunkSize
+
+                    // Calculate progress notification
+                    val currentProgress = (writtenPoints.toDouble() / totalPoints * 100).toInt()
+                    if (currentProgress != lastProgress) {
+                        lastProgress = currentProgress
+                        emit(DataStreamProgress.Progress(currentProgress))
+                    }
+                }
+
+                exporter.exportTrackSegmentFooter(writer)
+
             }
 
             // Write footer
-            exporter.exportTrackSegmentFooter(writer)
+
             exporter.exportFooter(writer)
             writer.close()
         }
 
         // Send completed notif
-        var trackIds = mutableListOf<Int>(trackId)
-        emit(DataStreamProgress.Completed(trackIds))
+        var tIds = trackIds.toMutableList()
+        emit(DataStreamProgress.Completed(tIds))
     }
 
 

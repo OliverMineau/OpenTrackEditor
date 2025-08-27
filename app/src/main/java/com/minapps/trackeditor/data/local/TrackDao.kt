@@ -148,6 +148,9 @@ interface TrackDao {
     @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId = :trackId")
     suspend fun countWaypointsForTrack(trackId: Int): Int
 
+    @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId in (:trackIds)")
+    suspend fun countWaypointsForTracks(trackIds: List<Int>): Int
+
     @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId ORDER BY waypointId ASC LIMIT :chunkSize OFFSET :offset")
     suspend fun getWaypointsByChunk(trackId: Int, chunkSize: Int, offset: Int): List<WaypointEntity>
 

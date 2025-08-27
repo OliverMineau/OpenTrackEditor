@@ -63,7 +63,6 @@ data class ActionDescriptor(
 )
 
 
-
 enum class ActionType(
     val icon: Int?,
     val label: String?,
@@ -118,14 +117,15 @@ enum class ActionType(
     REMOVE(R.drawable.map_marker_minus_24, "Remove", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
 
     // Main Bottom Navigation
-    VIEW(R.drawable.map_marker_24, "", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
-    EDIT(R.drawable.file_edit_24, "", SelectionCount.MULTIPLE, ToolGroup.TRACK_EDITING),
+    VIEW(R.drawable.map_marker_24, "View", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
+    EDIT(R.drawable.file_edit_24, "Edit", SelectionCount.MULTIPLE, ToolGroup.TRACK_EDITING),
+    TOOLBOX(R.drawable.tools_24, "Toolbox", SelectionCount.MULTIPLE, ToolGroup.TRACK_EDITING)
 
 }
 
 data class EditState(
     val currentSelectedTool: ActionType = ActionType.NONE,
-    val currentselectedTrack: Int? = null,
+    val currentselectedTracks: MutableList<Int> = mutableListOf(),
     val version: Long = System.nanoTime(),
 )
 
@@ -273,7 +273,7 @@ class MapViewModel @Inject constructor(
             _editState.update {
                 it.copy(
                     currentSelectedTool = action,
-                    currentselectedTrack = null, version = System.nanoTime()
+                    currentselectedTracks = mutableListOf(), version = System.nanoTime()
                 )
             }
         }
@@ -284,8 +284,7 @@ class MapViewModel @Inject constructor(
             when (action) {
                 ActionType.EXPORT -> toolExportTrack()
                 ActionType.SCREENSHOT -> toolGetScreenshot()
-
-                else -> Log.d("debug", "Not Implemented")
+               else -> {}
             }
         }
     }
@@ -310,11 +309,12 @@ class MapViewModel @Inject constructor(
      */
     fun addWaypoint(lat: Double, lng: Double) {
 
-        val selectedTrackId = editState.value.currentselectedTrack
+        val selectedTrackIds = editState.value.currentselectedTracks
         val currentTool = editState.value.currentSelectedTool
 
         // If no track is selected, do nothing
-        if (selectedTrackId == null) return
+        if (selectedTrackIds.isEmpty()) return
+        var selectedTrackId = selectedTrackIds.first()
 
         // If not Add as selected tool
         if (currentTool != ActionType.ADD) return
@@ -348,23 +348,31 @@ class MapViewModel @Inject constructor(
      */
     suspend fun createNewTrackIfNeeded(): Int {
 
-        var selectedTrackId = editState.value.currentselectedTrack
+        var selectedTrackIds = editState.value.currentselectedTracks
+        var selectedTrackId: Int? = null
 
         // If no track selected
-        if (selectedTrackId == null) {
+        if (selectedTrackIds.isEmpty()) {
             //Set default track name
             val newId = createTrackUseCase(context.getString(R.string.track_no_name))
 
             selectedTrackId = newId
             trackWaypointIndexes[selectedTrackId] = 0.0
             _editState.update {
+                val updatedList = it.currentselectedTracks.apply {
+                    if (!contains(selectedTrackId)) {
+                        add(selectedTrackId)
+                    }
+                }
                 it.copy(
-                    currentselectedTrack = selectedTrackId,
+                    currentselectedTracks = updatedList,
                     version = System.nanoTime()
                 )
             }
 
             Log.d("debug", "Created new track with ID: $newId")
+        } else {
+            selectedTrackId = selectedTrackIds.first()
         }
         return selectedTrackId
     }
@@ -381,12 +389,16 @@ class MapViewModel @Inject constructor(
      * @param geoPoint
      */
     suspend fun singleTapConfirmed(geoPoint: GeoPoint) {
-        val trackId = createNewTrackIfNeeded()
-        addWaypoint(geoPoint.latitude, geoPoint.longitude)
-        Log.d(
-            "debug",
-            "Added waypoint to track $trackId at: ${geoPoint.latitude}, ${geoPoint.longitude}"
-        )
+
+        if (editState.value.currentSelectedTool == ActionType.ADD) {
+            val trackId = createNewTrackIfNeeded()
+            addWaypoint(geoPoint.latitude, geoPoint.longitude)
+            Log.d(
+                "debug",
+                "Added waypoint to track $trackId at: ${geoPoint.latitude}, ${geoPoint.longitude}"
+            )
+        }
+
     }
 
 
@@ -455,9 +467,10 @@ class MapViewModel @Inject constructor(
      * @param trackId
      * @param vibrate
      */
-    fun selectedTrack(trackId: Int?, vibrate: Boolean = false) {
-        Log.d("debug", "Selected track $trackId")
-        _editState.update { it.copy(currentselectedTrack = trackId, version = System.nanoTime()) }
+    fun selectedTrack(trackIds: List<Int>, vibrate: Boolean = false) {
+        _editState.update { it.copy( currentselectedTracks = trackIds.toMutableList(), version = System.nanoTime()) }
+
+        Log.d("debug", "Selected track ${editState.value.currentselectedTracks}")
 
         if (vibrate) {
             context.vibrate(30)
@@ -469,16 +482,16 @@ class MapViewModel @Inject constructor(
         val format = ExportFormat.GPX
 
         viewModelScope.launch {
-            val trackId = editState.value.currentselectedTrack
-            if (trackId == null) {
-                _exportResult.emit(Result.failure(Exception("No track selected")))
+            val trackIds = editState.value.currentselectedTracks
+            if (trackIds.isEmpty()) {
+                _exportResult.emit(Result.failure(Exception("No tracks selected")))
                 return@launch
             }
 
             Log.d("debug", "Progress show")
             _progressState.update { it.copy(isDisplayed = true) }
 
-            exportTrackUseCase(trackId, fileName, format).collect { exportResult ->
+            exportTrackUseCase(trackIds, fileName, format).collect { exportResult ->
                 when (exportResult) {
                     is DataStreamProgress.Completed -> {
                         Log.d("debug", "export success, mapvm")
@@ -584,7 +597,7 @@ class MapViewModel @Inject constructor(
         Log.d("viewchanged", "View changed: $latNorth, $latSouth, $lonWest, $lonEast")
 
         // Add padding to load points off screen
-        val padding = 0.01
+        val padding = 0.05
         val latNorthPadded = latNorth + padding
         val latSouthPadded = latSouth - padding
         val lonWestPadded = lonWest - padding

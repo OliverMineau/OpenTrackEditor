@@ -1,12 +1,20 @@
 package com.minapps.trackeditor.feature_track_export.presentation.utils
 
 import android.content.Context
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.Toast
+import android.graphics.drawable.GradientDrawable
+import android.util.Log
+import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
+import android.widget.*
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
+import com.minapps.trackeditor.R
 
-fun showSaveFileDialog(context: Context, onFileNameEntered: (String) -> Unit) {
+fun showSaveFileDialog(
+    context: Context,
+    onFileNameEntered: (String, String, Boolean) -> Unit // returns fileName + chosen extension
+) {
     val input = EditText(context).apply {
         hint = "Enter file name (without extension)"
         layoutParams = LinearLayout.LayoutParams(
@@ -15,31 +23,105 @@ fun showSaveFileDialog(context: Context, onFileNameEntered: (String) -> Unit) {
         )
     }
 
-    AlertDialog.Builder(context)
-        .setTitle("Save Track")
-        .setMessage("Enter the file name")
-        .setView(input)
-        .setPositiveButton("Save") { dialog, _ ->
+    val spinner = createRoundedSpinner(context, listOf("GPX", "KML"))
+
+    val checkboxEAT = CheckBox(context).apply { text = "Export all tracks" }
+
+    val container = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(50, 40, 50, 10)
+        addView(input)
+        addView(spinner)
+        addView(checkboxEAT)
+    }
+
+    val dialog = AlertDialog.Builder(context)
+        .setTitle("Export Track")
+        .setMessage("Enter file name and choose export type")
+        .setView(container)
+        .setPositiveButton("Export") { dialog, _ ->
             val fileName = input.text.toString().trim()
+            val type = spinner.selectedItem.toString().lowercase()
+
             if (fileName.isNotEmpty() && isAllowed(fileName)) {
-
-                // TODO : Move it somewhere later !!!!! Here append .gpx or . kml ?
-                onFileNameEntered("$fileName.gpx")
-
+                onFileNameEntered("$fileName.$type", type, checkboxEAT.isChecked)
             } else {
-                if (fileName.isEmpty()){
-                        Toast.makeText(context, "File name cannot be empty", Toast.LENGTH_SHORT).show()
-                }else{
-                    Toast.makeText(context, "Illegal characters in file name.\nOnly use alphanumeric characters.", Toast.LENGTH_SHORT).show()
-                }
+                val msg = if (fileName.isEmpty())
+                    "File name cannot be empty"
+                else "Illegal characters in file name.\nOnly use alphanumeric characters."
+                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
             }
             dialog.dismiss()
         }
         .setNegativeButton("Cancel") { dialog, _ -> dialog.cancel() }
-        .show()
+        .create()
+
+    dialog.setOnShowListener {
+        styleDialogWindow(dialog, context)
+        styleDialogButtons(dialog, context)
+    }
+
+    dialog.show()
 }
 
-fun isAllowed(fileName: String): Boolean{
-    val pattern = Regex("[\\w._-]+")
-    return pattern.matches(fileName)
+private fun createRoundedSpinner(context: Context, items: List<String>): Spinner {
+    val adapter = object : ArrayAdapter<String>(context, android.R.layout.simple_spinner_item, items) {
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+            return super.getView(position, convertView, parent).apply {
+                (this as? TextView)?.apply {
+                    gravity = Gravity.CENTER
+                    setTextColor(ContextCompat.getColor(context, R.color.text_dark))
+                }
+            }
+        }
+
+        override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+            return super.getDropDownView(position, convertView, parent).apply {
+                (this as? TextView)?.apply {
+                    gravity = Gravity.CENTER
+                    setTextColor(ContextCompat.getColor(context, R.color.text_dark))
+                    setBackgroundColor(ContextCompat.getColor(context, R.color.background_light))
+                }
+            }
+        }
+    }.also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+
+    return Spinner(context).apply {
+        this.adapter = adapter
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
+        background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 24f
+            setColor(ContextCompat.getColor(context, R.color.background_light))
+            setStroke(3, ContextCompat.getColor(context, R.color.primary_teal))
+        }
+        setPadding(16, 16, 16, 16)
+    }
 }
+
+private fun styleDialogWindow(dialog: AlertDialog, context: Context) {
+    dialog.window?.setBackgroundDrawable(
+        GradientDrawable().apply {
+            cornerRadius = 32f
+            setColor(ContextCompat.getColor(context, R.color.primary_blue))
+        }
+    )
+}
+
+private fun styleDialogButtons(dialog: AlertDialog, context: Context) {
+    dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.apply {
+        textSize = 18f
+        setPadding(32, 16, 32, 16)
+        setTextColor(ContextCompat.getColor(context, R.color.apply))
+    }
+    dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.apply {
+        textSize = 18f
+        setPadding(32, 16, 32, 16)
+        setTextColor(ContextCompat.getColor(context, R.color.cancel))
+    }
+}
+
+fun isAllowed(fileName: String): Boolean = Regex("[\\w._-]+").matches(fileName)

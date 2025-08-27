@@ -2,7 +2,7 @@
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <!-- Optional edit nav (hidden by default) -->
+    <!-- Edit nav (hidden by default) -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/edit_bottom_navigation"
         style="@style/CustomBottomNavigationView2"
@@ -10,6 +10,7 @@
         android:layout_height="wrap_content"
         android:visibility="gone"
         app:menu="@menu/edit_menu"
+        app:labelVisibilityMode="labeled"
         app:layout_constraintBottom_toTopOf="@id/main_bottom_navigation"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />

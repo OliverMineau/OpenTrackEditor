@@ -3,9 +3,6 @@ package com.minapps.trackeditor.feature_map_editor.presentation.ui
 import ToolboxPopup
 import android.Manifest
 import android.content.pm.PackageManager
-import android.database.Cursor
-import android.graphics.Color
-import android.graphics.Paint
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -40,19 +37,15 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import androidx.core.view.size
 import androidx.core.view.get
 import com.google.android.gms.location.LocationServices
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.bottomnavigation.LabelVisibilityMode
 import com.minapps.trackeditor.core.domain.util.ToolGroup
 import com.minapps.trackeditor.feature_map_editor.presentation.EditState
 import com.minapps.trackeditor.feature_map_editor.presentation.ProgressData
 import com.minapps.trackeditor.feature_track_export.presentation.utils.showSaveFileDialog
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.isActive
-import org.osmdroid.util.BoundingBox
-import org.osmdroid.views.overlay.Polygon
-import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 
 @AndroidEntryPoint
 class MapActivity : AppCompatActivity(), MapListener {
@@ -174,24 +167,46 @@ class MapActivity : AppCompatActivity(), MapListener {
 
             // Inform ViewModel of navigation selection or do UI changes like showing/hiding editNav
             when (it.itemId) {
-                R.id.nav_edit -> editNav.visibility = View.VISIBLE
-                R.id.nav_add_track -> openFileExplorer()
-            }
+                R.id.nav_edit -> {
+                    editNav.visibility = View.VISIBLE
+                    mapViewModel.selectedTool(ActionType.EDIT)
+                    editNav.post {clearBottomNavSelection(editNav)}
 
-            mapRenderer.unselectPolyline(forceUpdate = true)
-            mapViewModel.selectedTool(ActionType.NONE)
+                }
+
+                R.id.nav_add_track -> {
+                    openFileExplorer()
+                    mapViewModel.selectedTool(ActionType.NONE)
+                }
+
+                R.id.nav_view -> {
+                    mapViewModel.selectedTool(ActionType.VIEW)
+                }
+
+                R.id.nav_settings -> {
+                    mapViewModel.selectedTool(ActionType.NONE)
+                }
+            }
+            mapRenderer.selectTrack(null, false)
             true
         }
 
         editNav.setOnItemSelectedListener {
 
-            mapRenderer.unselectPolyline(forceUpdate = true)
+            mapRenderer.selectTrack(null, false)
 
             when (it.itemId) {
                 R.id.nav_toolbox -> {
-                    toolboxPopup.show()
-                    mapViewModel.selectedTool(ActionType.NONE)
-                    true
+                    val wasShown = toolboxPopup.show()
+                    if(wasShown == 1){
+                        mapViewModel.selectedTool(ActionType.TOOLBOX)
+                        true
+                    }else if (wasShown == 0){
+                        mapViewModel.selectedTool(ActionType.EDIT)
+                        clearBottomNavSelection(editNav)
+                        false
+                    }
+                    false
                 }
 
                 R.id.nav_add -> {
@@ -213,6 +228,21 @@ class MapActivity : AppCompatActivity(), MapListener {
             }
         }
     }
+
+    private fun clearBottomNavSelection(bottomNav: BottomNavigationView) {
+        val menu = bottomNav.menu
+        if (menu.size == 0) return
+        val groupId = menu[0].groupId
+
+        // Temporarily allow multiple check so we can uncheck all
+        menu.setGroupCheckable(groupId, true, false)
+        for (i in 0 until menu.size) {
+            menu[i].isChecked = false
+        }
+        // Restore exclusive single-check behaviour
+        menu.setGroupCheckable(groupId, true, true)
+    }
+
 
     private fun observeViewModel() {
 
@@ -239,7 +269,7 @@ class MapActivity : AppCompatActivity(), MapListener {
 
                 launch {
                     mapViewModel.showExportDialog.collect { defaultFilename ->
-                        showSaveFileDialog(this@MapActivity) { fileName ->
+                        showSaveFileDialog(this@MapActivity) { fileName, fileExtension, exportAll ->
                             mapViewModel.toolExport(fileName)
                         }
                     }
@@ -296,6 +326,7 @@ class MapActivity : AppCompatActivity(), MapListener {
     fun handleEditStateEvents(event: EditState) {
         toolboxPopup.toolSelected(event.currentSelectedTool)
         updateSelectedToolUI(event.currentSelectedTool)
+        mapRenderer.toolSelected(event.currentSelectedTool)
     }
 
     //TODO BUG progress somewhere

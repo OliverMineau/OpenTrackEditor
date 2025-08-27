@@ -55,16 +55,17 @@ class ToolboxPopup(
     /**
      * Called to show popup menu
      *
+     * @return 0:Hidden, 1:Shown, -1:No change
      */
-    fun show() {
+    fun show(): Int {
 
         //If animations are currently running : return
-        if (isAnimatingTop || isAnimatingLeft) return
+        if (isAnimatingTop || isAnimatingLeft) return -1
 
         //If second click on menu item, close menus
         if (isVisibleTop) {
             hide()
-            return
+            return 0
         }
 
         //Menu is visible
@@ -91,6 +92,8 @@ class ToolboxPopup(
             popupContainer.visibility = VISIBLE
             animatePopupShow() // this animates to translationX = 0f
         }
+
+        return 1
     }
 
     /**

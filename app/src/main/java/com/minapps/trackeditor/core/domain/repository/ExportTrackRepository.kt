@@ -5,5 +5,5 @@ import com.minapps.trackeditor.feature_track_import.domain.usecase.DataStreamPro
 import kotlinx.coroutines.flow.Flow
 
 interface ExportTrackRepository {
-    suspend fun saveExportedTrack(trackId: Int, fileName: String, exportFormat: ExportFormat): Flow<DataStreamProgress>
+    suspend fun saveExportedTrack(trackIds: List<Int>, fileName: String, exportFormat: ExportFormat): Flow<DataStreamProgress>
 }

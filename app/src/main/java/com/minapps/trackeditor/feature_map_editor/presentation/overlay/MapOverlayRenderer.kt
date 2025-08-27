@@ -2,13 +2,12 @@ package com.minapps.trackeditor.feature_map_editor.presentation.overlay
 
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.Path
-import android.graphics.PathDashPathEffect
 import android.graphics.Rect
 import android.util.Log
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.common.MutablePair
 import com.minapps.trackeditor.core.domain.model.SimpleWaypoint
+import com.minapps.trackeditor.feature_map_editor.presentation.ActionType
 import com.minapps.trackeditor.feature_map_editor.presentation.MapViewModel
 import com.minapps.trackeditor.feature_map_editor.presentation.MovingPointBundle
 import com.minapps.trackeditor.feature_map_editor.presentation.MutablePointAdapter
@@ -25,7 +24,6 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.simplefastpoint.LabelledGeoPoint
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlayOptions
-import kotlin.toString
 
 
 class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: MapViewModel) :
@@ -37,17 +35,12 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
     private val displayedPolylines: MutableMap<Int, MutablePair<Polyline, CustomSimpleFastPointOverlay?>> =
         mutableMapOf()
 
-    private var selectedPolyline: Int? = null
+    private var selectedPolylines: MutableList<Int> = mutableListOf()
+    private var selectedTool: ActionType? = null
 
     // Polyline that is being modified
     private val modifyingPolylines: MutableMap<Int, Polyline> = mutableMapOf()
 
-
-    data class DisplayPoint(
-        val dbId: Int,
-        val lat: Double,
-        val lon: Double
-    )
 
     /**
      * Pure map settings
@@ -147,7 +140,6 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         }
 
 
-
         // Clickable points
         val clickablePoints = mutableListOf<IGeoPoint>()
 
@@ -155,7 +147,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         geoPoints.forEachIndexed { index, waypoint ->
             // Interactable labelled point
             val labelled = LabelledGeoPoint(waypoint.latitude, waypoint.longitude, "").apply {
-                label =  "69696969"//index.toString()
+                label = index.toString()
             }
             clickablePoints.add(labelled)
         }
@@ -174,7 +166,6 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
 
 
     /**
-     * TODO OOOOOOOOOOOO
      * Display full track (e.g. after import)
      *
      * @param waypoints List of waypoints to display
@@ -244,8 +235,6 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         // Add reference to polyline
         modifyingPolylines[trackId] = movedPolyline
 
-        unselectPolyline(trackId)
-
         mMap.invalidate()
     }
 
@@ -269,8 +258,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             modifyingPolylines.remove(trackId)
         }
 
-        selectTrack(trackId)
-        unselectPolyline(trackId)
+        selectTrack(trackId, true)
 
         // Get the displayed polyline and clickable overlay and update its point
         val polyline = displayedPolylines[trackId]?.first ?: return
@@ -319,12 +307,15 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         isModifying: Boolean = false
     ): MutablePair<Polyline, CustomSimpleFastPointOverlay?> {
 
+        Log.d("select", "display wp trkid : $trackId")
         val selectedColor = Color.YELLOW
         val unselectedColor = Color.RED
-        val paintColor = if(mapViewModel.editState.value.currentselectedTrack == trackId) selectedColor else color
 
-        selectTrack(trackId)
-        unselectPolyline(trackId)
+        val paintColor =
+            if (mapViewModel.editState.value.currentselectedTracks.isNotEmpty() && mapViewModel.editState.value.currentselectedTracks.contains(
+                    trackId
+                )
+            ) selectedColor else color
 
         // Create polyline with geoPoints and style
         val polyline = Polyline().apply {
@@ -333,19 +324,17 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             PaintType.SOLID.applyTo(outlinePaint, paintColor)
         }
 
-        polyline.setOnClickListener{ polyline, mapView, eventPos ->
+        polyline.setOnClickListener { polyline, mapView, eventPos ->
 
-            if (selectedPolyline == trackId) {
+            Log.d("polyline", "clicked $trackId")
+
+            if (selectedPolylines.contains(trackId)) {
                 // deselect
-                unselectPolyline()
-                selectedPolyline = null
-                mapViewModel.selectedTrack(null) // if you want VM cleared
+                selectTrack(trackId, false)
             } else {
                 // select this one
-                unselectPolyline()
-                selectedPolyline = trackId
                 polyline.outlinePaint.color = selectedColor
-                mapViewModel.selectedTrack(trackId)
+                selectTrack(trackId, true)
             }
             mMap.invalidate()
             true
@@ -403,32 +392,14 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         return Color.HSVToColor(alpha, hsv)
     }
 
-    fun unselectPolyline(trackId: Int? = null, forceUpdate: Boolean? = false) {
-        displayedPolylines.forEach { id, p1 ->
-            if (trackId == null || id != trackId) {
-                p1.first.outlinePaint.color = Color.RED
-            }
-        }
-        if (forceUpdate == true) {
-            mMap.invalidate()
-        }
-    }
-
     override fun onPointClicked(selectedBundle: MovingPointBundle) {
         // Ignore if no actual point is selected
         if (selectedBundle.selectedPoint == null) return
 
         val trackId = selectedBundle.trackId
 
-        // Deselect all others
-        unselectPolyline()
-
-        // Select this track
-        displayedPolylines[trackId]?.first?.outlinePaint?.color = Color.YELLOW
-        selectedPolyline = trackId
-
         // Notify ViewModel
-        mapViewModel.selectedTrack(trackId)
+        selectTrack(trackId, true)
 
         // Redraw
         mMap.invalidate()
@@ -508,15 +479,24 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         )
     }
 
-    fun handleWaypointEvents(event: WaypointUpdate){
+    fun handleWaypointEvents(event: WaypointUpdate) {
         when (event) {
             is WaypointUpdate.Added -> handleWaypointAdded(event.trackId, event.point)
-            is WaypointUpdate.AddedList -> handleWaypointAddedList(event.trackId, event.points, event.center)
+            is WaypointUpdate.AddedList -> handleWaypointAddedList(
+                event.trackId,
+                event.points,
+                event.center
+            )
+
             is WaypointUpdate.ViewChanged -> handleWaypointViewChanged(event.trackId, event.points)
             is WaypointUpdate.Removed -> handleWaypointRemoved(event.trackId, event.index)
             is WaypointUpdate.Moved -> handleWaypointMoved(event.trackId, event.points)
             is WaypointUpdate.Cleared -> handleTrackCleared(event.trackId)
-            is WaypointUpdate.MovedDone -> handleWaypointMovedDone(event.trackId, event.pointId, event.point)
+            is WaypointUpdate.MovedDone -> handleWaypointMovedDone(
+                event.trackId,
+                event.pointId,
+                event.point
+            )
         }
     }
 
@@ -541,7 +521,11 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
      * @param trackId
      * @param points
      */
-    private fun handleWaypointAddedList(trackId: Int, points: List<SimpleWaypoint>, center: Boolean) {
+    private fun handleWaypointAddedList(
+        trackId: Int,
+        points: List<SimpleWaypoint>,
+        center: Boolean
+    ) {
         displayTrack(points, trackId, Color.RED, center)
     }
 
@@ -590,11 +574,57 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         // TODO
     }
 
-    private fun selectTrack(trackId: Int?){
-        selectedPolyline = trackId
+    fun selectTrack(trackId: Int?, select: Boolean) {
 
-        if(trackId != null){
-            mapViewModel.selectedTrack(trackId)
+        if (trackId != null) {
+
+            // TOOLBOX SELECTED
+            if (selectedTool == ActionType.TOOLBOX) {
+
+                // If not selected and wants to be selected
+                if (!selectedPolylines.contains(trackId) && select) {
+                    selectedPolylines.add(trackId)
+                }
+                // If selected and wants to be unselected
+                else if (selectedPolylines.contains(trackId) && !select) {
+                    selectedPolylines.remove(trackId)
+                }
+            }
+            // If other tool
+            else {
+
+                // Deselect all
+                selectedPolylines.clear()
+
+                // Add newly selected
+                if (select) {
+                    selectedPolylines.add(trackId)
+                }
+            }
+
         }
+        // If null unselect all
+        else{
+            selectedPolylines.clear()
+        }
+
+        mapViewModel.selectedTrack(selectedPolylines)
+        colorTracks()
+    }
+
+    private fun colorTracks() {
+        displayedPolylines.forEach { id, p1 ->
+            if (selectedPolylines.contains(id)) {
+                p1.first.outlinePaint.color = Color.YELLOW
+            }else{
+                p1.first.outlinePaint.color = Color.RED
+            }
+        }
+
+        mMap.invalidate()
+    }
+
+    fun toolSelected(tool: ActionType) {
+        selectedTool = tool
     }
 }

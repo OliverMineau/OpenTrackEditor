@@ -11,7 +11,7 @@ import java.io.Writer
  */
 interface TrackExporter {
 
-    fun exportHeader(track: Track, writer: Writer)
+    fun exportHeader(writer: Writer)
     fun exportFooter(writer: Writer)
 
     fun exportWaypoints(waypoints: List<Waypoint>, writer: Writer)

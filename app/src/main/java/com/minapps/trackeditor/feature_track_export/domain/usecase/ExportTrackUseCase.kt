@@ -24,13 +24,13 @@ class ExportTrackUseCase @Inject constructor(
 ) {
 
     operator fun invoke(
-        trackId: Int,
+        trackIds: List<Int>,
         fileName: String,
         exportFormat: ExportFormat,
     ): Flow<DataStreamProgress> = flow {
 
         // Call repo in charge of setting up the export
-        repository.saveExportedTrack(trackId, fileName, exportFormat).collect { exportProgress ->
+        repository.saveExportedTrack(trackIds, fileName, exportFormat).collect { exportProgress ->
             when(exportProgress){
                 is DataStreamProgress.Completed -> emit(exportProgress)
                 is DataStreamProgress.Error -> emit(exportProgress)
