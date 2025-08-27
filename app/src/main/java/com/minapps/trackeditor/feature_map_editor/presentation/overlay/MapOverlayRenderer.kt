@@ -36,7 +36,6 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         mutableMapOf()
 
     private var selectedPolylines: MutableList<Int> = mutableListOf()
-    private var selectedTool: ActionType? = null
 
     // Polyline that is being modified
     private val modifyingPolylines: MutableMap<Int, Polyline> = mutableMapOf()
@@ -576,40 +575,9 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
     }
 
     fun selectTrack(trackId: Int?, select: Boolean, pointId: Double?=null) {
+        val state = mapViewModel.selectedTrack(trackId, select, pointId)
+        selectedPolylines = state.selectedTrackIds
 
-        if (trackId != null) {
-
-            // TOOLBOX SELECTED
-            if (selectedTool == ActionType.TOOLBOX) {
-
-                // If not selected and wants to be selected
-                if (!selectedPolylines.contains(trackId) && select) {
-                    selectedPolylines.add(trackId)
-                }
-                // If selected and wants to be unselected
-                else if (selectedPolylines.contains(trackId) && !select) {
-                    selectedPolylines.remove(trackId)
-                }
-            }
-            // If other tool
-            else {
-
-                // Deselect all
-                selectedPolylines.clear()
-
-                // Add newly selected
-                if (select) {
-                    selectedPolylines.add(trackId)
-                }
-            }
-
-        }
-        // If null unselect all
-        else{
-            selectedPolylines.clear()
-        }
-
-        mapViewModel.selectedTrack(selectedPolylines, true, pointId)
         colorTracks()
     }
 
@@ -625,7 +593,4 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         mMap.invalidate()
     }
 
-    fun toolSelected(tool: ActionType) {
-        selectedTool = tool
-    }
 }

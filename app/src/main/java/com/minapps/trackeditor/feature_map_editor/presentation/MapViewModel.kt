@@ -62,6 +62,11 @@ data class ActionDescriptor(
     val group: ToolGroup?
 )
 
+data class UiMapState(
+    val selectedTrackIds: MutableList<Int>,
+    val selectedPoints: MutableList<Pair<Int, Double>>,
+)
+
 
 enum class ActionType(
     val icon: Int?,
@@ -274,7 +279,9 @@ class MapViewModel @Inject constructor(
             _editState.update {
                 it.copy(
                     currentSelectedTool = action,
-                    currentselectedTracks = mutableListOf(), version = System.nanoTime()
+                    currentselectedTracks = mutableListOf(),
+                    currentselectedPoints = mutableListOf(),
+                    version = System.nanoTime()
                 )
             }
         }
@@ -468,39 +475,23 @@ class MapViewModel @Inject constructor(
      * @param trackId
      * @param vibrate
      */
-    fun selectedTrack(trackIds: List<Int>, vibrate: Boolean = false, pointId: Double?) {
+    fun selectedTrack(trackId: Int?, select: Boolean = false, pointId: Double?): UiMapState {
 
-        // If no selected point, empty
+        val selectedTracks = manageTrackSelection(trackId, select)
         var selectedPoints = mutableListOf<Pair<Int, Double>>()
-        Log.d("ddde", "pointId : $pointId")
 
-        if (pointId != null) {
+        if (trackId != null) {
+            selectedPoints = managePointSelection(trackId, pointId)
+        }
 
-            val pairPoint = Pair(trackIds.first(), pointId)
-
-            // If multiple points selection
-            if (editState.value.currentSelectedTool == ActionType.JOIN) {
-                selectedPoints = editState.value.currentselectedPoints
-
-                // If point not in list and list is < 2 : add
-                if(!selectedPoints.contains(pairPoint) && selectedPoints.size < 2){
-                    selectedPoints.add(pairPoint)
-                }
-                // If point not in list and list full : clear list and add point
-                else if(!selectedPoints.contains(pairPoint) && selectedPoints.size >= 2){
-                    selectedPoints = mutableListOf(pairPoint)
-                }
-            }
-
-            // If single point selection
-            else if (editState.value.currentSelectedTool == ActionType.ADD) {
-                selectedPoints = mutableListOf(Pair(trackIds.first(), pointId))
-            }
+        val vibrate = true
+        if (vibrate) {
+            context.vibrate(30)
         }
 
         _editState.update {
             it.copy(
-                currentselectedTracks = trackIds.toMutableList(),
+                currentselectedTracks = selectedTracks,
                 currentselectedPoints = selectedPoints,
                 version = System.nanoTime()
             )
@@ -510,11 +501,81 @@ class MapViewModel @Inject constructor(
             "debug",
             "Selected track ${editState.value.currentselectedTracks}\nSelected points: ${editState.value.currentselectedPoints}"
         )
-
-        if (vibrate) {
-            context.vibrate(30)
-        }
+        return UiMapState(selectedTracks, selectedPoints)
     }
+
+
+    fun manageTrackSelection(trackId: Int?, select: Boolean): MutableList<Int> {
+
+        val selectedTracks = editState.value.currentselectedTracks
+
+        if (trackId != null) {
+
+            // TOOLBOX SELECTED
+            if (editState.value.currentSelectedTool == ActionType.TOOLBOX) {
+
+                // If not selected and wants to be selected
+                if (!selectedTracks.contains(trackId) && select) {
+                    selectedTracks.add(trackId)
+                }
+                // If selected and wants to be unselected
+                else if (selectedTracks.contains(trackId) && !select) {
+                    selectedTracks.remove(trackId)
+                }
+            }
+            // If other tool
+            else {
+
+                // Deselect all
+                selectedTracks.clear()
+
+                // Add newly selected
+                if (select) {
+                    selectedTracks.add(trackId)
+                }
+            }
+
+        }
+        // If null unselect all
+        else {
+            selectedTracks.clear()
+        }
+
+        return selectedTracks
+    }
+
+    fun managePointSelection(trackId: Int, pointId: Double?): MutableList<Pair<Int, Double>> {
+
+        // If no selected point, empty
+        var selectedPoints = mutableListOf<Pair<Int, Double>>()
+
+        if (pointId != null) {
+
+            val pairPoint = Pair(trackId, pointId)
+
+            // If multiple points selection
+            if (editState.value.currentSelectedTool == ActionType.JOIN) {
+                selectedPoints = editState.value.currentselectedPoints
+
+                // If point not in list and list is < 2 : add
+                if (!selectedPoints.contains(pairPoint) && selectedPoints.size < 2) {
+                    selectedPoints.add(pairPoint)
+                }
+                // If point not in list and list full : clear list and add point
+                else if (!selectedPoints.contains(pairPoint) && selectedPoints.size >= 2) {
+                    selectedPoints = mutableListOf(pairPoint)
+                }
+            }
+
+            // If single point selection
+            else if (editState.value.currentSelectedTool == ActionType.ADD) {
+                selectedPoints = mutableListOf(Pair(trackId, pointId))
+            }
+        }
+
+        return selectedPoints
+    }
+
 
     fun toolExport(fileName: String) {
 
