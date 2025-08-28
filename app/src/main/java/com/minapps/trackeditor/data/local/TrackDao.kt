@@ -34,21 +34,49 @@ interface TrackDao {
     @Query("""SELECT MAX(waypointId) FROM waypoints WHERE trackOwnerId = :trackId""")
     suspend fun getTrackLastWaypointIndex(trackId: Int): Double
 
+    @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId = :trackId AND waypointId < :id")
+    suspend fun getWaypointIndex(trackId: Int, id: Double): Int?
+
+    @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId ORDER BY waypointId ASC LIMIT 1 OFFSET :index")
+    suspend fun getWaypoint(trackId: Int, index: Int): WaypointEntity?
+
     @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId = :trackId AND latitude BETWEEN :latSouth AND :latNorth AND longitude BETWEEN :lonWest AND :lonEast")
-    suspend fun getVisibleTrackWaypointsCount(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): Double
+    suspend fun getVisibleTrackWaypointsCount(
+        trackId: Int,
+        latNorth: Double,
+        latSouth: Double,
+        lonWest: Double,
+        lonEast: Double
+    ): Double
 
     @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId AND latitude BETWEEN :latSouth AND :latNorth AND longitude BETWEEN :lonWest AND :lonEast ORDER BY waypointId ASC")
-    suspend fun getVisibleTrackWaypoints(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): List<WaypointEntity>
+    suspend fun getVisibleTrackWaypoints(
+        trackId: Int,
+        latNorth: Double,
+        latSouth: Double,
+        lonWest: Double,
+        lonEast: Double
+    ): List<WaypointEntity>
 
     @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId AND latitude BETWEEN :latSouth AND :latNorth AND longitude BETWEEN :lonWest AND :lonEast ORDER BY waypointId ASC LIMIT :chunkSize OFFSET :offset")
-    suspend fun getVisibleTrackWaypointsChunk(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double, chunkSize: Int, offset: Int): List<WaypointEntity>
+    suspend fun getVisibleTrackWaypointsChunk(
+        trackId: Int,
+        latNorth: Double,
+        latSouth: Double,
+        lonWest: Double,
+        lonEast: Double,
+        chunkSize: Int,
+        offset: Int
+    ): List<WaypointEntity>
 
-    @Query("""
+    @Query(
+        """
     SELECT * FROM waypoints
     WHERE latitude BETWEEN :latSouth AND :latNorth
       AND longitude BETWEEN :lonWest AND :lonEast
     ORDER BY trackOwnerId ASC, waypointId ASC
-""")
+"""
+    )
     suspend fun getTracksWithVisibleWaypoints(
         latNorth: Double,
         latSouth: Double,
@@ -56,12 +84,14 @@ interface TrackDao {
         lonEast: Double
     ): List<WaypointEntity>
 
-    @Query("""
+    @Query(
+        """
     SELECT COUNT(*) FROM waypoints
     WHERE latitude BETWEEN :latSouth AND :latNorth
       AND longitude BETWEEN :lonWest AND :lonEast
     ORDER BY trackOwnerId ASC, waypointId ASC
-""")
+"""
+    )
     suspend fun getTracksWithVisibleWaypointsCount(
         latNorth: Double,
         latSouth: Double,
@@ -69,19 +99,20 @@ interface TrackDao {
         lonEast: Double
     ): Double
 
-    @Query("""
+    @Query(
+        """
     SELECT DISTINCT trackOwnerId FROM waypoints
     WHERE latitude BETWEEN :latSouth AND :latNorth
       AND longitude BETWEEN :lonWest AND :lonEast
     ORDER BY trackOwnerId ASC
-""")
+"""
+    )
     suspend fun getTrackIdsWithVisibleWaypoints(
         latNorth: Double,
         latSouth: Double,
         lonWest: Double,
         lonEast: Double
     ): List<Int>
-
 
 
     /**
@@ -179,14 +210,16 @@ interface TrackDao {
         clearTracks()
     }
 
-    @Query("""
+    @Query(
+        """
         SELECT * FROM waypoints
         WHERE trackOwnerId = :trackId
           AND latitude BETWEEN :south AND :north
           AND longitude BETWEEN :west AND :east
           AND (:step = 1 OR (CAST(waypointId AS INTEGER) % :step) = 0)
         ORDER BY waypointId
-    """)
+    """
+    )
     suspend fun getWaypointsInBoundingBox(
         trackId: Int,
         south: Double,

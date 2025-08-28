@@ -78,6 +78,8 @@ interface EditTrackRepository {
 
     suspend fun getTrackFirstWaypointIndex(trackId: Int): Double
     suspend fun getTrackLastWaypointIndex(trackId: Int): Double
+    suspend fun getWaypointIndex(trackId: Int, id: Double): Int?
+    suspend fun getWaypoint(trackId: Int, index: Int): Waypoint?
     suspend fun getVisibleTrackWaypointsCount(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): Double
     suspend fun getVisibleTrackWaypoints(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): List<Waypoint>
     suspend fun getTracksWithVisibleWaypoints(latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): List<Pair<Int, List<Waypoint>>>

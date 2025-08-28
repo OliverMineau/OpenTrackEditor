@@ -47,7 +47,7 @@ sealed class WaypointUpdate {
 
     data class Removed(val trackId: Int, val index: Int) : WaypointUpdate()
     data class Moved(val trackId: Int, val points: List<Pair<Double, Double>>) : WaypointUpdate()
-    data class MovedDone(val trackId: Int, val pointId: Int, val point: Pair<Double, Double>) :
+    data class MovedDone(val trackId: Int, val pointId: Double, val point: Pair<Double, Double>) :
         WaypointUpdate()
 
     data class Cleared(val trackId: Int) : WaypointUpdate()
@@ -454,13 +454,15 @@ class MapViewModel @Inject constructor(
                     waypointList.first().lat,
                     waypointList.first().lng,
                     pointId,
-                    trackId = trackId
+                    trackId = trackId,
+                    0.0
                 )
 
+                // TODO WRONG INDEX GIVEN
                 _waypointEvents.emit(
                     WaypointUpdate.MovedDone(
                         trackId,
-                        pointIndex,
+                        pointId,
                         waypointList.first().lat to waypointList.first().lng
                     )
                 )
@@ -594,7 +596,12 @@ class MapViewModel @Inject constructor(
             }
             ActionType.ADD -> {
                 if(editState.value.currentselectedPoints.isNotEmpty()){
-                    addWaypointUseCase.updateMarker(editState.value.currentselectedPoints.first().first, editState.value.currentselectedPoints.first().second)
+                    val newPoint = addWaypointUseCase.updateMarker(editState.value.currentselectedPoints.first().first, editState.value.currentselectedPoints.first().second)
+
+                    /*if(newPoint !=null){
+                        Log.d("add innne", "Do we add inner : $newPoint")
+                        addWaypointUseCase.addInnerWaypoint()
+                    }*/
                 }
             }
             else -> {}
@@ -765,7 +772,7 @@ class MapViewModel @Inject constructor(
                 )
             }
 
-
+            // Send new updated tracks to be displayed
             tracksData?.forEach { (trackId, waypoints) ->
                 val points = waypoints.map { wp -> SimpleWaypoint(wp.id, wp.lat, wp.lng) }
                 _waypointEvents.emit(WaypointUpdate.ViewChanged(trackId, points))
