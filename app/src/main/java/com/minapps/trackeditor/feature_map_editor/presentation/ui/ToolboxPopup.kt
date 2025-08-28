@@ -406,7 +406,7 @@ class ToolboxPopup(
 
         toolViews.forEach { item ->
 
-            // Type 2 tools don't change colour and affect the ui
+            // Type FILE_SYSTEM tools don't change colour and affect the ui
             if (tool.group == ToolGroup.FILE_SYSTEM){
                 return
             }
@@ -419,6 +419,13 @@ class ToolboxPopup(
 
             // TODO Maybe error here
             // If same group, deselect all except same action/tool or if same tool
+
+            // Deselect all if hand selected
+            if(tool == ActionType.HAND){
+                changeColor(item.second, LTGRAY)
+                return@forEach
+            }
+
             if(tool.group == ToolGroup.NONE && group == ToolGroup.NONE && tool == type){
 
                 color = LTGRAY

@@ -23,6 +23,7 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.simplefastpoint.LabelledGeoPoint
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlayOptions
+import java.util.function.IntToDoubleFunction
 
 
 class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: MapViewModel) :
@@ -71,6 +72,34 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
 
             return insertIndex
         }
+
+        /**
+         * Remove id from maps
+         *
+         * @param id
+         * @return
+         */
+        fun removeId(id: Double): Int? {
+            // Find index of the id
+            val removeIndex = indexMap[id] ?: return null
+
+            // Remove from both maps
+            indexMap.remove(id)
+            reverseIndexMap.remove(removeIndex)
+
+            // Shift all indices > removeIndex down by 1
+            val keysToShift = indexMap.filterValues { it > removeIndex }.keys
+            keysToShift.forEach { key ->
+                val oldIndex = indexMap[key]!!
+                val newIndex = oldIndex - 1
+                indexMap[key] = newIndex
+                reverseIndexMap.remove(oldIndex)
+                reverseIndexMap[newIndex] = key
+            }
+
+            return removeIndex
+        }
+
     }
 
     // Polylines that are currently displayed with render data
@@ -122,7 +151,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
 
         // Remove all polyline data
         val renderData = displayedPolylines[trackId]
-        if(renderData != null){
+        if (renderData != null) {
             mMap.overlayManager.remove(renderData.overlay)
             mMap.overlayManager.remove(renderData.polyline)
             displayedPolylines.remove(trackId)
@@ -160,7 +189,8 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         )
 
         // Add track to display list
-        displayedPolylines[trackId] = TrackRenderData(polylinePair.first, polylinePair.second, indexMap, reverseIndexMap)
+        displayedPolylines[trackId] =
+            TrackRenderData(polylinePair.first, polylinePair.second, indexMap, reverseIndexMap)
 
         mMap.invalidate()
     }
@@ -216,6 +246,8 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         // Update display list
         displayedPolylines[trackId]?.polyline = polylinePair.first
         displayedPolylines[trackId]?.overlay = polylinePair.second
+
+        mMap.invalidate()
     }
 
 
@@ -271,394 +303,427 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         }
 
         mMap.invalidate()
-}
-
-
-/**
- * Display live modifications of moving track point
- *
- * @param waypoints List of waypoints to draw
- * @param trackId
- * @param color
- */
-fun displayLiveModification(
-    waypoints: List<Pair<Double, Double>>,
-    trackId: Int,
-    color: Int,
-) {
-    // Remove previous modification overlay if it exists
-    modifyingPolylines[trackId]?.let {
-        mMap.overlayManager.remove(it)
     }
 
-    // Convert to GeoPoints
-    val movingPoints = waypoints.map { GeoPoint(it.first, it.second) }
 
-    // Create new modifying polyline
-    val movedPolyline = Polyline().apply {
-        setPoints(movingPoints)
-        id = System.identityHashCode(this).toString()
-        PaintType.DASHED.applyTo(outlinePaint, color)
-    }
-
-    // Add to map and track it
-    mMap.overlayManager.add(movedPolyline)
-
-    // Add reference to polyline
-    modifyingPolylines[trackId] = movedPolyline
-
-    mMap.invalidate()
-}
-
-
-/**
- * Display the modified track (point moved by user)
- *
- * @param waypoint Waypoint moved (new location)
- * @param trackId Track id
- * @param pointId Waypoint id
- */
-fun displayLiveModificationDone(
-    waypoint: Pair<Double, Double>,
-    trackId: Int,
-    pointId: Double,
-) {
-
-    // Remove temporary moving polyline
-    modifyingPolylines[trackId]?.let {
-        mMap.overlayManager.remove(it)
-        modifyingPolylines.remove(trackId)
-    }
-
-    // TODO ON LARGE TRACKS INDEX IS FALSE
-    Log.d("point", "Point id set : $pointId")
-
-    selectTrack(trackId, true)
-
-    // Get the displayed polyline
-    val renderData = displayedPolylines[trackId] ?: return
-    val updatedPolylinePoints = renderData.polyline.actualPoints.toMutableList()
-
-    // Get the index
-    val index = renderData.indexMap[pointId]
-
-    // Update position of point
-    if(index != null){
-        updatedPolylinePoints[index] = GeoPoint(waypoint.first, waypoint.second)
-    }
-
-    // Replace polyline with updated points
-    renderData.polyline.setPoints(updatedPolylinePoints)
-
-    // Display and change color
-    displayTrack(trackId, Color.YELLOW, false)
-}
-
-/**
- * MAIN DISPLAY FUNCTION
- * Display a list of waypoints
- *
- * @param waypoints List of points to be displayed
- * @param trackId Track id
- * @param color color of track
- * @param center If view should center on track after displaying
- * @param isModifying If track to be displayed is a segment that is being modified (no need for CSFPO)
- * @return Polyline and clickable points
- */
-private fun displayWaypoints(
-    geoPoints: MutableList<GeoPoint>,
-    nodes: MutableList<IGeoPoint>,
-    trackId: Int,
-    color: Int,
-    center: Boolean,
-    isModifying: Boolean = false
-): MutablePair<Polyline, CustomSimpleFastPointOverlay?> {
-
-    Log.d("select", "display wp trkid : $trackId")
-    val selectedColor = Color.YELLOW
-    val unselectedColor = Color.RED
-
-    val paintColor =
-        if (mapViewModel.editState.value.currentselectedTracks.isNotEmpty() && mapViewModel.editState.value.currentselectedTracks.contains(
-                trackId
-            )
-        ) selectedColor else color
-
-    // Create polyline with geoPoints and style
-    val polyline = Polyline().apply {
-        setPoints(geoPoints)
-        id = System.identityHashCode(this).toString()
-        PaintType.SOLID.applyTo(outlinePaint, paintColor)
-    }
-
-    polyline.setOnClickListener { polyline, mapView, eventPos ->
-
-        Log.d("polyline", "clicked $trackId")
-
-        if (selectedPolylines.contains(trackId)) {
-            // deselect
-            selectTrack(trackId, false)
-        } else {
-            // select this one
-            polyline.outlinePaint.color = selectedColor
-            selectTrack(trackId, true)
+    /**
+     * Display live modifications of moving track point
+     *
+     * @param waypoints List of waypoints to draw
+     * @param trackId
+     * @param color
+     */
+    fun displayLiveModification(
+        waypoints: List<Pair<Double, Double>>,
+        trackId: Int,
+        color: Int,
+    ) {
+        // Remove previous modification overlay if it exists
+        modifyingPolylines[trackId]?.let {
+            mMap.overlayManager.remove(it)
         }
+
+        // Convert to GeoPoints
+        val movingPoints = waypoints.map { GeoPoint(it.first, it.second) }
+
+        // Create new modifying polyline
+        val movedPolyline = Polyline().apply {
+            setPoints(movingPoints)
+            id = System.identityHashCode(this).toString()
+            PaintType.DASHED.applyTo(outlinePaint, color)
+        }
+
+        // Add to map and track it
+        mMap.overlayManager.add(movedPolyline)
+
+        // Add reference to polyline
+        modifyingPolylines[trackId] = movedPolyline
+
         mMap.invalidate()
-        true
     }
 
-    // Add to polyline to be displayed
-    mMap.overlayManager.add(polyline)
 
-    // Point overlay styles
-    val primaryPaint = Paint().apply {
-        editColor(color, 0, 0.70f, 0.60f)
+    /**
+     * Display the modified track (point moved by user)
+     *
+     * @param waypoint Waypoint moved (new location)
+     * @param trackId Track id
+     * @param pointId Waypoint id
+     */
+    fun displayLiveModificationDone(
+        waypoint: Pair<Double, Double>,
+        trackId: Int,
+        pointId: Double,
+    ) {
+
+        // Remove temporary moving polyline
+        modifyingPolylines[trackId]?.let {
+            mMap.overlayManager.remove(it)
+            modifyingPolylines.remove(trackId)
+        }
+
+        // TODO ON LARGE TRACKS INDEX IS FALSE
+        Log.d("point", "Point id set : $pointId")
+
+        selectTrack(trackId, true)
+
+        // Get the displayed polyline
+        val renderData = displayedPolylines[trackId] ?: return
+        val updatedPolylinePoints = renderData.polyline.actualPoints.toMutableList()
+
+        // Get the index
+        val index = renderData.indexMap[pointId]
+
+        // Update position of point
+        if (index != null) {
+            updatedPolylinePoints[index] = GeoPoint(waypoint.first, waypoint.second)
+        }
+
+        // Replace polyline with updated points
+        renderData.polyline.setPoints(updatedPolylinePoints)
+
+        // Display and change color
+        displayTrack(trackId, Color.YELLOW, false)
     }
-    val selectedPaint = Paint().apply {
-        editColor(color, 0, 0.25f, 0.40f)
+
+    /**
+     * MAIN DISPLAY FUNCTION
+     * Display a list of waypoints
+     *
+     * @param waypoints List of points to be displayed
+     * @param trackId Track id
+     * @param color color of track
+     * @param center If view should center on track after displaying
+     * @param isModifying If track to be displayed is a segment that is being modified (no need for CSFPO)
+     * @return Polyline and clickable points
+     */
+    private fun displayWaypoints(
+        geoPoints: MutableList<GeoPoint>,
+        nodes: MutableList<IGeoPoint>,
+        trackId: Int,
+        color: Int,
+        center: Boolean,
+        isModifying: Boolean = false
+    ): MutablePair<Polyline, CustomSimpleFastPointOverlay?> {
+
+        Log.d("select", "display wp trkid : $trackId")
+        val selectedColor = Color.YELLOW
+        val unselectedColor = Color.RED
+
+        val paintColor =
+            if (mapViewModel.editState.value.currentselectedTracks.isNotEmpty() && mapViewModel.editState.value.currentselectedTracks.contains(
+                    trackId
+                )
+            ) selectedColor else color
+
+        // Create polyline with geoPoints and style
+        val polyline = Polyline().apply {
+            setPoints(geoPoints)
+            id = System.identityHashCode(this).toString()
+            PaintType.SOLID.applyTo(outlinePaint, paintColor)
+        }
+
+        polyline.setOnClickListener { polyline, mapView, eventPos ->
+
+            Log.d("polyline", "clicked $trackId")
+
+            if (selectedPolylines.contains(trackId)) {
+                // deselect
+                selectTrack(trackId, false)
+            } else {
+                // select this one
+                polyline.outlinePaint.color = selectedColor
+                selectTrack(trackId, true)
+            }
+            mMap.invalidate()
+            true
+        }
+
+        // Add to polyline to be displayed
+        mMap.overlayManager.add(polyline)
+
+        // Point overlay styles
+        val primaryPaint = Paint().apply {
+            editColor(color, 0, 0.70f, 0.60f)
+        }
+        val selectedPaint = Paint().apply {
+            editColor(color, 0, 0.25f, 0.40f)
+        }
+
+        // Create clickable points overlay
+        var pointOverlay: CustomSimpleFastPointOverlay? = null
+        if (!isModifying) {
+            val pointAdapter = MutablePointAdapter(nodes.toMutableList(), false)
+            val pointOptions = SimpleFastPointOverlayOptions.getDefaultStyle()
+                .setAlgorithm(SimpleFastPointOverlayOptions.RenderingAlgorithm.MAXIMUM_OPTIMIZATION)
+                .setRadius(8f) //Smaller is faster
+                .setIsClickable(true)
+                .setCellSize(20) //Bigger is faster (less points shown on screen)
+                .setPointStyle(primaryPaint)
+                .setSelectedPointStyle(selectedPaint)
+                .setSymbol(SimpleFastPointOverlayOptions.Shape.CIRCLE)
+
+            pointOverlay = CustomSimpleFastPointOverlay(pointAdapter, pointOptions, this, trackId)
+
+            // Add overlay to be displayed
+            mMap.overlayManager.add(pointOverlay)
+        }
+
+        // Center to track if asked for
+        if (center && geoPoints.isNotEmpty()) {
+            val boundingBox = BoundingBox.fromGeoPointsSafe(geoPoints)
+            mMap.post {
+                mMap.zoomToBoundingBox(boundingBox.increaseByScale(2f), true)
+                mMap.invalidate() // Force redraw
+            }
+        }
+
+        // Return track line and clickable overlay
+        return MutablePair(polyline, pointOverlay)
     }
 
-    // Create clickable points overlay
-    var pointOverlay: CustomSimpleFastPointOverlay? = null
-    if (!isModifying) {
-        val pointAdapter = MutablePointAdapter(nodes.toMutableList(), false)
-        val pointOptions = SimpleFastPointOverlayOptions.getDefaultStyle()
-            .setAlgorithm(SimpleFastPointOverlayOptions.RenderingAlgorithm.MAXIMUM_OPTIMIZATION)
-            .setRadius(8f) //Smaller is faster
-            .setIsClickable(true)
-            .setCellSize(20) //Bigger is faster (less points shown on screen)
-            .setPointStyle(primaryPaint)
-            .setSelectedPointStyle(selectedPaint)
-            .setSymbol(SimpleFastPointOverlayOptions.Shape.CIRCLE)
 
-        pointOverlay = CustomSimpleFastPointOverlay(pointAdapter, pointOptions, this, trackId)
-
-        // Add overlay to be displayed
-        mMap.overlayManager.add(pointOverlay)
+    fun editColor(color: Int, alpha: Int, saturation: Float, value: Float): Int {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(color, hsv)
+        hsv[1] = saturation
+        hsv[2] = value
+        return Color.HSVToColor(alpha, hsv)
     }
 
-    // Center to track if asked for
-    if (center && geoPoints.isNotEmpty()) {
-        val boundingBox = BoundingBox.fromGeoPointsSafe(geoPoints)
-        mMap.post {
-            mMap.zoomToBoundingBox(boundingBox.increaseByScale(2f), true)
-            mMap.invalidate() // Force redraw
+    override fun onPointClicked(selectedBundle: MovingPointBundle) {
+        // Ignore if no actual point is selected
+        if (selectedBundle.selectedPoint == null) return
+
+        val trackId = selectedBundle.trackId
+
+        // Notify ViewModel
+        selectTrack(trackId, true, selectedBundle.selectedPointRealId)
+
+
+        // Redraw
+        mMap.invalidate()
+    }
+
+
+    /**
+     * When user moves point, renderer listens for move notification.
+     * (Called by CustomSimpleFastPointOverlay)
+     *
+     * converts coords to waypoint and send it to the ViewModel
+     *
+     * @param selectedBundle
+     */
+    override fun onPointMoved(selectedBundle: MovingPointBundle) {
+        /**TODO How do we manage elevation ?
+         * - Null then interpolate ?
+         * - Interpolate when ? Saving to DB ? Exporting ?
+         */
+
+        // Create list of moved points
+        val movingPoint = mutableListOf<Waypoint>()
+
+        // If selectedPoint is null then point has been set (user lifted finger)
+        val isSet = selectedBundle.selectedPoint == null
+
+        // Add previous point if exists (track border)
+        if (selectedBundle.previousPoint != null && !isSet) {
+            val it = selectedBundle.previousPoint!!
+            movingPoint.add(
+                Waypoint(
+                    id = 0.0,
+                    lat = it.latitude,
+                    lng = it.longitude,
+                    elv = null,
+                    time = "",
+                    trackId = selectedBundle.trackId
+                )
+            )
+        }
+
+        // Add current moving point
+        selectedBundle.movingPos?.let {
+            movingPoint.add(
+                Waypoint(
+                    id = 1.0,
+                    lat = it.latitude,
+                    lng = it.longitude,
+                    elv = null,
+                    time = "",
+                    trackId = selectedBundle.trackId
+                )
+            )
+        }
+
+        // Add next point if exists (track border)
+        if (selectedBundle.nextPoint != null && !isSet) {
+            val it = selectedBundle.nextPoint!!
+            movingPoint.add(
+                Waypoint(
+                    id = 2.0,
+                    lat = it.latitude,
+                    lng = it.longitude,
+                    elv = null,
+                    time = "",
+                    trackId = selectedBundle.trackId
+                )
+            )
+        }
+
+        // Call VM movePoint with list of point, idx of point being modified, if set
+        mapViewModel.movePoint(
+            movingPoint,
+            selectedBundle.selectedPointIdx,
+            selectedBundle.selectedPointRealId,
+            selectedBundle.selectedPoint == null
+        )
+    }
+
+    fun handleWaypointEvents(event: WaypointUpdate) {
+        when (event) {
+            is WaypointUpdate.Added -> handleWaypointAdded(event.trackId, event.point)
+            is WaypointUpdate.AddedList -> handleWaypointAddedList(
+                event.trackId,
+                event.points,
+                event.center
+            )
+
+            is WaypointUpdate.ViewChanged -> handleWaypointViewChanged(event.trackId, event.points)
+            is WaypointUpdate.Removed -> handleWaypointRemoved(event.trackId, event.index)
+            is WaypointUpdate.Moved -> handleWaypointMoved(event.trackId, event.points)
+            is WaypointUpdate.Cleared -> handleTrackCleared(event.trackId)
+            is WaypointUpdate.MovedDone -> handleWaypointMovedDone(
+                event.trackId,
+                event.pointId,
+                event.point
+            )
+
+            is WaypointUpdate.RemovedById -> handleWaypointRemovedById(event.trackId, event.id)
         }
     }
 
-    // Return track line and clickable overlay
-    return MutablePair(polyline, pointOverlay)
-}
-
-
-fun editColor(color: Int, alpha: Int, saturation: Float, value: Float): Int {
-    val hsv = FloatArray(3)
-    Color.colorToHSV(color, hsv)
-    hsv[1] = saturation
-    hsv[2] = value
-    return Color.HSVToColor(alpha, hsv)
-}
-
-override fun onPointClicked(selectedBundle: MovingPointBundle) {
-    // Ignore if no actual point is selected
-    if (selectedBundle.selectedPoint == null) return
-
-    val trackId = selectedBundle.trackId
-
-    // Notify ViewModel
-    selectTrack(trackId, true, selectedBundle.selectedPointRealId)
-
-
-    // Redraw
-    mMap.invalidate()
-}
-
-
-/**
- * When user moves point, renderer listens for move notification.
- * (Called by CustomSimpleFastPointOverlay)
- *
- * converts coords to waypoint and send it to the ViewModel
- *
- * @param selectedBundle
- */
-override fun onPointMoved(selectedBundle: MovingPointBundle) {
-    /**TODO How do we manage elevation ?
-     * - Null then interpolate ?
-     * - Interpolate when ? Saving to DB ? Exporting ?
+    /**
+     * TODO
+     * Called When Map clicked
+     * Add point to polyline in optimised way
+     *
+     * @param trackId
+     * @param point
      */
 
-    // Create list of moved points
-    val movingPoint = mutableListOf<Waypoint>()
-
-    // If selectedPoint is null then point has been set (user lifted finger)
-    val isSet = selectedBundle.selectedPoint == null
-
-    // Add previous point if exists (track border)
-    if (selectedBundle.previousPoint != null && !isSet) {
-        val it = selectedBundle.previousPoint!!
-        movingPoint.add(
-            Waypoint(
-                id = 0.0,
-                lat = it.latitude,
-                lng = it.longitude,
-                elv = null,
-                time = "",
-                trackId = selectedBundle.trackId
-            )
-        )
+    private fun handleWaypointAdded(trackId: Int, point: SimpleWaypoint) {
+        displayNewAddedPoint(point, trackId)
+        Log.d("debug", "Added point")
     }
 
-    // Add current moving point
-    selectedBundle.movingPos?.let {
-        movingPoint.add(
-            Waypoint(
-                id = 1.0,
-                lat = it.latitude,
-                lng = it.longitude,
-                elv = null,
-                time = "",
-                trackId = selectedBundle.trackId
-            )
-        )
+
+    /**
+     * Render list of points
+     *
+     * @param trackId
+     * @param points
+     */
+    private fun handleWaypointAddedList(
+        trackId: Int,
+        points: List<SimpleWaypoint>,
+        center: Boolean
+    ) {
+        displayTrack(points, trackId, Color.RED, center)
     }
 
-    // Add next point if exists (track border)
-    if (selectedBundle.nextPoint != null && !isSet) {
-        val it = selectedBundle.nextPoint!!
-        movingPoint.add(
-            Waypoint(
-                id = 2.0,
-                lat = it.latitude,
-                lng = it.longitude,
-                elv = null,
-                time = "",
-                trackId = selectedBundle.trackId
-            )
-        )
+    private fun handleWaypointViewChanged(trackId: Int, points: List<SimpleWaypoint>) {
+        Log.d("debugOpti", "Sent To update")
+        displayTrack(points, trackId, Color.RED, false)
     }
 
-    // Call VM movePoint with list of point, idx of point being modified, if set
-    mapViewModel.movePoint(
-        movingPoint,
-        selectedBundle.selectedPointIdx,
-        selectedBundle.selectedPointRealId,
-        selectedBundle.selectedPoint == null
-    )
-}
-
-fun handleWaypointEvents(event: WaypointUpdate) {
-    when (event) {
-        is WaypointUpdate.Added -> handleWaypointAdded(event.trackId, event.point)
-        is WaypointUpdate.AddedList -> handleWaypointAddedList(
-            event.trackId,
-            event.points,
-            event.center
-        )
-
-        is WaypointUpdate.ViewChanged -> handleWaypointViewChanged(event.trackId, event.points)
-        is WaypointUpdate.Removed -> handleWaypointRemoved(event.trackId, event.index)
-        is WaypointUpdate.Moved -> handleWaypointMoved(event.trackId, event.points)
-        is WaypointUpdate.Cleared -> handleTrackCleared(event.trackId)
-        is WaypointUpdate.MovedDone -> handleWaypointMovedDone(
-            event.trackId,
-            event.pointId,
-            event.point
-        )
+    /**
+     * Render moved point
+     *
+     * @param trackId
+     * @param points
+     */
+    private fun handleWaypointMoved(trackId: Int, points: List<Pair<Double, Double>>) {
+        displayLiveModification(points, trackId, Color.rgb(255, 128, 0))
     }
-}
 
-/**
- * TODO
- * Called When Map clicked
- * Add point to polyline in optimised way
- *
- * @param trackId
- * @param point
- */
+    /**
+     * Render final point move
+     *
+     * @param trackId
+     * @param pointId
+     * @param point
+     */
+    private fun handleWaypointMovedDone(
+        trackId: Int,
+        pointId: Double,
+        point: Pair<Double, Double>
+    ) {
+        displayLiveModificationDone(point, trackId, pointId)
+    }
 
-private fun handleWaypointAdded(trackId: Int, point: SimpleWaypoint) {
-    displayNewAddedPoint(point, trackId)
-    Log.d("debug", "Added point")
-}
+    /**
+     * Remove point
+     *
+     * @param trackId
+     * @param index
+     */
+    private fun handleWaypointRemoved(trackId: Int, index: Int) {
+        // TODO
+    }
 
 
-/**
- * Render list of points
- *
- * @param trackId
- * @param points
- */
-private fun handleWaypointAddedList(
-    trackId: Int,
-    points: List<SimpleWaypoint>,
-    center: Boolean
-) {
-    displayTrack(points, trackId, Color.RED, center)
-}
+    /**
+     * Remove waypoint by id
+     *
+     * @param trackId
+     * @param id
+     */
+    private fun handleWaypointRemovedById(trackId: Int, id: Double) {
 
-private fun handleWaypointViewChanged(trackId: Int, points: List<SimpleWaypoint>) {
-    Log.d("debugOpti", "Sent To update")
-    displayTrack(points, trackId, Color.RED, false)
-}
 
-/**
- * Render moved point
- *
- * @param trackId
- * @param points
- */
-private fun handleWaypointMoved(trackId: Int, points: List<Pair<Double, Double>>) {
-    displayLiveModification(points, trackId, Color.rgb(255, 128, 0))
-}
+        val renderData = displayedPolylines[trackId]
+        if(renderData == null) return
 
-/**
- * Render final point move
- *
- * @param trackId
- * @param pointId
- * @param point
- */
-private fun handleWaypointMovedDone(trackId: Int, pointId: Double, point: Pair<Double, Double>) {
-    displayLiveModificationDone(point, trackId, pointId)
-}
+        // Get index
+        val index = renderData.indexMap[id]
+        if(index == null) return
 
-/**
- * Remove point
- *
- * @param trackId
- * @param index
- */
-private fun handleWaypointRemoved(trackId: Int, index: Int) {
-    // TODO
-}
+        // Get Geopoint because cant delete by index
+        val point = renderData.polyline.actualPoints[index]
+        renderData.polyline.actualPoints.remove(point)
 
-/**
- * Remove track
- *
- * @param trackId
- */
-private fun handleTrackCleared(trackId: Int) {
-    // TODO
-}
+        // Update Maps
+        renderData.removeId(id)
 
-fun selectTrack(trackId: Int?, select: Boolean, pointId: Double? = null) {
-    val state = mapViewModel.selectedTrack(trackId, select, pointId)
-    selectedPolylines = state.selectedTrackIds
+        displayTrack(trackId, Color.YELLOW, false)
+    }
 
-    colorTracks()
-}
+    /**
+     * Remove track
+     *
+     * @param trackId
+     */
+    private fun handleTrackCleared(trackId: Int) {
+        // TODO
+    }
 
-private fun colorTracks() {
-    displayedPolylines.forEach { id, renderData ->
-        if (selectedPolylines.contains(id)) {
-            renderData.polyline.outlinePaint.color = Color.YELLOW
-        } else {
-            renderData.polyline.outlinePaint.color = Color.RED
+    fun selectTrack(trackId: Int?, select: Boolean, pointId: Double? = null) {
+        val state = mapViewModel.selectedTrack(trackId, select, pointId)
+        selectedPolylines = state.selectedTrackIds
+
+        colorTracks()
+    }
+
+    private fun colorTracks() {
+        displayedPolylines.forEach { id, renderData ->
+            if (selectedPolylines.contains(id)) {
+                renderData.polyline.outlinePaint.color = Color.YELLOW
+            } else {
+                renderData.polyline.outlinePaint.color = Color.RED
+            }
         }
-    }
 
-    mMap.invalidate()
-}
+        mMap.invalidate()
+    }
 
 }

@@ -19,6 +19,9 @@ interface TrackDao {
     @Insert
     suspend fun insertTrack(track: TrackEntity): Long
 
+    @Query("DELETE FROM tracks WHERE trackId = :trackId ")
+    suspend fun removeTrack(trackId: Int)
+
     /**
      * Fetch a single track by its ID.
      * @param id Track ID
@@ -180,6 +183,9 @@ interface TrackDao {
      */
     @Delete
     suspend fun deleteWaypoint(waypoint: WaypointEntity)
+
+    @Query("DELETE FROM waypoints WHERE trackOwnerId = :trackId AND waypointId = :id")
+    suspend fun deleteWaypoint(trackId: Int, id: Double)
 
 
     @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId = :trackId")

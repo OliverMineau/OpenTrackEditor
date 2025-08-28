@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
+        android:id="@+id/nav_hand"
+        android:icon="@drawable/hand_24"
+        android:title="Move" />
+    <item
         android:id="@+id/nav_remove"
         android:icon="@drawable/map_marker_cross_24"
         android:title="Remove" />
@@ -8,6 +12,10 @@
         android:id="@+id/nav_add"
         android:icon="@drawable/map_marker_plus_24"
         android:title="Add" />
+    <item
+        android:id="@+id/nav_selection"
+        android:icon="@drawable/map_location_track_24"
+        android:title="Select" />
     <item
         android:id="@+id/nav_toolbox"
         android:icon="@drawable/tools_24"

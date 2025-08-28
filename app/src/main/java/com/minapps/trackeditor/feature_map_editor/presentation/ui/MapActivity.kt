@@ -219,6 +219,16 @@ class MapActivity : AppCompatActivity(), MapListener {
                     true
                 }
 
+                R.id.nav_hand -> {
+                    mapViewModel.selectedTool(ActionType.HAND)
+                    true
+                }
+
+                R.id.nav_selection -> {
+                    mapViewModel.selectedTool(ActionType.SELECT)
+                    true
+                }
+
                 else -> {
                     mapViewModel.selectedTool(ActionType.NONE)
                     toolboxPopup.hide()
@@ -369,7 +379,13 @@ class MapActivity : AppCompatActivity(), MapListener {
                 } else if (item.itemId == R.id.nav_remove && tool == ActionType.REMOVE) {
                     item.isChecked = true
                     return
-                } else if (item.itemId == R.id.nav_toolbox && tool != ActionType.REMOVE && tool != ActionType.ADD && tool != ActionType.VIEW) {
+                } else if (item.itemId == R.id.nav_toolbox && tool != ActionType.REMOVE && tool != ActionType.ADD && tool != ActionType.VIEW && tool != ActionType.SELECT) {
+                    item.isChecked = true
+                    return
+                }else if (item.itemId == R.id.nav_hand && tool == ActionType.HAND) {
+                    item.isChecked = true
+                    return
+                }else if (item.itemId == R.id.nav_selection && tool == ActionType.SELECT) {
                     item.isChecked = true
                     return
                 }

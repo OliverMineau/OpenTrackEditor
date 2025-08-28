@@ -162,6 +162,15 @@ class EditTrackRepositoryImpl @Inject constructor(
         return dao.insertTrack(track)
     }
 
+    override suspend fun removeTrack(trackId: Int){
+        dao.removeTrack(trackId)
+    }
+
+    override suspend fun deleteWaypoint(trackId: Int, id: Double){
+        dao.deleteWaypoint(trackId, id)
+    }
+
+
     override suspend fun getFullTrack(trackId: Int): Track? {
         return dao.getTrackById(trackId)?.toDomain( dao.getTrackWaypoints(trackId))
     }

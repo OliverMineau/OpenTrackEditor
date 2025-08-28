@@ -17,6 +17,7 @@ import com.minapps.trackeditor.feature_track_export.domain.usecase.ExportTrackUs
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.ClearAllUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.CreateTrackUseCase
+import com.minapps.trackeditor.feature_map_editor.domain.usecase.DeleteWaypointUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.DisplayTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackLastWaypointIndexUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackWaypointsUseCase
@@ -46,6 +47,7 @@ sealed class WaypointUpdate {
         WaypointUpdate()
 
     data class Removed(val trackId: Int, val index: Int) : WaypointUpdate()
+    data class RemovedById(val trackId: Int, val id: Double) : WaypointUpdate()
     data class Moved(val trackId: Int, val points: List<Pair<Double, Double>>) : WaypointUpdate()
     data class MovedDone(val trackId: Int, val pointId: Double, val point: Pair<Double, Double>) :
         WaypointUpdate()
@@ -75,7 +77,8 @@ enum class ActionType(
     val group: ToolGroup? = ToolGroup.NONE
 ) {
     // No action
-    NONE(null, null, null),
+    NONE(null, "None", null),
+    HAND(R.drawable.hand_24, "Hand", SelectionCount.ONE, ToolGroup.ALL),
     SPACER(null, null, null),
 
     // File & system actions
@@ -120,6 +123,7 @@ enum class ActionType(
     // Edit Bottom Navigation
     ADD(R.drawable.map_marker_plus_24, "Add", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
     REMOVE(R.drawable.map_marker_minus_24, "Remove", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
+    SELECT(R.drawable.map_location_track_24, "Select", SelectionCount.MULTIPLE, ToolGroup.ALL),
 
 
     // Main Bottom Navigation
@@ -156,7 +160,7 @@ class MapViewModel @Inject constructor(
     private val getTrackWaypointsUseCase: GetTrackWaypointsUseCase,
     private val displayTrackUseCase: DisplayTrackUseCase,
     private val exportTrackUseCase: ExportTrackUseCase,
-    private val getTrackLastWaypointIndexUseCase: GetTrackLastWaypointIndexUseCase,
+    private val deleteWaypointUseCase: DeleteWaypointUseCase,
     private val updateMapViewUseCase: UpdateMapViewUseCase,
     private val trackImportUseCase: TrackImportUseCase,
     private val mapUpdateViewHelper: MapUpdateViewHelper,
@@ -405,7 +409,7 @@ class MapViewModel @Inject constructor(
                 "debug",
                 "Added waypoint to track $trackId at: ${geoPoint.latitude}, ${geoPoint.longitude}"
             )
-        }else{
+        } else {
 
         }
 
@@ -572,7 +576,7 @@ class MapViewModel @Inject constructor(
             }
 
             // If single point selection
-            else if (editState.value.currentSelectedTool == ActionType.ADD) {
+            else if (editState.value.currentSelectedTool == ActionType.ADD || editState.value.currentSelectedTool == ActionType.REMOVE) {
                 selectedPoints = mutableListOf(Pair(trackId, pointId))
             }
         }
@@ -584,17 +588,24 @@ class MapViewModel @Inject constructor(
      * Called when point selection changed
      *
      */
-    private suspend fun toggleSelectedPoints(){
-        when(editState.value.currentSelectedTool){
+    private suspend fun toggleSelectedPoints() {
+        when (editState.value.currentSelectedTool) {
             ActionType.JOIN -> {
-                Log.d("Join", "Call JoinTrackUseCase points :${editState.value.currentselectedPoints}")
+                Log.d(
+                    "Join",
+                    "Call JoinTrackUseCase points :${editState.value.currentselectedPoints}"
+                )
             }
+
             ActionType.ADD -> {
-                if(editState.value.currentselectedPoints.isNotEmpty()){
+                if (editState.value.currentselectedPoints.isNotEmpty()) {
                     // Update marker OR add point if clicked on inner waypoint
-                    val newWaypoint = addWaypointUseCase.updateMarker(editState.value.currentselectedPoints.first().first, editState.value.currentselectedPoints.first().second)
+                    val newWaypoint = addWaypointUseCase.updateMarker(
+                        editState.value.currentselectedPoints.first().first,
+                        editState.value.currentselectedPoints.first().second
+                    )
                     // Notify observers that a waypoint was added
-                    if(newWaypoint != null){
+                    if (newWaypoint != null) {
                         _waypointEvents.emit(
                             WaypointUpdate.Added(
                                 newWaypoint.trackId,
@@ -605,6 +616,24 @@ class MapViewModel @Inject constructor(
 
                 }
             }
+
+            ActionType.REMOVE -> {
+                if (editState.value.currentselectedPoints.isNotEmpty()) {
+                    val point = editState.value.currentselectedPoints.first()
+
+                    // Delete point
+                    deleteWaypointUseCase.invoke(point.first, point.second)
+
+                    // Notify observers that a waypoint was deleted
+                    _waypointEvents.emit(
+                        WaypointUpdate.RemovedById(
+                            point.first,
+                            point.second
+                        )
+                    )
+                }
+            }
+
             else -> {}
         }
     }

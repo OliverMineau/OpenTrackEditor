@@ -53,6 +53,10 @@ interface EditTrackRepository {
      */
     suspend fun insertTrack(track: TrackEntity): Long
 
+    suspend fun removeTrack(trackId: Int)
+
+    suspend fun deleteWaypoint(trackId: Int, id: Double)
+
 
     suspend fun getFullTrack(trackId: Int): Track?
 
