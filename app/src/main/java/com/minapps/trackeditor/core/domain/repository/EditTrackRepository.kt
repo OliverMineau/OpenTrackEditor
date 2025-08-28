@@ -22,7 +22,7 @@ interface EditTrackRepository {
      *
      * @param waypoint Waypoint domain model to insert.
      */
-    suspend fun addWaypoint(waypoint: Waypoint)
+    suspend fun addWaypoint(waypoint: Waypoint, updateUI: Boolean = false)
 
     /**
      * Get all waypoints across all tracks.
@@ -75,9 +75,9 @@ interface EditTrackRepository {
      * @param waypoints The domain Waypoint to add
      */
     suspend fun addWaypoints(waypoints: List<Waypoint>)
-
-    suspend fun getTrackFirstWaypointIndex(trackId: Int): Double
-    suspend fun getTrackLastWaypointIndex(trackId: Int): Double
+    suspend fun getTrackIds(): List<Int>
+    suspend fun getTrackFirstWaypointIndex(trackId: Int): Double?
+    suspend fun getTrackLastWaypointIndex(trackId: Int): Double?
     suspend fun getWaypointIndex(trackId: Int, id: Double): Int?
     suspend fun getWaypoint(trackId: Int, index: Int): Waypoint?
     suspend fun getVisibleTrackWaypointsCount(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): Double

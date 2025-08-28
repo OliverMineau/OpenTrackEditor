@@ -19,6 +19,6 @@ class GetTrackLastWaypointIndexUseCase @Inject constructor(
      * @return List of waypoints associated to given trackId
      */
     suspend operator fun invoke(trackId: Int): Double {
-        return repository.getTrackLastWaypointIndex(trackId)
+        return repository.getTrackLastWaypointIndex(trackId) ?: 0.0
     }
 }

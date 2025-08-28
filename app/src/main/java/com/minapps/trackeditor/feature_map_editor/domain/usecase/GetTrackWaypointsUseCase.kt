@@ -30,7 +30,7 @@ class GetTrackWaypointsUseCase @Inject constructor(
 
         // Get number of points in given track or in in view
         val waypointCount = if (latNorth == null || latSouth == null || lonWest == null || lonEast == null) {
-            repository.getTrackLastWaypointIndex(trackId)
+            repository.getTrackLastWaypointIndex(trackId)?: 0.0
         } else {
             repository.getVisibleTrackWaypointsCount(trackId, latNorth, latSouth, lonWest, lonEast)
         }

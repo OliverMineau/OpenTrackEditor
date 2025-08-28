@@ -29,10 +29,10 @@ interface TrackDao {
 
 
     @Query("""SELECT MIN(waypointId) FROM waypoints WHERE trackOwnerId = :trackId""")
-    suspend fun getTrackFirstWaypointIndex(trackId: Int): Double
+    suspend fun getTrackFirstWaypointIndex(trackId: Int): Double?
 
     @Query("""SELECT MAX(waypointId) FROM waypoints WHERE trackOwnerId = :trackId""")
-    suspend fun getTrackLastWaypointIndex(trackId: Int): Double
+    suspend fun getTrackLastWaypointIndex(trackId: Int): Double?
 
     @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId = :trackId AND waypointId < :id")
     suspend fun getWaypointIndex(trackId: Int, id: Double): Int?
@@ -154,6 +154,9 @@ interface TrackDao {
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWaypoints(waypoints: List<WaypointEntity>)
+
+    @Query("SELECT trackId FROM tracks")
+    suspend fun getTrackIds(): List<Int>
 
     /**
      * Get all waypoints for a specific track, ordered by their ID.

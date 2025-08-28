@@ -32,11 +32,13 @@ class EditTrackRepositoryImpl @Inject constructor(
      *
      * @param waypoint The domain Waypoint to add
      */
-    override suspend fun addWaypoint(waypoint: Waypoint) {
+    override suspend fun addWaypoint(waypoint: Waypoint, updateUI: Boolean) {
         dao.insertWaypointWithTrackCheck(waypoint.toEntity(), )
         Log.d("debug", "Added to track: ${waypoint.trackId}, ${waypoint.id}")
 
-        //_addedTracks.emit(Pair(waypoint.trackId,false))
+        if(updateUI){
+            _addedTracks.emit(Pair(waypoint.trackId,false))
+        }
     }
 
     /**
@@ -50,6 +52,11 @@ class EditTrackRepositoryImpl @Inject constructor(
         dao.insertWaypoints(waypoints.map { it.toEntity() })
         Log.d("debug", "Added ${waypoints.size} waypoints")
     }
+
+    override suspend fun getTrackIds(): List<Int>{
+        return dao.getTrackIds()
+    }
+
 
     /**
      * Retrieve all waypoints from the database.
@@ -82,11 +89,11 @@ class EditTrackRepositoryImpl @Inject constructor(
 
 
 
-    override suspend fun getTrackFirstWaypointIndex(trackId: Int): Double {
+    override suspend fun getTrackFirstWaypointIndex(trackId: Int): Double? {
         return dao.getTrackFirstWaypointIndex(trackId)
     }
 
-    override suspend fun getTrackLastWaypointIndex(trackId: Int): Double {
+    override suspend fun getTrackLastWaypointIndex(trackId: Int): Double? {
         return dao.getTrackLastWaypointIndex(trackId)
     }
 

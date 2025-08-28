@@ -121,6 +121,7 @@ enum class ActionType(
     ADD(R.drawable.map_marker_plus_24, "Add", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
     REMOVE(R.drawable.map_marker_minus_24, "Remove", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
 
+
     // Main Bottom Navigation
     VIEW(R.drawable.map_marker_24, "View", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
     EDIT(R.drawable.file_edit_24, "Edit", SelectionCount.MULTIPLE, ToolGroup.TRACK_EDITING),
@@ -330,14 +331,10 @@ class MapViewModel @Inject constructor(
 
         viewModelScope.launch {
 
-            /*val currentId =
-                trackWaypointIndexes[selectedTrackId] ?: (getTrackLastWaypointIndexUseCase(
-                    selectedTrackId
-                ) + 1.0)*/
-
+            // Adding new point, get id and add point
             val currentId = addWaypointUseCase.getNextId(selectedTrackId)
-
             addWaypointUseCase(lat, lng, currentId, selectedTrackId)
+
             // Notify observers that a waypoint was added
             _waypointEvents.emit(
                 WaypointUpdate.Added(
@@ -408,6 +405,8 @@ class MapViewModel @Inject constructor(
                 "debug",
                 "Added waypoint to track $trackId at: ${geoPoint.latitude}, ${geoPoint.longitude}"
             )
+        }else{
+
         }
 
     }
@@ -442,9 +441,6 @@ class MapViewModel @Inject constructor(
         isPointSet: Boolean = false
     ) {
 
-        //val currentTool = editState.value.currentSelectedTool
-        //if(currentTool == ActionType.NONE)
-
         viewModelScope.launch {
             val trackId = waypointList.first().trackId
 
@@ -455,10 +451,9 @@ class MapViewModel @Inject constructor(
                     waypointList.first().lng,
                     pointId,
                     trackId = trackId,
-                    0.0
+                    false
                 )
 
-                // TODO WRONG INDEX GIVEN
                 _waypointEvents.emit(
                     WaypointUpdate.MovedDone(
                         trackId,
@@ -596,12 +591,18 @@ class MapViewModel @Inject constructor(
             }
             ActionType.ADD -> {
                 if(editState.value.currentselectedPoints.isNotEmpty()){
-                    val newPoint = addWaypointUseCase.updateMarker(editState.value.currentselectedPoints.first().first, editState.value.currentselectedPoints.first().second)
+                    // Update marker OR add point if clicked on inner waypoint
+                    val newWaypoint = addWaypointUseCase.updateMarker(editState.value.currentselectedPoints.first().first, editState.value.currentselectedPoints.first().second)
+                    // Notify observers that a waypoint was added
+                    if(newWaypoint != null){
+                        _waypointEvents.emit(
+                            WaypointUpdate.Added(
+                                newWaypoint.trackId,
+                                SimpleWaypoint(newWaypoint.id, newWaypoint.lat, newWaypoint.lng)
+                            )
+                        )
+                    }
 
-                    /*if(newPoint !=null){
-                        Log.d("add innne", "Do we add inner : $newPoint")
-                        addWaypointUseCase.addInnerWaypoint()
-                    }*/
                 }
             }
             else -> {}
@@ -778,10 +779,6 @@ class MapViewModel @Inject constructor(
                 _waypointEvents.emit(WaypointUpdate.ViewChanged(trackId, points))
             }
 
-            /*tracksData?.firstOrNull()?.let { (trackId, waypoints) ->
-                val points = waypoints.map { wp -> wp.lat to wp.lng }
-                _waypointEvents.emit(WaypointUpdate.ViewChanged(trackId, points))
-            }*/
 
             hasStartedCalculationsInThread = false
             Log.d("debugOpti", "Finished in new thread")
