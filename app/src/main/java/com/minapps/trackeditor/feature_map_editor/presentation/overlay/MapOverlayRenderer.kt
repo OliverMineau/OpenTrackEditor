@@ -7,6 +7,7 @@ import android.util.Log
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.common.MutablePair
 import com.minapps.trackeditor.core.domain.model.SimpleWaypoint
+import com.minapps.trackeditor.feature_map_editor.presentation.ActionType
 import com.minapps.trackeditor.feature_map_editor.presentation.MapViewModel
 import com.minapps.trackeditor.feature_map_editor.presentation.MovingPointBundle
 import com.minapps.trackeditor.feature_map_editor.presentation.MutablePointAdapter
@@ -22,14 +23,23 @@ import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.simplefastpoint.LabelledGeoPoint
+import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlay
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlayOptions
-import java.util.function.IntToDoubleFunction
+import org.osmdroid.views.overlay.simplefastpoint.SimplePointTheme
+import kotlin.math.max
+import kotlin.math.min
 
 
 class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: MapViewModel) :
     PointInteractionListener {
 
     private val controller: IMapController = mMap.controller
+
+    data class SelectedPoint(
+        var trackId: Int,
+        var id: Double,
+        var overlay: SimpleFastPointOverlay
+    )
 
     data class TrackRenderData(
         // Polyline displayed
@@ -54,8 +64,8 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             // Sort map by id
             val sorted = indexMap.toList().sortedBy { it.first }
             // Find index where id should be placed
-            val insertIndex = sorted.indexOfFirst { it.first > id }
-                .takeIf { it != -1 } ?: indexMap.size
+            val insertIndex =
+                sorted.indexOfFirst { it.first > id }.takeIf { it != -1 } ?: indexMap.size
 
             // Shift all indices >= insertIndex
             indexMap.keys.forEach { key ->
@@ -100,6 +110,33 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             return removeIndex
         }
 
+        fun removeIndex(start: Int, end: Int) {
+
+            // Find index of the id
+            val idStart = reverseIndexMap[start] ?: return
+            val idEnd = reverseIndexMap[end] ?: return
+
+            // Remove from both maps
+            indexMap.entries.removeIf { (_, idx) -> idx in (start + 1) until end }
+            reverseIndexMap.entries.removeIf { (idx, _) -> idx in (start + 1) until end }
+
+            // How many points got removed
+            val shift = (end - start - 1).coerceAtLeast(0)
+
+            if (shift > 0) {
+                // Shift all indices >= end down by 'shift'
+                val keysToShift = indexMap.filterValues { it >= end }.keys.toList()
+
+                keysToShift.forEach { id ->
+                    val oldIndex = indexMap[id]!!
+                    val newIndex = oldIndex - shift
+                    indexMap[id] = newIndex
+                    reverseIndexMap.remove(oldIndex)
+                    reverseIndexMap[newIndex] = id
+                }
+            }
+        }
+
     }
 
     // Polylines that are currently displayed with render data
@@ -107,6 +144,8 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
 
 
     private var selectedPolylines: MutableList<Int> = mutableListOf()
+    private var selectedPoints: MutableList<SelectedPoint> = mutableListOf()
+    private var selectedTrackOverlay: Polyline? = null
 
     // Polyline that is being modified
     private val modifyingPolylines: MutableMap<Int, Polyline> = mutableMapOf()
@@ -125,9 +164,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         mMap.setHorizontalMapRepetitionEnabled(true);
         mMap.setVerticalMapRepetitionEnabled(false);
         mMap.setScrollableAreaLimitLatitude(
-            MapView.getTileSystem().maxLatitude,
-            MapView.getTileSystem().minLatitude,
-            0
+            MapView.getTileSystem().maxLatitude, MapView.getTileSystem().minLatitude, 0
         );
         mMap.minZoomLevel = 4.0
     }
@@ -143,10 +180,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
      * @param center If should center after displaying
      */
     fun displayTrack(
-        waypoints: List<SimpleWaypoint>,
-        trackId: Int,
-        color: Int,
-        center: Boolean
+        waypoints: List<SimpleWaypoint>, trackId: Int, color: Int, center: Boolean
     ) {
 
         // Remove all polyline data
@@ -207,9 +241,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
      * @param center
      */
     fun displayTrack(
-        trackId: Int,
-        color: Int,
-        center: Boolean
+        trackId: Int, color: Int, center: Boolean
     ) {
 
         val renderData = displayedPolylines[trackId]
@@ -275,10 +307,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         // First point of track : Create it
         if (renderData == null) {
             displayTrack(
-                waypoints = listOf(waypoint),
-                trackId = trackId,
-                color = Color.RED,
-                center = false
+                waypoints = listOf(waypoint), trackId = trackId, color = Color.RED, center = false
             )
         }
         // If track exists, update original points
@@ -296,9 +325,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
 
             // Display to refresh clickable overlay
             displayTrack(
-                trackId = trackId,
-                color = Color.RED,
-                center = false
+                trackId = trackId, color = Color.RED, center = false
             )
         }
 
@@ -411,7 +438,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         val unselectedColor = Color.RED
 
         val paintColor =
-            if (mapViewModel.editState.value.currentselectedTracks.isNotEmpty() && mapViewModel.editState.value.currentselectedTracks.contains(
+            if (mapViewModel.editState.value.currentSelectedTracks.isNotEmpty() && mapViewModel.editState.value.currentSelectedTracks.contains(
                     trackId
                 )
             ) selectedColor else color
@@ -459,8 +486,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
                 .setRadius(8f) //Smaller is faster
                 .setIsClickable(true)
                 .setCellSize(20) //Bigger is faster (less points shown on screen)
-                .setPointStyle(primaryPaint)
-                .setSelectedPointStyle(selectedPaint)
+                .setPointStyle(primaryPaint).setSelectedPointStyle(selectedPaint)
                 .setSymbol(SimpleFastPointOverlayOptions.Shape.CIRCLE)
 
             pointOverlay = CustomSimpleFastPointOverlay(pointAdapter, pointOptions, this, trackId)
@@ -519,6 +545,9 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
          * - Null then interpolate ?
          * - Interpolate when ? Saving to DB ? Exporting ?
          */
+
+        // Check if is allowed to move point
+        if (mapViewModel.editState.value.currentSelectedTool != ActionType.HAND) return
 
         // Create list of moved points
         val movingPoint = mutableListOf<Waypoint>()
@@ -583,9 +612,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         when (event) {
             is WaypointUpdate.Added -> handleWaypointAdded(event.trackId, event.point)
             is WaypointUpdate.AddedList -> handleWaypointAddedList(
-                event.trackId,
-                event.points,
-                event.center
+                event.trackId, event.points, event.center
             )
 
             is WaypointUpdate.ViewChanged -> handleWaypointViewChanged(event.trackId, event.points)
@@ -593,13 +620,60 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             is WaypointUpdate.Moved -> handleWaypointMoved(event.trackId, event.points)
             is WaypointUpdate.Cleared -> handleTrackCleared(event.trackId)
             is WaypointUpdate.MovedDone -> handleWaypointMovedDone(
-                event.trackId,
-                event.pointId,
-                event.point
+                event.trackId, event.pointId, event.point
             )
 
             is WaypointUpdate.RemovedById -> handleWaypointRemovedById(event.trackId, event.id)
+            is WaypointUpdate.RemovedSegment -> handleRemovedSegment(
+                event.trackId,
+                event.startId,
+                event.endId
+            )
+
+            is WaypointUpdate.RemovedTracks -> handleRemovedTrack(event.trackIds)
         }
+
+        redrawSelection()
+    }
+
+    private fun handleRemovedSegment(trackId: Int, startId: Double, endId: Double) {
+        val renderData = displayedPolylines[trackId]
+        if (renderData == null) return
+
+        // Get index
+        val idx1 = renderData.indexMap[startId] ?: return
+        val idx2 = renderData.indexMap[endId] ?: return
+
+        val min = min(idx1, idx2)
+        val max = max(idx1, idx2)
+
+        // Get Geopoint because cant delete by index
+        val polyline = renderData.polyline.actualPoints
+
+        val newPoints = polyline.toMutableList()
+        if (min < max && min in newPoints.indices && max in newPoints.indices) {
+            newPoints.subList(min + 1, max).clear()
+            renderData.polyline.setPoints(newPoints)
+        }
+
+        renderData.removeIndex(min, max)
+
+        Log.d("delete points", "delete : ${polyline.size}")
+
+        clearAllSelections()
+
+        displayTrack(trackId, Color.YELLOW, false)
+
+        //mMap.invalidate()
+    }
+
+    private fun handleRemovedTrack(trackIds: List<Int>) {
+        trackIds.forEach { trackId ->
+            mMap.overlays.remove(displayedPolylines[trackId]?.polyline)
+            mMap.overlays.remove(displayedPolylines[trackId]?.overlay)
+            displayedPolylines.remove(trackId)
+        }
+        clearAllSelections()
     }
 
     /**
@@ -624,9 +698,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
      * @param points
      */
     private fun handleWaypointAddedList(
-        trackId: Int,
-        points: List<SimpleWaypoint>,
-        center: Boolean
+        trackId: Int, points: List<SimpleWaypoint>, center: Boolean
     ) {
         displayTrack(points, trackId, Color.RED, center)
     }
@@ -654,9 +726,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
      * @param point
      */
     private fun handleWaypointMovedDone(
-        trackId: Int,
-        pointId: Double,
-        point: Pair<Double, Double>
+        trackId: Int, pointId: Double, point: Pair<Double, Double>
     ) {
         displayLiveModificationDone(point, trackId, pointId)
     }
@@ -682,11 +752,11 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
 
 
         val renderData = displayedPolylines[trackId]
-        if(renderData == null) return
+        if (renderData == null) return
 
         // Get index
         val index = renderData.indexMap[id]
-        if(index == null) return
+        if (index == null) return
 
         // Get Geopoint because cant delete by index
         val point = renderData.polyline.actualPoints[index]
@@ -695,6 +765,9 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         // Update Maps
         renderData.removeId(id)
 
+        clearAllSelections()
+
+        // Rebuild overlay
         displayTrack(trackId, Color.YELLOW, false)
     }
 
@@ -710,8 +783,9 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
     fun selectTrack(trackId: Int?, select: Boolean, pointId: Double? = null) {
         val state = mapViewModel.selectedTrack(trackId, select, pointId)
         selectedPolylines = state.selectedTrackIds
-
         colorTracks()
+        colorPoints(state.selectedPoints)
+        colorTrackSegment()
     }
 
     private fun colorTracks() {
@@ -721,6 +795,133 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             } else {
                 renderData.polyline.outlinePaint.color = Color.RED
             }
+        }
+
+        mMap.invalidate()
+    }
+
+    private fun colorPoints(newSelectedPoints: MutableList<Pair<Int, Double>>) {
+
+        // Remove last overlays
+        clearAllSelections()
+
+        // Display new overlays
+        newSelectedPoints.forEachIndexed { index, newPoint ->
+            val overlay = getPointOverlay(newPoint.first, newPoint.second, index)
+            if (overlay == null) return@forEachIndexed
+            selectedPoints.add(SelectedPoint(newPoint.first, newPoint.second, overlay))
+            mMap.overlays.add(overlay)
+        }
+
+        mMap.invalidate()
+    }
+
+    private fun getPointOverlay(
+        trackId: Int,
+        id: Double,
+        colorIndex: Int
+    ): SimpleFastPointOverlay? {
+
+        val renderData = displayedPolylines[trackId] ?: return null
+
+        val index = renderData.indexMap[id] ?: return null
+
+        val point = listOf(renderData.polyline.actualPoints[index])
+        val theme = SimplePointTheme(point)
+
+        val colorList = mapOf(0 to Color.GREEN, 1 to Color.MAGENTA)
+
+        // Create paint
+        val paint = Paint().apply {
+            color = colorList[colorIndex] ?: Color.GREEN
+            style = Paint.Style.FILL
+            isAntiAlias = true
+        }
+
+        // Set circle point
+        val options = SimpleFastPointOverlayOptions.getDefaultStyle()
+            .setAlgorithm(SimpleFastPointOverlayOptions.RenderingAlgorithm.MAXIMUM_OPTIMIZATION)
+            .setRadius(14f)
+            .setIsClickable(false)
+            .setPointStyle(paint)
+            .setSymbol(SimpleFastPointOverlayOptions.Shape.CIRCLE)
+
+        // Create overlay
+        val overlay = SimpleFastPointOverlay(theme, options)
+
+        return overlay
+    }
+
+    private fun colorTrackSegment() {
+
+        if (selectedPoints.size != 2) return
+
+        var trackId: Int? = null
+        var first: Double? = null
+        var last: Double? = null
+        selectedPoints.forEach { point ->
+            if (trackId == null) {
+                trackId = point.trackId
+                first = point.id
+            } else if (trackId != point.trackId) {
+                return
+            } else {
+                last = point.id
+            }
+        }
+
+        val renderData = displayedPolylines[trackId] ?: return
+        val points = renderData.polyline.actualPoints
+        val ind1 = renderData.indexMap[first] ?: return
+        val ind2 = renderData.indexMap[last] ?: return
+
+        val f = min(ind1, ind2)
+        val l = max(ind1, ind2)
+        val polyline = Polyline(mMap).apply {
+            setPoints(points.subList(f, l + 1))
+            outlinePaint.color = Color.BLUE
+            outlinePaint.strokeWidth = 10f
+            setOnClickListener { _, _, _ -> false }
+        }
+
+        selectedTrackOverlay?.let { mMap.overlays.remove(it) }
+        selectedTrackOverlay = polyline
+
+        mMap.overlays.add(polyline)
+        mMap.invalidate()
+    }
+
+    fun clearAllSelections() {
+        clearTrackOverlaySelection()
+        clearPointOverlaySelection()
+        mMap.invalidate()
+    }
+
+    fun clearTrackOverlaySelection() {
+        // Remove track overlays
+        if (selectedTrackOverlay != null) {
+            mMap.overlays.remove(selectedTrackOverlay)
+            selectedTrackOverlay = null
+        }
+    }
+
+    fun clearPointOverlaySelection() {
+        // Remove point overlays
+        selectedPoints.forEach { selectedPoint ->
+            mMap.overlays.remove(selectedPoint.overlay)
+        }
+        selectedPoints.clear()
+    }
+
+    fun redrawSelection() {
+        if (selectedTrackOverlay != null) {
+            mMap.overlays.remove(selectedTrackOverlay)
+            mMap.overlays.add(selectedTrackOverlay)
+        }
+
+        selectedPoints.forEach { selectedPoint ->
+            mMap.overlays.remove(selectedPoint.overlay)
+            mMap.overlays.add(selectedPoint.overlay)
         }
 
         mMap.invalidate()

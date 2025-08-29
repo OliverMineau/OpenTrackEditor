@@ -57,6 +57,8 @@ interface EditTrackRepository {
 
     suspend fun deleteWaypoint(trackId: Int, id: Double)
 
+    suspend fun deleteSegment(trackId: Int, startId: Double, endId: Double)
+
 
     suspend fun getFullTrack(trackId: Int): Track?
 

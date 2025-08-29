@@ -1,7 +1,6 @@
 package com.minapps.trackeditor.feature_map_editor.domain.usecase
 
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
-import com.minapps.trackeditor.data.local.TrackEntity
 import jakarta.inject.Inject
 
 /**
@@ -9,7 +8,7 @@ import jakarta.inject.Inject
  *
  * @property trackRepository
  */
-class RemoveTrackUseCase @Inject constructor(
+class DeleteTrackUseCase @Inject constructor(
     private val trackRepository: EditTrackRepository
 ) {
 
@@ -21,5 +20,11 @@ class RemoveTrackUseCase @Inject constructor(
      */
     suspend operator fun invoke(trackId: Int){
         trackRepository.removeTrack(trackId)
+    }
+
+    suspend operator fun invoke(trackIds: List<Int>){
+        trackIds.forEach { trackId ->
+            trackRepository.removeTrack(trackId)
+        }
     }
 }

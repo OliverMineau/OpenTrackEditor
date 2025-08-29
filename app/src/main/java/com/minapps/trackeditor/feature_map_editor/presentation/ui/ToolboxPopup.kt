@@ -374,7 +374,7 @@ class ToolboxPopup(
                     lastSelectedItemView = itemView
 
                     coroutineScope.launch {
-                        item.action.invoke()
+                        item.action.invoke(selectedItemCount[item.type] == 0)
                     }
                 }
             }

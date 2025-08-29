@@ -187,6 +187,8 @@ interface TrackDao {
     @Query("DELETE FROM waypoints WHERE trackOwnerId = :trackId AND waypointId = :id")
     suspend fun deleteWaypoint(trackId: Int, id: Double)
 
+    @Query("DELETE FROM waypoints WHERE trackOwnerId = :trackId AND waypointId > :startId AND waypointId < :endId")
+    suspend fun deleteSegment(trackId: Int, startId: Double, endId: Double)
 
     @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId = :trackId")
     suspend fun countWaypointsForTrack(trackId: Int): Int

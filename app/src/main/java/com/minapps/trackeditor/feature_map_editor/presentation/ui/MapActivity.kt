@@ -336,6 +336,11 @@ class MapActivity : AppCompatActivity(), MapListener {
     fun handleEditStateEvents(event: EditState) {
         toolboxPopup.toolSelected(event.currentSelectedTool)
         updateSelectedToolUI(event.currentSelectedTool)
+
+        if(event.currentSelectedTool != ActionType.SELECT &&
+            event.currentSelectedTool != ActionType.TOOLBOX){
+            mapRenderer.clearAllSelections()
+        }
     }
 
     //TODO BUG progress somewhere

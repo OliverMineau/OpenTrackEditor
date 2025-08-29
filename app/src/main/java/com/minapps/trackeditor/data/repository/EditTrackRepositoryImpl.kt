@@ -170,6 +170,10 @@ class EditTrackRepositoryImpl @Inject constructor(
         dao.deleteWaypoint(trackId, id)
     }
 
+    override suspend fun deleteSegment(trackId: Int, startId: Double, endId: Double){
+        dao.deleteSegment(trackId, startId, endId)
+    }
+
 
     override suspend fun getFullTrack(trackId: Int): Track? {
         return dao.getTrackById(trackId)?.toDomain( dao.getTrackWaypoints(trackId))
