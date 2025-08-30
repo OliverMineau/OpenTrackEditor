@@ -4,6 +4,7 @@ import android.graphics.Path
 import android.util.Log
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
+import com.minapps.trackeditor.core.domain.type.InsertPosition
 import jakarta.inject.Inject
 
 class GetNewPointDirectionUseCase @Inject constructor(
@@ -22,39 +23,52 @@ class GetNewPointDirectionUseCase @Inject constructor(
      * if not : null
      */
     suspend operator fun invoke(
-        trackId: Int, marker: Double?
-    ): Pair<Waypoint?, AddWaypointUseCase.InsertPosition> {
-        Log.d("new point", "Marker : $marker")
+        trackId: Int,
+        marker: Double?
+    ): Pair<Waypoint?, InsertPosition> {
 
+        // Get ends of track
         val first = repository.getTrackFirstWaypointIndex(trackId)
         val last = repository.getTrackLastWaypointIndex(trackId)
-        var direction = AddWaypointUseCase.InsertPosition.BACK
+        // Set default direction to BACK
+        var direction = InsertPosition.BACK
 
         var newPoint: Waypoint? = null
 
+        // If user didn't click on a waypoint
         if (marker != null) {
 
+            // If user clicked on start of track
             if (marker == first) {
-                direction = AddWaypointUseCase.InsertPosition.FRONT
-            } else if (marker == last) {
-                direction = AddWaypointUseCase.InsertPosition.BACK
-            } else {
+                direction = InsertPosition.FRONT
+            }
+            // If user clicked on end of track
+            else if (marker == last) {
+                direction = InsertPosition.BACK
+            }
+            // If user clicked on other waypoint on the track
+            else {
+
+                // Get index of point
                 val index = repository.getWaypointIndex(trackId, marker)
+                // If waypoint exists on track
                 if (index != null) {
                     val startPoint = repository.getWaypoint(trackId, index)
                     val endPoint = repository.getWaypoint(trackId, index + 1)
 
+                    // If retrieved start and end points
                     if (startPoint != null && endPoint != null) {
-                        direction = AddWaypointUseCase.InsertPosition.MIDDLE
+                        direction = InsertPosition.MIDDLE
                         val latlong = getWaypointCoords(startPoint, endPoint)
                         val newInnerId = (startPoint.id + endPoint.id) / 2.0
-                        Log.d("ADD", "nenewInnerId :$newInnerId")
 
                         newPoint = Waypoint(newInnerId, latlong.first, latlong.second, null, null, trackId)
                     }
                 }
             }
         }
+
+        // Return new point if has on and direction
         return newPoint to direction
     }
 

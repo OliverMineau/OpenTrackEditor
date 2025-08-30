@@ -3,6 +3,7 @@ package com.minapps.trackeditor.feature_map_editor.domain.usecase
 import android.util.Log
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
+import com.minapps.trackeditor.core.domain.type.InsertPosition
 import jakarta.inject.Inject
 
 /**
@@ -17,7 +18,7 @@ class AddWaypointUseCase @Inject constructor(
     private val repository: EditTrackRepository
 ) {
 
-    enum class InsertPosition { FRONT, BACK, MIDDLE }
+
 
     //var direction: Double? = 1.0
     //var position: InsertPosition = InsertPosition.BACK

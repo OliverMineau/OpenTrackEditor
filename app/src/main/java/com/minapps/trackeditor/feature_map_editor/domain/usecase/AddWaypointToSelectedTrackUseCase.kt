@@ -1,6 +1,7 @@
 package com.minapps.trackeditor.feature_map_editor.domain.usecase
 
 import com.minapps.trackeditor.core.domain.model.SimpleWaypoint
+import com.minapps.trackeditor.core.domain.type.InsertPosition
 import jakarta.inject.Inject
 
 class AddWaypointToSelectedTrackUseCase @Inject constructor(
@@ -11,7 +12,7 @@ class AddWaypointToSelectedTrackUseCase @Inject constructor(
         selectedTrackIds: List<Int>,
         lat: Double,
         lng: Double,
-        position: AddWaypointUseCase.InsertPosition,
+        position: InsertPosition,
         trackNameProvider: () -> String
     ): Pair<Int, SimpleWaypoint> {
 

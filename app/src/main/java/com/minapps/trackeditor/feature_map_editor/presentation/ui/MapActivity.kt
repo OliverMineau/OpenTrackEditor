@@ -20,8 +20,6 @@ import com.minapps.trackeditor.R
 import com.minapps.trackeditor.databinding.ActivityMapBinding
 import com.minapps.trackeditor.databinding.BottomNavigationBinding
 import com.minapps.trackeditor.feature_map_editor.presentation.ActionDescriptor
-import com.minapps.trackeditor.feature_map_editor.presentation.ActionType
-import com.minapps.trackeditor.feature_map_editor.presentation.DataDestination
 import com.minapps.trackeditor.feature_map_editor.presentation.overlay.MapOverlayRenderer
 import com.minapps.trackeditor.feature_map_editor.presentation.MapViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -40,9 +38,11 @@ import androidx.core.view.get
 import com.google.android.gms.location.LocationServices
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.bottomnavigation.LabelVisibilityMode
+import com.minapps.trackeditor.core.domain.model.EditState
+import com.minapps.trackeditor.core.domain.model.ProgressData
+import com.minapps.trackeditor.core.domain.type.ActionType
+import com.minapps.trackeditor.core.domain.type.DataDestination
 import com.minapps.trackeditor.core.domain.util.ToolGroup
-import com.minapps.trackeditor.feature_map_editor.presentation.EditState
-import com.minapps.trackeditor.feature_map_editor.presentation.ProgressData
 import com.minapps.trackeditor.feature_track_export.presentation.utils.showSaveFileDialog
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

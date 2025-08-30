@@ -1,7 +1,7 @@
 package com.minapps.trackeditor.feature_map_editor.domain.usecase
 
 import android.util.Log
-import com.minapps.trackeditor.feature_map_editor.presentation.WaypointUpdate
+import com.minapps.trackeditor.core.domain.model.WaypointUpdate
 import jakarta.inject.Inject
 
 class DeleteSelectedUseCase @Inject constructor(

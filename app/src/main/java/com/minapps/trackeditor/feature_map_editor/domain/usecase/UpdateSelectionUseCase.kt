@@ -1,17 +1,16 @@
 package com.minapps.trackeditor.feature_map_editor.domain.usecase
 
-import android.util.Log
+import com.minapps.trackeditor.core.domain.model.EditState
 import com.minapps.trackeditor.core.domain.model.SimpleWaypoint
-import com.minapps.trackeditor.feature_map_editor.presentation.ActionType
-import com.minapps.trackeditor.feature_map_editor.presentation.EditState
-import com.minapps.trackeditor.feature_map_editor.presentation.UiMapState
+import com.minapps.trackeditor.core.domain.type.ActionType
+import com.minapps.trackeditor.core.domain.type.InsertPosition
 import jakarta.inject.Inject
 
 sealed class SelectionResult {
     data class UpdatedState(
         val selectedTracks: List<Int>,
         val selectedPoints: List<Pair<Int, Double>>,
-        val direction: AddWaypointUseCase.InsertPosition? = null
+        val direction: InsertPosition? = null
     ) : SelectionResult()
 
     data class WaypointAdded(val trackId: Int, val waypoint: SimpleWaypoint) : SelectionResult()
@@ -19,6 +18,13 @@ sealed class SelectionResult {
     object None : SelectionResult()
 }
 
+/**
+ * Update user selections (Points and Tracks)
+ *
+ * @property getNewPointDirectionUseCase
+ * @property addWaypointUseCase
+ * @property deleteWaypointUseCase
+ */
 class UpdateSelectionUseCase @Inject constructor(
     private val getNewPointDirectionUseCase: GetNewPointDirectionUseCase,
     private val addWaypointUseCase: AddWaypointUseCase,
@@ -32,12 +38,8 @@ class UpdateSelectionUseCase @Inject constructor(
     ): List<SelectionResult> {
         val results = mutableListOf<SelectionResult>()
 
-        Log.d("trackselect", "Selected before  ${currentState.currentSelectedTracks}")
-
         val selectedTracks = manageTrackSelection(trackId, select, currentState)
         val selectedPoints = managePointSelection(trackId, pointId, currentState)
-
-        Log.d("trackselect", "Selected $selectedTracks")
 
         results.add(
             SelectionResult.UpdatedState(
@@ -47,14 +49,24 @@ class UpdateSelectionUseCase @Inject constructor(
             )
         )
 
-        results += toggleSelectedPoints(currentState.copy(
-            currentSelectedTracks = selectedTracks,
-            currentSelectedPoints = selectedPoints
-        ))
+        results += clickSelectedPoints(
+            currentState.copy(
+                currentSelectedTracks = selectedTracks,
+                currentSelectedPoints = selectedPoints
+            )
+        )
 
         return results
     }
 
+    /**
+     * Decide which tracks to select or not
+     *
+     * @param trackId
+     * @param select
+     * @param state
+     * @return
+     */
     private fun manageTrackSelection(
         trackId: Int?,
         select: Boolean,
@@ -62,21 +74,42 @@ class UpdateSelectionUseCase @Inject constructor(
     ): MutableList<Int> {
         val selectedTracks = state.currentSelectedTracks.toMutableList()
 
+        // If selected a track
         if (trackId != null) {
+
+            // If state is SELECT or TOOLBOX
             if (state.currentSelectedTool == ActionType.TOOLBOX || state.currentSelectedTool == ActionType.SELECT) {
+
+                // Add selected track if in selection mode
                 if (!selectedTracks.contains(trackId) && select) selectedTracks.add(trackId)
+                // Remove track if in deselection mode
                 else if (selectedTracks.contains(trackId) && !select) selectedTracks.remove(trackId)
-            } else {
+            }
+            // If any state
+            else {
+
                 selectedTracks.clear()
                 if (select) selectedTracks.add(trackId)
             }
-        } else if (state.currentSelectedTool != ActionType.SELECT &&
-            state.currentSelectedTool != ActionType.TOOLBOX) {
+        }
+        // If tool isn't SELECT or TOOLBOX
+        else if (state.currentSelectedTool != ActionType.SELECT &&
+            state.currentSelectedTool != ActionType.TOOLBOX
+        ) {
             selectedTracks.clear()
         }
+
         return selectedTracks
     }
 
+    /**
+     * Decide which points to select or not
+     *
+     * @param trackId
+     * @param pointId
+     * @param state
+     * @return
+     */
     private fun managePointSelection(
         trackId: Int?,
         pointId: Double?,
@@ -84,28 +117,48 @@ class UpdateSelectionUseCase @Inject constructor(
     ): MutableList<Pair<Int, Double>> {
         var selectedPoints = mutableListOf<Pair<Int, Double>>()
 
+        // If point from track selected
         if (trackId != null && pointId != null) {
             val pairPoint = trackId to pointId
 
+            // If in selection mode (Multiple selection)
             if (state.currentSelectedTool == ActionType.SELECT) {
                 selectedPoints = state.currentSelectedPoints.toMutableList()
 
+                // If selected point isn't already selected and
+                // LESS than 2 points are already selected
                 if (!selectedPoints.contains(pairPoint) && selectedPoints.size < 2) {
+                    // Add point
                     selectedPoints.add(pairPoint)
-                } else if (!selectedPoints.contains(pairPoint) && selectedPoints.size >= 2) {
+                }
+                // If selected point isn't already selected and
+                // MORE than 2 points are already selected
+                else if (!selectedPoints.contains(pairPoint) && selectedPoints.size >= 2) {
+                    // Set as only point selected
                     selectedPoints = mutableListOf(pairPoint)
                 }
-            } else if (state.currentSelectedTool == ActionType.ADD ||
-                state.currentSelectedTool == ActionType.REMOVE) {
+            }
+            // If tool are ADD or REMOVE (only one point can be selected)
+            else if (state.currentSelectedTool == ActionType.ADD ||
+                state.currentSelectedTool == ActionType.REMOVE
+            ) {
                 selectedPoints = mutableListOf(pairPoint)
             }
-        } else {
+        }
+        // If no points selected, return same list of points
+        else {
             selectedPoints = state.currentSelectedPoints.toMutableList()
         }
         return selectedPoints
     }
 
-    private suspend fun toggleSelectedPoints(state: EditState): List<SelectionResult> {
+    /**
+     * Called after clicking a point
+     *
+     * @param state
+     * @return
+     */
+    private suspend fun clickSelectedPoints(state: EditState): List<SelectionResult> {
         return when (state.currentSelectedTool) {
             ActionType.JOIN -> {
                 // Future: call JoinTrackUseCase
@@ -134,7 +187,7 @@ class UpdateSelectionUseCase @Inject constructor(
                             SelectionResult.UpdatedState(
                                 state.currentSelectedTracks,
                                 state.currentSelectedPoints,
-                                AddWaypointUseCase.InsertPosition.BACK
+                                InsertPosition.BACK
                             )
                         )
                     } else {

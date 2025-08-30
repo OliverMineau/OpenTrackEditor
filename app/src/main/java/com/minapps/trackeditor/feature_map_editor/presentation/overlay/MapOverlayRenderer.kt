@@ -7,11 +7,11 @@ import android.util.Log
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.common.MutablePair
 import com.minapps.trackeditor.core.domain.model.SimpleWaypoint
-import com.minapps.trackeditor.feature_map_editor.presentation.ActionType
+import com.minapps.trackeditor.core.domain.model.WaypointUpdate
+import com.minapps.trackeditor.core.domain.type.ActionType
 import com.minapps.trackeditor.feature_map_editor.presentation.MapViewModel
 import com.minapps.trackeditor.feature_map_editor.presentation.MovingPointBundle
 import com.minapps.trackeditor.feature_map_editor.presentation.MutablePointAdapter
-import com.minapps.trackeditor.feature_map_editor.presentation.WaypointUpdate
 import com.minapps.trackeditor.feature_map_editor.presentation.interaction.PointInteractionListener
 import com.minapps.trackeditor.feature_map_editor.presentation.util.PaintType
 import org.osmdroid.api.IGeoPoint
