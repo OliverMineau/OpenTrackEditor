@@ -2,6 +2,7 @@ package com.minapps.trackeditor.feature_map_editor.presentation.ui
 
 import ToolboxPopup
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
@@ -125,6 +126,8 @@ class MapActivity : AppCompatActivity(), MapListener {
         // Start observing ViewModel state flows
         observeViewModel()
 
+
+        handleIntent(intent)
     }
 
 
@@ -507,14 +510,37 @@ class MapActivity : AppCompatActivity(), MapListener {
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 centerMapOnMyLocationOnce()
-            } else {
-                // Permission denied, handle accordingly (show message or fallback)
             }
         }
     }
 
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1001
+    }
+
+
+
+
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        if (intent == null) return
+
+        // Only process VIEW intents
+        if (intent.action == Intent.ACTION_VIEW) {
+            val uri = intent.data
+            if (uri != null) {
+                try {
+                    mapViewModel.importTrack(uri)
+                } catch (e: Exception) {
+                    Log.e("MapActivity", "Failed to read GPX file", e)
+                }
+            }
+        }
     }
 
 

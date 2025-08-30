@@ -9,19 +9,28 @@ import com.minapps.trackeditor.R
 import com.minapps.trackeditor.core.domain.model.SimpleWaypoint
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
+import com.minapps.trackeditor.core.domain.usecase.HandleMapViewportChangeUseCase
 import com.minapps.trackeditor.core.domain.usecase.UpdateMapViewUseCase
+import com.minapps.trackeditor.core.domain.usecase.Viewport
 import com.minapps.trackeditor.core.domain.util.MapUpdateViewHelper
 import com.minapps.trackeditor.core.domain.util.SelectionCount
 import com.minapps.trackeditor.core.domain.util.ToolGroup
+import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointToSelectedTrackUseCase
 import com.minapps.trackeditor.feature_track_export.domain.usecase.ExportTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.ClearAllUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.CreateTrackUseCase
+import com.minapps.trackeditor.feature_map_editor.domain.usecase.DeleteSelectedUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.DeleteTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.DeleteWaypointUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.DisplayTrackUseCase
+import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetNewPointDirectionUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackWaypointsUseCase
+import com.minapps.trackeditor.feature_map_editor.domain.usecase.SelectionResult
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.UIAction
+import com.minapps.trackeditor.feature_map_editor.domain.usecase.UpdateSelectionUseCase
+import com.minapps.trackeditor.feature_map_editor.presentation.util.HapticFeedback
+import com.minapps.trackeditor.feature_map_editor.presentation.util.StringProvider
 import com.minapps.trackeditor.feature_map_editor.presentation.util.vibrate
 import com.minapps.trackeditor.feature_track_export.domain.model.ExportFormat
 import com.minapps.trackeditor.feature_track_import.domain.usecase.DataStreamProgress
@@ -48,7 +57,9 @@ sealed class WaypointUpdate {
 
     data class Removed(val trackId: Int, val index: Int) : WaypointUpdate()
     data class RemovedById(val trackId: Int, val id: Double) : WaypointUpdate()
-    data class RemovedSegment(val trackId: Int, val startId: Double, val endId: Double) : WaypointUpdate()
+    data class RemovedSegment(val trackId: Int, val startId: Double, val endId: Double) :
+        WaypointUpdate()
+
     data class RemovedTracks(val trackIds: List<Int>) : WaypointUpdate()
     data class Moved(val trackId: Int, val points: List<Pair<Double, Double>>) : WaypointUpdate()
     data class MovedDone(val trackId: Int, val pointId: Double, val point: Pair<Double, Double>) :
@@ -124,7 +135,7 @@ enum class ActionType(
 
     // Edit Bottom Navigation
     ADD(R.drawable.map_marker_plus_24, "Add", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
-    REMOVE(R.drawable.map_marker_minus_24, "Remove", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
+    REMOVE(R.drawable.map_marker_cross_24, "Remove", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
     SELECT(R.drawable.map_location_track_24, "Select", SelectionCount.MULTIPLE, ToolGroup.ALL),
 
 
@@ -146,6 +157,7 @@ data class EditState(
     val currentSelectedTool: ActionType = ActionType.NONE,
     val currentSelectedTracks: MutableList<Int> = mutableListOf(),
     val currentSelectedPoints: MutableList<Pair<Int, Double>> = mutableListOf(),
+    val direction: AddWaypointUseCase.InsertPosition = AddWaypointUseCase.InsertPosition.BACK,
     val version: Long = System.nanoTime(),
 )
 
@@ -174,7 +186,14 @@ class MapViewModel @Inject constructor(
     private val updateMapViewUseCase: UpdateMapViewUseCase,
     private val trackImportUseCase: TrackImportUseCase,
     private val deleteTrackUseCase: DeleteTrackUseCase,
+    private val deleteSelectedUseCase: DeleteSelectedUseCase,
+    private val addWaypointToSelectedTrackUseCase: AddWaypointToSelectedTrackUseCase,
+    private val getNewPointDirectionUseCase: GetNewPointDirectionUseCase,
     private val mapUpdateViewHelper: MapUpdateViewHelper,
+    private val handleMapViewportChangeUseCase: HandleMapViewportChangeUseCase,
+    private val updateSelectionUseCase: UpdateSelectionUseCase,
+    private val stringProvider: StringProvider,
+    private val hapticFeedback: HapticFeedback,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
@@ -301,7 +320,7 @@ class MapViewModel @Inject constructor(
      */
     fun selectedTool(action: ActionType, isSelected: Boolean = true) {
 
-        context.vibrate(30)
+        hapticFeedback.vibrate(30)
 
         var action = action
         if (!isSelected) {
@@ -329,19 +348,20 @@ class MapViewModel @Inject constructor(
                 // Set selected tool and reset selections
                 else -> {
 
-                    var freezeSelection = (action == ActionType.SELECT || action == ActionType.TOOLBOX)
+                    var freezeSelection =
+                        (action == ActionType.SELECT || action == ActionType.TOOLBOX)
 
                     _editState.update {
 
-                        if(freezeSelection){
+                        if (freezeSelection) {
                             it.copy(
                                 currentSelectedTool = action,
                                 version = System.nanoTime()
                             )
-                        }else{
+                        } else {
                             it.copy(
                                 currentSelectedTool = action,
-                                currentSelectedTracks =  mutableListOf(),
+                                currentSelectedTracks = mutableListOf(),
                                 currentSelectedPoints = mutableListOf(),
                                 version = System.nanoTime()
                             )
@@ -359,53 +379,25 @@ class MapViewModel @Inject constructor(
         Log.d("debug", "Exporting Track Fun")
 
         // Emit event to UI to show dialog with default filename
-        _showExportDialog.emit("track.gpx")
+        val defaultTrackName = stringProvider.getString(R.string.track_no_name)
+        _showExportDialog.emit(defaultTrackName)
     }
 
-    private suspend fun toolDelete(){
-        val selectedPoints = editState.value.currentSelectedPoints
-        val selectedTracks = editState.value.currentSelectedTracks
-
-        // If selected one waypoint
-        if (selectedPoints.size == 1){
-            val point = selectedPoints.first()
-            deleteWaypointUseCase.invoke(point.first, point.second)
-
-            _waypointEvents.emit(
-                WaypointUpdate.RemovedById(
-                    point.first,
-                    point.second
-                )
+    /**
+     * Called to delete selected waypoint.s/track.s
+     *
+     */
+    private fun toolDelete() {
+        viewModelScope.launch {
+            val update = deleteSelectedUseCase(
+                editState.value.currentSelectedTracks,
+                editState.value.currentSelectedPoints
             )
+            if (update != null) {
+                _waypointEvents.emit(update)
+            }
+            _editState.update { it.copy(currentSelectedPoints = mutableListOf()) }
         }
-
-        // If selected segment
-        else if (selectedPoints.size == 2){
-            val p1 = selectedPoints[0]
-            val p2 = selectedPoints[1]
-            if(p1.first != p2.first) return
-            deleteWaypointUseCase.invoke(p1.first, p1.second, p2.second)
-
-            _waypointEvents.emit(
-                WaypointUpdate.RemovedSegment(
-                    p1.first, p1.second, p2.second
-                )
-            )
-        }
-
-        // If no points selected but full track selected
-        else if (selectedPoints.isEmpty() && selectedTracks.isNotEmpty()){
-            deleteTrackUseCase.invoke(selectedTracks)
-
-            _waypointEvents.emit(
-                WaypointUpdate.RemovedTracks(
-                    selectedTracks
-                )
-            )
-        }
-
-        // Clear points
-        _editState.update { it.copy(currentSelectedPoints = mutableListOf()) }
     }
 
 
@@ -420,72 +412,25 @@ class MapViewModel @Inject constructor(
      * @param lng
      */
     fun addWaypoint(lat: Double, lng: Double) {
-
-        val selectedTrackIds = editState.value.currentSelectedTracks
-        val currentTool = editState.value.currentSelectedTool
-
-        // If no track is selected, do nothing
-        if (selectedTrackIds.isEmpty()) return
-        var selectedTrackId = selectedTrackIds.first()
-
-        // If not Add as selected tool
-        if (currentTool != ActionType.ADD) return
-
-
         viewModelScope.launch {
+            // Get selected track ids
+            val selectedTrackIds = editState.value.currentSelectedTracks
+            val (trackId, point) = addWaypointToSelectedTrackUseCase(
+                selectedTrackIds,
+                lat,
+                lng,
+                editState.value.direction,
+            ) { stringProvider.getString(R.string.track_no_name) }
 
-            // Adding new point, get id and add point
-            val currentId = addWaypointUseCase.getNextId(selectedTrackId)
-            addWaypointUseCase(lat, lng, currentId, selectedTrackId)
+            // Update map with new waypoint
+            _waypointEvents.emit(WaypointUpdate.Added(trackId, point))
 
-            // Notify observers that a waypoint was added
-            _waypointEvents.emit(
-                WaypointUpdate.Added(
-                    selectedTrackId,
-                    SimpleWaypoint(currentId, lat, lng)
-                )
-            )
-
-            // Update index only after successful addition TODO DELETE
-            trackWaypointIndexes[selectedTrackId] = currentId + 1
-        }
-    }
-
-
-    /**
-     * Create new track entity if no track is selected
-     *
-     * @return Track id (Never Null)
-     */
-    suspend fun createNewTrackIfNeeded(): Int {
-
-        val selectedTrackIds = editState.value.currentSelectedTracks
-        var selectedTrackId: Int? = null
-
-        // If no track selected
-        if (selectedTrackIds.isEmpty()) {
-            //Set default track name
-            val newId = createTrackUseCase(context.getString(R.string.track_no_name))
-
-            selectedTrackId = newId
-            trackWaypointIndexes[selectedTrackId] = 0.0
-            _editState.update {
-                val updatedList = it.currentSelectedTracks.apply {
-                    if (!contains(selectedTrackId)) {
-                        add(selectedTrackId)
-                    }
-                }
-                it.copy(
-                    currentSelectedTracks = updatedList,
-                    version = System.nanoTime()
-                )
+            // Select track after adding point
+            if(!selectedTrackIds.contains(trackId)){
+                selectedTrackIds.add(trackId)
+                _editState.update { it.copy(currentSelectedTracks = selectedTrackIds) }
             }
-
-            Log.d("debug", "Created new track with ID: $newId")
-        } else {
-            selectedTrackId = selectedTrackIds.first()
         }
-        return selectedTrackId
     }
 
     fun clearAll() {
@@ -499,19 +444,15 @@ class MapViewModel @Inject constructor(
      *
      * @param geoPoint
      */
-    suspend fun singleTapConfirmed(geoPoint: GeoPoint) {
+    fun singleTapConfirmed(geoPoint: GeoPoint) {
 
         if (editState.value.currentSelectedTool == ActionType.ADD) {
-            val trackId = createNewTrackIfNeeded()
             addWaypoint(geoPoint.latitude, geoPoint.longitude)
             Log.d(
                 "debug",
-                "Added waypoint to track $trackId at: ${geoPoint.latitude}, ${geoPoint.longitude}"
+                "Added waypoint to track trackId at: ${geoPoint.latitude}, ${geoPoint.longitude}"
             )
-        } else {
-
         }
-
     }
 
 
@@ -554,6 +495,7 @@ class MapViewModel @Inject constructor(
                     waypointList.first().lng,
                     pointId,
                     trackId = trackId,
+                    editState.value.direction,
                     false
                 )
 
@@ -572,182 +514,40 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Updates selected track and selected points
-     *
-     * @param trackId
-     * @param vibrate
-     */
-    fun selectedTrack(trackId: Int?, select: Boolean = false, pointId: Double?): UiMapState {
-
-        val selectedTracks = manageTrackSelection(trackId, select)
-        var selectedPoints = mutableListOf<Pair<Int, Double>>()
-
-        //if (trackId != null) {
-        selectedPoints = managePointSelection(trackId, pointId)
-        //}
-
-        val vibrate = true
-        if (vibrate) {
-            context.vibrate(30)
-        }
-
-        _editState.update {
-            it.copy(
-                currentSelectedTracks = selectedTracks,
-                currentSelectedPoints = selectedPoints,
-                version = System.nanoTime()
-            )
-        }
-
+    fun selectedTrack(trackId: Int?, select: Boolean, pointId: Double?): UiMapState {
         viewModelScope.launch {
-            toggleSelectedPoints()
-        }
+            val results = updateSelectionUseCase(
+                trackId = trackId,
+                pointId = pointId,
+                select = select,
+                currentState = editState.value
+            )
 
-        Log.d(
-            "debug",
-            "Selected track ${editState.value.currentSelectedTracks}\nSelected points: ${editState.value.currentSelectedPoints}"
-        )
-        return UiMapState(selectedTracks, selectedPoints)
-    }
-
-
-    fun manageTrackSelection(trackId: Int?, select: Boolean): MutableList<Int> {
-
-        val selectedTracks = editState.value.currentSelectedTracks
-
-        if (trackId != null) {
-
-            // TOOLBOX SELECTED
-            if (editState.value.currentSelectedTool == ActionType.TOOLBOX) {
-
-                // If not selected and wants to be selected
-                if (!selectedTracks.contains(trackId) && select) {
-                    selectedTracks.add(trackId)
-                }
-                // If selected and wants to be unselected
-                else if (selectedTracks.contains(trackId) && !select) {
-                    selectedTracks.remove(trackId)
-                }
-            }
-            // If other tool
-            else {
-
-                // Deselect all
-                selectedTracks.clear()
-
-                // Add newly selected
-                if (select) {
-                    selectedTracks.add(trackId)
-                }
-            }
-
-        }
-        // If null and not toolbox and selection : unselect all
-        else if(editState.value.currentSelectedTool != ActionType.SELECT || editState.value.currentSelectedTool != ActionType.TOOLBOX){
-            selectedTracks.clear()
-        }
-
-        return selectedTracks
-    }
-
-    fun managePointSelection(trackId: Int?, pointId: Double?): MutableList<Pair<Int, Double>> {
-
-        // If no selected point, empty
-        var selectedPoints = mutableListOf<Pair<Int, Double>>()
-
-        if (trackId != null && pointId != null) {
-
-            val pairPoint = Pair(trackId, pointId)
-
-            // If multiple points selection
-            if (editState.value.currentSelectedTool == ActionType.SELECT) {
-                selectedPoints = editState.value.currentSelectedPoints
-
-                // If point not in list and list is < 2 : add
-                if (!selectedPoints.contains(pairPoint) && selectedPoints.size < 2) {
-                    selectedPoints.add(pairPoint)
-                }
-
-                // If point not in list and list full : clear list and add point
-                else if (!selectedPoints.contains(pairPoint) && selectedPoints.size >= 2) {
-                    selectedPoints = mutableListOf(pairPoint)
-                }
-            }
-
-            // If single point selection
-            else if (editState.value.currentSelectedTool == ActionType.ADD || editState.value.currentSelectedTool == ActionType.REMOVE) {
-                selectedPoints = mutableListOf(Pair(trackId, pointId))
-            }
-
-            // If Clicked on other tool
-            else if(editState.value.currentSelectedTool != ActionType.SELECT || editState.value.currentSelectedTool != ActionType.TOOLBOX){
-                selectedPoints.clear()
-            }
-
-        }else{
-            selectedPoints = editState.value.currentSelectedPoints
-        }
-
-        return selectedPoints
-    }
-
-    /**
-     * Called when point selection changed
-     *
-     */
-    private suspend fun toggleSelectedPoints() {
-        when (editState.value.currentSelectedTool) {
-            ActionType.JOIN -> {
-                Log.d(
-                    "Join",
-                    "Call JoinTrackUseCase points :${editState.value.currentSelectedPoints}"
-                )
-            }
-
-            ActionType.ADD -> {
-                if (editState.value.currentSelectedPoints.isNotEmpty()) {
-                    // Update marker OR add point if clicked on inner waypoint
-                    val newWaypoint = addWaypointUseCase.updateMarker(
-                        editState.value.currentSelectedPoints.first().first,
-                        editState.value.currentSelectedPoints.first().second
-                    )
-                    // Notify observers that a waypoint was added
-                    if (newWaypoint != null) {
-                        _waypointEvents.emit(
-                            WaypointUpdate.Added(
-                                newWaypoint.trackId,
-                                SimpleWaypoint(newWaypoint.id, newWaypoint.lat, newWaypoint.lng)
-                            )
+            results.forEach { result ->
+                when (result) {
+                    is SelectionResult.UpdatedState -> _editState.update {
+                        it.copy(
+                            currentSelectedTracks = result.selectedTracks.toMutableList(),
+                            currentSelectedPoints = result.selectedPoints.toMutableList(),
+                            direction = result.direction ?: it.direction,
+                            version = System.nanoTime()
                         )
                     }
-
-                }
-            }
-
-            ActionType.REMOVE -> {
-                if (editState.value.currentSelectedPoints.isNotEmpty()) {
-                    val point = editState.value.currentSelectedPoints.first()
-
-                    // Delete point
-                    deleteWaypointUseCase.invoke(point.first, point.second)
-
-                    // Notify observers that a waypoint was deleted
-                    _waypointEvents.emit(
-                        WaypointUpdate.RemovedById(
-                            point.first,
-                            point.second
-                        )
+                    is SelectionResult.WaypointAdded -> _waypointEvents.emit(
+                        WaypointUpdate.Added(result.trackId, result.waypoint)
                     )
-
-                    // Clear points
-                    _editState.update { it.copy(currentSelectedPoints = mutableListOf()) }
+                    is SelectionResult.WaypointRemoved -> _waypointEvents.emit(
+                        WaypointUpdate.RemovedById(result.trackId, result.waypointId)
+                    )
+                    SelectionResult.None -> {}
                 }
             }
 
-            else -> {}
+            hapticFeedback.vibrate(30)
         }
+        return UiMapState(editState.value.currentSelectedTracks, editState.value.currentSelectedPoints)
     }
+
 
     fun toolExport(fileName: String) {
 
@@ -859,6 +659,16 @@ class MapViewModel @Inject constructor(
 
 
     // TODO : Works but should be redesigned (pls)
+    /**
+     * When user moves map, recalculate what tracks should be displayed and
+     * with which algorithm
+     *
+     * @param latNorth
+     * @param latSouth
+     * @param lonWest
+     * @param lonEast
+     * @param zoom
+     */
     fun viewChanged(
         latNorth: Double,
         latSouth: Double,
@@ -866,67 +676,34 @@ class MapViewModel @Inject constructor(
         lonEast: Double,
         zoom: Double
     ) {
-        Log.d("viewchanged", "View changed: $latNorth, $latSouth, $lonWest, $lonEast")
-
-        // Add padding to load points off screen
-        val padding = 0.05
-        val latNorthPadded = latNorth + padding
-        val latSouthPadded = latSouth - padding
-        val lonWestPadded = lonWest - padding
-        val lonEastPadded = lonEast + padding
+        val viewport = Viewport(latNorth, latSouth, lonWest, lonEast, zoom)
 
         viewModelScope.launch {
-
             if (hasStartedCalculationsInThread) return@launch
 
-            // Do calculations in new thread
-            val tracksData = withContext(Dispatchers.Default) {
-                Log.d("debugOpti", "Started in new thread")
-                hasStartedCalculationsInThread = true
+            hasStartedCalculationsInThread = true
 
-                // Count waypoints in visible area
-                val count = updateMapViewUseCase.getVisiblePointCount(
-                    latNorthPadded, latSouthPadded, lonWestPadded, lonEastPadded
-                )
-
-                // Decide how to load points
-                val decision = mapUpdateViewHelper.decide(
-                    zoom,
-                    count,
+            val result = withContext(Dispatchers.Default) {
+                handleMapViewportChangeUseCase(
+                    viewport,
                     lastZoom,
                     hasDisplayedFull,
                     hasDisplayedOutline
                 )
-
-                Log.d("debugOpti", "hasDisplayedFull: $hasDisplayedFull")
-                Log.d("debugOpti", "hasDisplayedOutline: $hasDisplayedOutline")
-
-                // Update state
-                lastZoom = decision.snappedZoom
-                hasDisplayedFull = decision.showFull
-                hasDisplayedOutline = decision.showOutline
-
-                // Fetch tracks with chosen methode/mode
-                updateMapViewUseCase(
-                    latNorthPadded, latSouthPadded, lonWestPadded, lonEastPadded,
-                    decision.showOutline, decision.showFull
-                )
             }
 
-            // Send new updated tracks to be displayed
-            tracksData?.forEach { (trackId, waypoints) ->
-                val points = waypoints.map { wp -> SimpleWaypoint(wp.id, wp.lat, wp.lng) }
-                _waypointEvents.emit(WaypointUpdate.ViewChanged(trackId, points))
-            }
+            result?.let { update ->
+                lastZoom = update.snappedZoom
+                hasDisplayedFull = update.showFull
+                hasDisplayedOutline = update.showOutline
 
+                update.tracks.forEach { (trackId, waypoints) ->
+                    val points = waypoints.map { wp -> SimpleWaypoint(wp.id, wp.lat, wp.lng) }
+                    _waypointEvents.emit(WaypointUpdate.ViewChanged(trackId, points))
+                }
+            }
 
             hasStartedCalculationsInThread = false
-            Log.d("debugOpti", "Finished in new thread")
-
         }
-
-
     }
-
-
 }

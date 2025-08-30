@@ -21,14 +21,6 @@ class DeleteWaypointUseCase @Inject constructor(
      * @param trackId
      * @return
      */
-    suspend operator fun invoke(trackId: Int, waypoint: Waypoint){
-        //trackRepository.removeTrack(trackId)
-    }
-
-    suspend operator fun invoke(trackId: Int, waypoints: List<Waypoint>){
-        //trackRepository.removeTrack(trackId)
-    }
-
     suspend operator fun invoke(trackId: Int, startId: Double, endId: Double){
         val min = min(startId, endId)
         val max = max(startId, endId)

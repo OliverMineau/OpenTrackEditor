@@ -13,4 +13,6 @@ class TrackEditorApp : Application() {
         deleteDatabase("track_editor_db")
     }
 
+
+
 }

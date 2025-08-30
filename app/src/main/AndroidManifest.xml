@@ -14,20 +14,35 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/ic_ote_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/ic_ote_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.TrackEditor">
 
         <activity
             android:name=".feature_map_editor.presentation.ui.MapActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- GPX file opener -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+
+                <!-- file:// and content:// URIs -->
+                <data android:scheme="file" android:host="*" android:pathPattern=".*\\.gpx"/>
+                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.gpx"/>
+                <data android:mimeType="*/*"/>
+            </intent-filter>
+
+
         </activity>
 
         <provider
