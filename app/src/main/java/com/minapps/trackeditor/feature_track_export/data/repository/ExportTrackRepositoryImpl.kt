@@ -7,7 +7,7 @@ import com.minapps.trackeditor.data.mapper.toDomain
 import com.minapps.trackeditor.feature_track_export.data.factory.ExporterFactory
 import com.minapps.trackeditor.feature_track_export.domain.model.ExportFormat
 import com.minapps.trackeditor.core.domain.repository.ExportTrackRepository
-import com.minapps.trackeditor.feature_track_import.domain.usecase.DataStreamProgress
+import com.minapps.trackeditor.feature_track_import.domain.model.DataStreamProgress
 import dagger.hilt.android.scopes.ViewModelScoped
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow

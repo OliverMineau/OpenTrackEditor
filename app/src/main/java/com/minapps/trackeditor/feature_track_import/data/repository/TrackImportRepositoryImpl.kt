@@ -11,7 +11,7 @@ import com.minapps.trackeditor.feature_track_import.data.factory.ImporterFactory
 import com.minapps.trackeditor.feature_track_import.data.parser.ParsedData
 import com.minapps.trackeditor.feature_track_import.domain.model.ImportFormat
 import com.minapps.trackeditor.core.domain.repository.TrackImportRepository
-import com.minapps.trackeditor.feature_track_import.domain.usecase.DataStreamProgress
+import com.minapps.trackeditor.feature_track_import.domain.model.DataStreamProgress
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch

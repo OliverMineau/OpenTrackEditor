@@ -1,22 +1,13 @@
 package com.minapps.trackeditor.feature_map_editor.domain.usecase
 
-import com.minapps.trackeditor.core.domain.model.EditState
-import com.minapps.trackeditor.core.domain.model.SimpleWaypoint
+import com.minapps.trackeditor.feature_map_editor.domain.model.EditState
+import com.minapps.trackeditor.feature_map_editor.domain.model.SimpleWaypoint
 import com.minapps.trackeditor.core.domain.type.ActionType
 import com.minapps.trackeditor.core.domain.type.InsertPosition
+import com.minapps.trackeditor.feature_map_editor.domain.model.SelectionResult
 import jakarta.inject.Inject
 
-sealed class SelectionResult {
-    data class UpdatedState(
-        val selectedTracks: List<Int>,
-        val selectedPoints: List<Pair<Int, Double>>,
-        val direction: InsertPosition? = null
-    ) : SelectionResult()
 
-    data class WaypointAdded(val trackId: Int, val waypoint: SimpleWaypoint) : SelectionResult()
-    data class WaypointRemoved(val trackId: Int, val waypointId: Double) : SelectionResult()
-    object None : SelectionResult()
-}
 
 /**
  * Update user selections (Points and Tracks)

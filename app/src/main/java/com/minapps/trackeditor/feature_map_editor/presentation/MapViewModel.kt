@@ -6,40 +6,32 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minapps.trackeditor.R
-import com.minapps.trackeditor.core.domain.model.EditState
-import com.minapps.trackeditor.core.domain.model.ProgressData
-import com.minapps.trackeditor.core.domain.model.SimpleWaypoint
-import com.minapps.trackeditor.core.domain.model.UiMapState
+import com.minapps.trackeditor.feature_map_editor.domain.model.EditState
+import com.minapps.trackeditor.feature_map_editor.domain.model.ProgressData
+import com.minapps.trackeditor.feature_map_editor.domain.model.SimpleWaypoint
+import com.minapps.trackeditor.feature_map_editor.domain.model.UiMapState
 import com.minapps.trackeditor.core.domain.model.Waypoint
-import com.minapps.trackeditor.core.domain.model.WaypointUpdate
+import com.minapps.trackeditor.feature_map_editor.domain.model.WaypointUpdate
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
 import com.minapps.trackeditor.core.domain.type.ActionType
 import com.minapps.trackeditor.core.domain.type.DataDestination
 import com.minapps.trackeditor.core.domain.usecase.HandleMapViewportChangeUseCase
-import com.minapps.trackeditor.core.domain.usecase.UpdateMapViewUseCase
 import com.minapps.trackeditor.core.domain.usecase.Viewport
-import com.minapps.trackeditor.core.domain.util.MapUpdateViewHelper
-import com.minapps.trackeditor.core.domain.util.SelectionCount
-import com.minapps.trackeditor.core.domain.util.ToolGroup
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointToSelectedTrackUseCase
 import com.minapps.trackeditor.feature_track_export.domain.usecase.ExportTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.ClearAllUseCase
-import com.minapps.trackeditor.feature_map_editor.domain.usecase.CreateTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.DeleteSelectedUseCase
-import com.minapps.trackeditor.feature_map_editor.domain.usecase.DeleteTrackUseCase
-import com.minapps.trackeditor.feature_map_editor.domain.usecase.DeleteWaypointUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.DisplayTrackUseCase
-import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetNewPointDirectionUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackWaypointsUseCase
-import com.minapps.trackeditor.feature_map_editor.domain.usecase.SelectionResult
+import com.minapps.trackeditor.feature_map_editor.domain.model.SelectionResult
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.UIAction
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.UpdateSelectionUseCase
+import com.minapps.trackeditor.feature_map_editor.presentation.model.ActionDescriptor
 import com.minapps.trackeditor.feature_map_editor.presentation.util.HapticFeedback
 import com.minapps.trackeditor.feature_map_editor.presentation.util.StringProvider
-import com.minapps.trackeditor.feature_map_editor.presentation.util.vibrate
 import com.minapps.trackeditor.feature_track_export.domain.model.ExportFormat
-import com.minapps.trackeditor.feature_track_import.domain.usecase.DataStreamProgress
+import com.minapps.trackeditor.feature_track_import.domain.model.DataStreamProgress
 import com.minapps.trackeditor.feature_track_import.domain.usecase.TrackImportUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -56,52 +48,17 @@ import kotlinx.coroutines.withContext
 import org.osmdroid.util.GeoPoint
 
 
-
-data class ActionDescriptor(
-    val icon: Int?,
-    val label: String?,
-    val action: UIAction?,
-    val selectionCount: SelectionCount?,
-    val type: ActionType,
-    val group: ToolGroup?
-)
-
-
-
-
-
-/*enum class ActionGroup(val actions: Set<ActionType>) {
-    MOVE(setOf(ActionType.HAND)),
-
-    ;
-    fun contains(action: ActionType) = action in actions
-}*/
-
-
-
-
-
-
-
-
-
 @HiltViewModel
 class MapViewModel @Inject constructor(
     private val repository: EditTrackRepository,
     private val addWaypointUseCase: AddWaypointUseCase,
     private val clearAllUseCase: ClearAllUseCase,
-    private val createTrackUseCase: CreateTrackUseCase,
     private val getTrackWaypointsUseCase: GetTrackWaypointsUseCase,
     private val displayTrackUseCase: DisplayTrackUseCase,
     private val exportTrackUseCase: ExportTrackUseCase,
-    private val deleteWaypointUseCase: DeleteWaypointUseCase,
-    private val updateMapViewUseCase: UpdateMapViewUseCase,
     private val trackImportUseCase: TrackImportUseCase,
-    private val deleteTrackUseCase: DeleteTrackUseCase,
     private val deleteSelectedUseCase: DeleteSelectedUseCase,
     private val addWaypointToSelectedTrackUseCase: AddWaypointToSelectedTrackUseCase,
-    private val getNewPointDirectionUseCase: GetNewPointDirectionUseCase,
-    private val mapUpdateViewHelper: MapUpdateViewHelper,
     private val handleMapViewportChangeUseCase: HandleMapViewportChangeUseCase,
     private val updateSelectionUseCase: UpdateSelectionUseCase,
     private val stringProvider: StringProvider,
@@ -109,67 +66,69 @@ class MapViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
-    // Expose data events (Add,Remove,Move points) to other classes (MapActivity)
+    // Expose data events (Added,Removed,Moved points) to other classes (MapActivity)
     private val _waypointEvents = MutableSharedFlow<WaypointUpdate>()
     val waypointEvents: SharedFlow<WaypointUpdate> = _waypointEvents
 
+    // Expose tool creation events (Add, Select, Remove, Export...) to other classes (MapActivity)
     private val _actions =
         MutableStateFlow<Map<DataDestination, List<ActionDescriptor>>>(emptyMap())
     val actions: StateFlow<Map<DataDestination, List<ActionDescriptor>>> = _actions
 
+    // Expose edition state events (current selected tracks, points, ...) to other classes (MapActivity, OverlayRenderer)
     private val _editState = MutableStateFlow(EditState())
     val editState: StateFlow<EditState> = _editState
 
+    // Expose progress (Import, Export)
     private val _progressState = MutableStateFlow(ProgressData())
     val progressState: StateFlow<ProgressData> = _progressState
 
+    // Expose selected export parameters
     private val _showExportDialog = MutableSharedFlow<String>()
     val showExportDialog: SharedFlow<String> = _showExportDialog
 
+    // Expose export result state
     private val _exportResult = MutableSharedFlow<Result<Uri>>()
     val exportResult = _exportResult.asSharedFlow()
 
     private var lastZoom: Int? = null
 
-    private val trackWaypointIndexes = mutableMapOf<Int, Double>()
-
-
     private val actionHandlers: Map<ActionType, UIAction> = mapOf(
-        ActionType.EXPORT to { selectedTool(ActionType.EXPORT) },
-        ActionType.SCREENSHOT to { selectedTool(ActionType.SCREENSHOT) },
-        ActionType.DELETE to { selectedTool(ActionType.DELETE) },
-        ActionType.ELEVATION to { selectedTool(ActionType.ELEVATION) },
-        ActionType.LAYERS to { selectedTool(ActionType.LAYERS) },
-        ActionType.REVERSE to { isSelected -> selectedTool(ActionType.REVERSE, isSelected) },
+        ActionType.EXPORT to { onToolSelected(ActionType.EXPORT) },
+        ActionType.SCREENSHOT to { onToolSelected(ActionType.SCREENSHOT) },
+        ActionType.DELETE to { onToolSelected(ActionType.DELETE) },
+        ActionType.ELEVATION to { onToolSelected(ActionType.ELEVATION) },
+        ActionType.LAYERS to { onToolSelected(ActionType.LAYERS) },
+        ActionType.REVERSE to { isSelected -> onToolSelected(ActionType.REVERSE, isSelected) },
         ActionType.REMOVE_DUPS to { isSelected ->
-            selectedTool(
+            onToolSelected(
                 ActionType.REMOVE_DUPS,
                 isSelected
             )
         },
         ActionType.REMOVE_BUGS to { isSelected ->
-            selectedTool(
+            onToolSelected(
                 ActionType.REMOVE_BUGS,
                 isSelected
             )
         },
-        ActionType.CUT to { isSelected -> selectedTool(ActionType.CUT, isSelected) },
-        ActionType.JOIN to { isSelected -> selectedTool(ActionType.JOIN, isSelected) },
+        ActionType.CUT to { isSelected -> onToolSelected(ActionType.CUT, isSelected) },
+        ActionType.JOIN to { isSelected -> onToolSelected(ActionType.JOIN, isSelected) },
         ActionType.REDUCE_NOISE to { isSelected ->
-            selectedTool(
+            onToolSelected(
                 ActionType.REDUCE_NOISE,
                 isSelected
             )
         },
-        ActionType.FILTER to { isSelected -> selectedTool(ActionType.FILTER, isSelected) },
+        ActionType.FILTER to { isSelected -> onToolSelected(ActionType.FILTER, isSelected) },
         ActionType.MAGIC_FILTER to { isSelected ->
-            selectedTool(
+            onToolSelected(
                 ActionType.MAGIC_FILTER,
                 isSelected
             )
         },
-        ActionType.ADD to { selectedTool(ActionType.ADD) },
-        ActionType.REMOVE to { selectedTool(ActionType.REMOVE) }
+        ActionType.ADD to { onToolSelected(ActionType.ADD) },
+        ActionType.REMOVE to { onToolSelected(ActionType.REMOVE) }
     )
 
 
@@ -230,7 +189,7 @@ class MapViewModel @Inject constructor(
      *
      * @param action
      */
-    fun selectedTool(action: ActionType, isSelected: Boolean = true) {
+    fun onToolSelected(action: ActionType, isSelected: Boolean = true) {
 
         hapticFeedback.vibrate(30)
 
@@ -250,11 +209,11 @@ class MapViewModel @Inject constructor(
                         )
                     }
 
-                    toolExportTrack()
+                    performExportTrack()
                 }
 
                 ActionType.DELETE -> {
-                    toolDelete()
+                    performDelete()
                 }
 
                 // Set selected tool and reset selections
@@ -287,7 +246,7 @@ class MapViewModel @Inject constructor(
     }
 
 
-    private suspend fun toolExportTrack() {
+    private suspend fun performExportTrack() {
         Log.d("debug", "Exporting Track Fun")
 
         // Emit event to UI to show dialog with default filename
@@ -299,7 +258,7 @@ class MapViewModel @Inject constructor(
      * Called to delete selected waypoint.s/track.s
      *
      */
-    private fun toolDelete() {
+    private fun performDelete() {
         viewModelScope.launch {
             val update = deleteSelectedUseCase(
                 editState.value.currentSelectedTracks,
@@ -515,7 +474,7 @@ class MapViewModel @Inject constructor(
 
     fun importTrack(uri: Uri) {
 
-        selectedTool(ActionType.VIEW)
+        onToolSelected(ActionType.VIEW)
 
         viewModelScope.launch {
             trackImportUseCase(uri).collect { importProgress ->

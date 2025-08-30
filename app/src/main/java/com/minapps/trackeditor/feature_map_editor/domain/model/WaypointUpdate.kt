@@ -1,4 +1,4 @@
-package com.minapps.trackeditor.core.domain.model
+package com.minapps.trackeditor.feature_map_editor.domain.model
 
 /**
  * Types of waypoint updates

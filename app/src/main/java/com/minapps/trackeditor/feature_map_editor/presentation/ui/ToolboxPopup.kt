@@ -18,7 +18,7 @@ import androidx.core.view.isEmpty
 import com.minapps.trackeditor.R
 import com.minapps.trackeditor.core.domain.type.ActionType
 import com.minapps.trackeditor.core.domain.util.ToolGroup
-import com.minapps.trackeditor.feature_map_editor.presentation.ActionDescriptor
+import com.minapps.trackeditor.feature_map_editor.presentation.model.ActionDescriptor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 

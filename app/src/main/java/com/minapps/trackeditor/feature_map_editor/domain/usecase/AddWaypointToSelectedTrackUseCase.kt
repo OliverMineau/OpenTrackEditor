@@ -1,6 +1,6 @@
 package com.minapps.trackeditor.feature_map_editor.domain.usecase
 
-import com.minapps.trackeditor.core.domain.model.SimpleWaypoint
+import com.minapps.trackeditor.feature_map_editor.domain.model.SimpleWaypoint
 import com.minapps.trackeditor.core.domain.type.InsertPosition
 import jakarta.inject.Inject
 

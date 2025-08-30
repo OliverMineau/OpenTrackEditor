@@ -6,8 +6,8 @@ import android.graphics.Rect
 import android.util.Log
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.common.MutablePair
-import com.minapps.trackeditor.core.domain.model.SimpleWaypoint
-import com.minapps.trackeditor.core.domain.model.WaypointUpdate
+import com.minapps.trackeditor.feature_map_editor.domain.model.SimpleWaypoint
+import com.minapps.trackeditor.feature_map_editor.domain.model.WaypointUpdate
 import com.minapps.trackeditor.core.domain.type.ActionType
 import com.minapps.trackeditor.feature_map_editor.presentation.MapViewModel
 import com.minapps.trackeditor.feature_map_editor.presentation.MovingPointBundle

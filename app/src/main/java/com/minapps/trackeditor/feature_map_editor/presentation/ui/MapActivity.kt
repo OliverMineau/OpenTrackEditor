@@ -19,7 +19,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.minapps.trackeditor.R
 import com.minapps.trackeditor.databinding.ActivityMapBinding
 import com.minapps.trackeditor.databinding.BottomNavigationBinding
-import com.minapps.trackeditor.feature_map_editor.presentation.ActionDescriptor
 import com.minapps.trackeditor.feature_map_editor.presentation.overlay.MapOverlayRenderer
 import com.minapps.trackeditor.feature_map_editor.presentation.MapViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -37,13 +36,13 @@ import androidx.core.view.size
 import androidx.core.view.get
 import com.google.android.gms.location.LocationServices
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.google.android.material.bottomnavigation.LabelVisibilityMode
-import com.minapps.trackeditor.core.domain.model.EditState
-import com.minapps.trackeditor.core.domain.model.ProgressData
+import com.minapps.trackeditor.feature_map_editor.domain.model.EditState
+import com.minapps.trackeditor.feature_map_editor.domain.model.ProgressData
 import com.minapps.trackeditor.core.domain.type.ActionType
 import com.minapps.trackeditor.core.domain.type.DataDestination
 import com.minapps.trackeditor.core.domain.util.ToolGroup
-import com.minapps.trackeditor.feature_track_export.presentation.utils.showSaveFileDialog
+import com.minapps.trackeditor.feature_map_editor.presentation.model.ActionDescriptor
+import com.minapps.trackeditor.feature_track_export.presentation.util.showSaveFileDialog
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -172,22 +171,22 @@ class MapActivity : AppCompatActivity(), MapListener {
             when (it.itemId) {
                 R.id.nav_edit -> {
                     editNav.visibility = View.VISIBLE
-                    mapViewModel.selectedTool(ActionType.EDIT)
+                    mapViewModel.onToolSelected(ActionType.EDIT)
                     editNav.post {clearBottomNavSelection(editNav)}
 
                 }
 
                 R.id.nav_add_track -> {
                     openFileExplorer()
-                    mapViewModel.selectedTool(ActionType.NONE)
+                    mapViewModel.onToolSelected(ActionType.NONE)
                 }
 
                 R.id.nav_view -> {
-                    mapViewModel.selectedTool(ActionType.VIEW)
+                    mapViewModel.onToolSelected(ActionType.VIEW)
                 }
 
                 R.id.nav_settings -> {
-                    mapViewModel.selectedTool(ActionType.NONE)
+                    mapViewModel.onToolSelected(ActionType.NONE)
                 }
             }
             mapRenderer.selectTrack(null, false)
@@ -202,10 +201,10 @@ class MapActivity : AppCompatActivity(), MapListener {
                 R.id.nav_toolbox -> {
                     val wasShown = toolboxPopup.show()
                     if(wasShown == 1){
-                        mapViewModel.selectedTool(ActionType.TOOLBOX)
+                        mapViewModel.onToolSelected(ActionType.TOOLBOX)
                         true
                     }else if (wasShown == 0){
-                        mapViewModel.selectedTool(ActionType.EDIT)
+                        mapViewModel.onToolSelected(ActionType.EDIT)
                         clearBottomNavSelection(editNav)
                         false
                     }
@@ -213,27 +212,27 @@ class MapActivity : AppCompatActivity(), MapListener {
                 }
 
                 R.id.nav_add -> {
-                    mapViewModel.selectedTool(ActionType.ADD)
+                    mapViewModel.onToolSelected(ActionType.ADD)
                     true
                 }
 
                 R.id.nav_remove -> {
-                    mapViewModel.selectedTool(ActionType.REMOVE)
+                    mapViewModel.onToolSelected(ActionType.REMOVE)
                     true
                 }
 
                 R.id.nav_hand -> {
-                    mapViewModel.selectedTool(ActionType.HAND)
+                    mapViewModel.onToolSelected(ActionType.HAND)
                     true
                 }
 
                 R.id.nav_selection -> {
-                    mapViewModel.selectedTool(ActionType.SELECT)
+                    mapViewModel.onToolSelected(ActionType.SELECT)
                     true
                 }
 
                 else -> {
-                    mapViewModel.selectedTool(ActionType.NONE)
+                    mapViewModel.onToolSelected(ActionType.NONE)
                     toolboxPopup.hide()
                     true
                 }

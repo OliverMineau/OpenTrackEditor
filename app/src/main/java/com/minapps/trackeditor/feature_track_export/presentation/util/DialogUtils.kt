@@ -1,8 +1,7 @@
-package com.minapps.trackeditor.feature_track_export.presentation.utils
+package com.minapps.trackeditor.feature_track_export.presentation.util
 
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
-import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup

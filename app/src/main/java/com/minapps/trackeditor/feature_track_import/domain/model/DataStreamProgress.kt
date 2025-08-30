@@ -1,4 +1,4 @@
-package com.minapps.trackeditor.feature_track_import.domain.usecase
+package com.minapps.trackeditor.feature_track_import.domain.model
 
 /**
  * Data on import/export status

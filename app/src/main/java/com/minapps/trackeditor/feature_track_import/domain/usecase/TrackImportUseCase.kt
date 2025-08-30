@@ -3,6 +3,7 @@ package com.minapps.trackeditor.feature_track_import.domain.usecase
 import android.net.Uri
 import android.util.Log
 import com.minapps.trackeditor.core.domain.repository.TrackImportRepository
+import com.minapps.trackeditor.feature_track_import.domain.model.DataStreamProgress
 import dagger.hilt.android.scopes.ViewModelScoped
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow
