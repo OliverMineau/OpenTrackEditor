@@ -631,6 +631,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             )
 
             is WaypointUpdate.RemovedTracks -> handleRemovedTrack(event.trackIds)
+            is WaypointUpdate.JoinedTracks -> handleJoinedTrack(event)
         }
 
         redrawSelection()
@@ -778,6 +779,17 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
      */
     private fun handleTrackCleared(trackId: Int) {
         // TODO
+    }
+
+    private fun handleJoinedTrack(event: WaypointUpdate.JoinedTracks){
+
+        // Delete second track
+        mMap.overlays.remove(displayedPolylines[event.trackIdRemoved]?.polyline)
+        mMap.overlays.remove(displayedPolylines[event.trackIdRemoved]?.overlay)
+
+
+        //Redisplay first track
+
     }
 
     fun selectTrack(trackId: Int?, select: Boolean, pointId: Double? = null) {

@@ -1,8 +1,6 @@
 package com.minapps.trackeditor.data.local
 
 import androidx.room.*
-import com.minapps.trackeditor.core.domain.model.Waypoint
-import com.minapps.trackeditor.data.mapper.toDomain
 
 /**
  * DAO (Data Access Object) for Tracks and Waypoints.
@@ -32,10 +30,10 @@ interface TrackDao {
 
 
     @Query("""SELECT MIN(waypointId) FROM waypoints WHERE trackOwnerId = :trackId""")
-    suspend fun getTrackFirstWaypointIndex(trackId: Int): Double?
+    suspend fun getTrackFirstWaypointId(trackId: Int): Double?
 
     @Query("""SELECT MAX(waypointId) FROM waypoints WHERE trackOwnerId = :trackId""")
-    suspend fun getTrackLastWaypointIndex(trackId: Int): Double?
+    suspend fun getTrackLastWaypointId(trackId: Int): Double?
 
     @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId = :trackId AND waypointId < :id")
     suspend fun getWaypointIndex(trackId: Int, id: Double): Int?
@@ -239,4 +237,95 @@ interface TrackDao {
         east: Double,
         step: Int = 1
     ): List<WaypointEntity>
+
+
+    @Query(
+        """
+        UPDATE waypoints
+        SET waypointId = waypointId + 1000000
+        WHERE trackOwnerId = :trackId
+        """
+    )
+    suspend fun shiftIdsTemporarily(trackId: Int)
+
+    @Query(
+        """
+        WITH ordered AS (
+            SELECT waypointId,
+                   ROW_NUMBER() OVER (ORDER BY waypointId) - 1 AS rn,
+                   COUNT(*) OVER () - 1 AS maxRn
+            FROM waypoints
+            WHERE trackOwnerId = :trackId
+        )
+        UPDATE waypoints
+        SET waypointId = :newStart + (
+            SELECT CASE 
+                     WHEN :indexDescending = 1 THEN (maxRn - rn) 
+                     ELSE rn 
+                   END
+            FROM ordered
+            WHERE ordered.waypointId = waypoints.waypointId
+        )
+        WHERE trackOwnerId = :trackId
+        """
+    )
+    suspend fun reassignIdsAscending(
+        trackId: Int,
+        newStart: Double,
+        indexDescending: Boolean
+    )
+
+
+    @Query(
+        """
+        WITH ordered AS (
+            SELECT waypointId,
+                   ROW_NUMBER() OVER (ORDER BY waypointId) - 1 AS rn,
+                   COUNT(*) OVER () - 1 AS maxRn
+            FROM waypoints
+            WHERE trackOwnerId = :trackId
+        )
+        UPDATE waypoints
+        SET waypointId = :newStart - (
+            SELECT CASE 
+                     WHEN :indexDescending = 1 THEN (maxRn - rn) 
+                     ELSE rn 
+                   END
+            FROM ordered
+            WHERE ordered.waypointId = waypoints.waypointId
+        )
+        WHERE trackOwnerId = :trackId
+        """
+    )
+    suspend fun reassignIdsDescending(
+        trackId: Int,
+        newStart: Double,
+        indexDescending: Boolean
+    )
+
+    @Transaction
+    suspend fun renumberTrack(
+        trackId: Int,
+        newStart: Double,
+        descending: Boolean = false,
+        indexDescending: Boolean = false
+    ) {
+        shiftIdsTemporarily(trackId)
+        if (descending) {
+            reassignIdsDescending(trackId, newStart, indexDescending)
+        } else {
+            reassignIdsAscending(trackId, newStart, indexDescending)
+        }
+    }
+
+
+    @Query(
+        """
+        UPDATE waypoints
+        SET trackOwnerId = :toTrackId
+        WHERE trackOwnerId = :fromTrackId
+    """
+    )
+    suspend fun changeTrackId(fromTrackId: Int, toTrackId: Int)
 }
+

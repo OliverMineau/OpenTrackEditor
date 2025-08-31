@@ -25,6 +25,7 @@ import com.minapps.trackeditor.feature_map_editor.domain.usecase.DeleteSelectedU
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.DisplayTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackWaypointsUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.model.SelectionResult
+import com.minapps.trackeditor.feature_map_editor.domain.usecase.JoinTracksUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.UIAction
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.UpdateSelectionUseCase
 import com.minapps.trackeditor.feature_map_editor.presentation.model.ActionDescriptor
@@ -61,6 +62,7 @@ class MapViewModel @Inject constructor(
     private val addWaypointToSelectedTrackUseCase: AddWaypointToSelectedTrackUseCase,
     private val handleMapViewportChangeUseCase: HandleMapViewportChangeUseCase,
     private val updateSelectionUseCase: UpdateSelectionUseCase,
+    private val joinTracksUseCase: JoinTracksUseCase,
     private val stringProvider: StringProvider,
     private val hapticFeedback: HapticFeedback,
     @ApplicationContext private val context: Context,
@@ -216,6 +218,10 @@ class MapViewModel @Inject constructor(
                     performDelete()
                 }
 
+                ActionType.JOIN -> {
+                    performJoin()
+                }
+
                 // Set selected tool and reset selections
                 else -> {
 
@@ -271,10 +277,19 @@ class MapViewModel @Inject constructor(
         }
     }
 
+    private suspend fun performJoin(){
+        val results = joinTracksUseCase(editState.value.currentSelectedPoints)
 
-    private suspend fun toolGetScreenshot() {
-        Log.d("debug", "Screenshot")
+        results?.forEach { result ->
+            when (result) {
+                is WaypointUpdate.AddedList -> _waypointEvents.emit(result)
+                is WaypointUpdate.RemovedTracks -> _waypointEvents.emit(result)
+                else -> {}
+            }
+        }
     }
+
+
 
     /**
      * Add waypoint to selected track

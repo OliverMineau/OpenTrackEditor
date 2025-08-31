@@ -41,8 +41,8 @@ class AddWaypointUseCase @Inject constructor(
         updateUi: Boolean = false
     ) {
 
-        val first = repository.getTrackFirstWaypointIndex(trackId)
-        val last = repository.getTrackLastWaypointIndex(trackId)
+        val first = repository.getTrackFirstWaypointId(trackId)
+        val last = repository.getTrackLastWaypointId(trackId)
         var newId = id
 
         // If new point (no known id) (place to front or back)
@@ -127,8 +127,8 @@ class AddWaypointUseCase @Inject constructor(
     suspend fun getNextId(trackId: Int, position: InsertPosition?): Double {
 
         Log.d("bug", "trackId: $trackId")
-        val first = repository.getTrackFirstWaypointIndex(trackId)
-        val last = repository.getTrackLastWaypointIndex(trackId)
+        val first = repository.getTrackFirstWaypointId(trackId)
+        val last = repository.getTrackLastWaypointId(trackId)
         var newId = 0.0
 
         // If first point of track

@@ -1,7 +1,5 @@
 package com.minapps.trackeditor.feature_map_editor.domain.usecase
 
-import android.graphics.Path
-import android.util.Log
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
 import com.minapps.trackeditor.core.domain.type.InsertPosition
@@ -28,8 +26,8 @@ class GetNewPointDirectionUseCase @Inject constructor(
     ): Pair<Waypoint?, InsertPosition> {
 
         // Get ends of track
-        val first = repository.getTrackFirstWaypointIndex(trackId)
-        val last = repository.getTrackLastWaypointIndex(trackId)
+        val first = repository.getTrackFirstWaypointId(trackId)
+        val last = repository.getTrackLastWaypointId(trackId)
         // Set default direction to BACK
         var direction = InsertPosition.BACK
 

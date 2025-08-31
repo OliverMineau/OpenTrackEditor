@@ -82,8 +82,8 @@ interface EditTrackRepository {
      */
     suspend fun addWaypoints(waypoints: List<Waypoint>)
     suspend fun getTrackIds(): List<Int>
-    suspend fun getTrackFirstWaypointIndex(trackId: Int): Double?
-    suspend fun getTrackLastWaypointIndex(trackId: Int): Double?
+    suspend fun getTrackFirstWaypointId(trackId: Int): Double?
+    suspend fun getTrackLastWaypointId(trackId: Int): Double?
     suspend fun getWaypointIndex(trackId: Int, id: Double): Int?
     suspend fun getWaypoint(trackId: Int, index: Int): Waypoint?
     suspend fun getVisibleTrackWaypointsCount(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): Double
@@ -91,7 +91,8 @@ interface EditTrackRepository {
     suspend fun getTracksWithVisibleWaypoints(latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): List<Pair<Int, List<Waypoint>>>
     suspend fun getTracksWithVisibleWaypointsCount(latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): Double
     suspend fun getTrackIdsWithVisibleWaypoints(latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double): List<Int>
-
     suspend fun getVisibleTrackWaypointsChunk(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double, chunkSize: Int, offset: Int): List<Waypoint>
+    suspend fun renumberTrack(trackId: Int, newStart: Double, descending: Boolean, indexDescending: Boolean)
+    suspend fun changeTrackId(fromTrackId: Int, toTrackId: Int)
 
 }

@@ -89,12 +89,12 @@ class EditTrackRepositoryImpl @Inject constructor(
 
 
 
-    override suspend fun getTrackFirstWaypointIndex(trackId: Int): Double? {
-        return dao.getTrackFirstWaypointIndex(trackId)
+    override suspend fun getTrackFirstWaypointId(trackId: Int): Double? {
+        return dao.getTrackFirstWaypointId(trackId)
     }
 
-    override suspend fun getTrackLastWaypointIndex(trackId: Int): Double? {
-        return dao.getTrackLastWaypointIndex(trackId)
+    override suspend fun getTrackLastWaypointId(trackId: Int): Double? {
+        return dao.getTrackLastWaypointId(trackId)
     }
 
     override suspend fun getWaypointIndex(trackId: Int, id: Double): Int?{
@@ -194,19 +194,16 @@ class EditTrackRepositoryImpl @Inject constructor(
      * @return Track
      */
     override suspend fun addImportedTrack(trackId: Int, center: Boolean) : Boolean{
-        //TODO DEBUG purposes : No need of track in the future
-        // only get number of points proportional to zoom
-
-        //var track = dao.getTrackById(trackId)?.toDomain(dao.getTrackWaypoints(trackId))
-
-        /*if(track == null){
-            return false
-        }*/
-
-        // Emit track for MapViewModel
-        //_addedTracks.emit(track)
         _addedTracks.emit(Pair(trackId, center))
         return true
+    }
+
+    override suspend fun renumberTrack(trackId: Int, newStart: Double, descending: Boolean, indexDescending: Boolean){
+        dao.renumberTrack(trackId, newStart, descending, indexDescending)
+    }
+
+    override suspend fun changeTrackId(fromTrackId: Int, toTrackId: Int){
+        dao.changeTrackId(fromTrackId, toTrackId)
     }
 
 }

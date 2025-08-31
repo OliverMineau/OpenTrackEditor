@@ -5,7 +5,6 @@ import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
 import com.minapps.trackeditor.core.domain.util.TrackSimplifier
 import jakarta.inject.Inject
-import kotlin.math.max
 
 class GetTrackWaypointsUseCase @Inject constructor(
     private val repository: EditTrackRepository,
@@ -30,7 +29,7 @@ class GetTrackWaypointsUseCase @Inject constructor(
 
         // Get number of points in given track or in in view
         val waypointCount = if (latNorth == null || latSouth == null || lonWest == null || lonEast == null) {
-            repository.getTrackLastWaypointIndex(trackId)?: 0.0
+            repository.getTrackLastWaypointId(trackId)?: 0.0
         } else {
             repository.getVisibleTrackWaypointsCount(trackId, latNorth, latSouth, lonWest, lonEast)
         }
