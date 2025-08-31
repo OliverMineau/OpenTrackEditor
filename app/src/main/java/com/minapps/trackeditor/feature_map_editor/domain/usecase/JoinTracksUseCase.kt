@@ -2,15 +2,13 @@ package com.minapps.trackeditor.feature_map_editor.domain.usecase
 
 import android.util.Log
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
+import com.minapps.trackeditor.core.domain.type.EndType
 import com.minapps.trackeditor.feature_map_editor.domain.model.SimpleWaypoint
 import com.minapps.trackeditor.feature_map_editor.domain.model.WaypointUpdate
 import jakarta.inject.Inject
 import kotlin.collections.get
 
-enum class EndType {
-    START,
-    END
-}
+
 
 class JoinTracksUseCase @Inject constructor(
     private val repository: EditTrackRepository

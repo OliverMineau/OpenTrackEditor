@@ -11,6 +11,7 @@ import com.minapps.trackeditor.data.mapper.toEntity
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlin.Int
 
 /**
  * Implementation of the EditTrackRepository interface.
@@ -204,6 +205,14 @@ class EditTrackRepositoryImpl @Inject constructor(
 
     override suspend fun changeTrackId(fromTrackId: Int, toTrackId: Int){
         dao.changeTrackId(fromTrackId, toTrackId)
+    }
+
+    override suspend fun getIntervalSize(trackId: Int, p1: Double, p2: Double): Int{
+        return dao.getIntervalSize(trackId, p1, p2)
+    }
+
+    override suspend fun getIntervalSize(trackId: Int): Int{
+        return dao.countWaypointsForTrack(trackId)
     }
 
 }

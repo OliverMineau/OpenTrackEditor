@@ -13,6 +13,7 @@ import com.minapps.trackeditor.feature_map_editor.domain.model.UiMapState
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.feature_map_editor.domain.model.WaypointUpdate
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
+import com.minapps.trackeditor.core.domain.tool.EditorTool
 import com.minapps.trackeditor.core.domain.type.ActionType
 import com.minapps.trackeditor.core.domain.type.DataDestination
 import com.minapps.trackeditor.core.domain.usecase.HandleMapViewportChangeUseCase
@@ -26,11 +27,14 @@ import com.minapps.trackeditor.feature_map_editor.domain.usecase.DisplayTrackUse
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackWaypointsUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.model.SelectionResult
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.JoinTracksUseCase
-import com.minapps.trackeditor.feature_map_editor.domain.usecase.UIAction
+import com.minapps.trackeditor.feature_map_editor.presentation.model.UIAction
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.UpdateSelectionUseCase
 import com.minapps.trackeditor.feature_map_editor.presentation.model.ActionDescriptor
 import com.minapps.trackeditor.feature_map_editor.presentation.util.HapticFeedback
 import com.minapps.trackeditor.feature_map_editor.presentation.util.StringProvider
+import com.minapps.trackeditor.feature_map_editor.tools.filter.FilterTool
+import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.model.FilterParams
+import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.usecase.ApplyFilterUseCase
 import com.minapps.trackeditor.feature_track_export.domain.model.ExportFormat
 import com.minapps.trackeditor.feature_track_import.domain.model.DataStreamProgress
 import com.minapps.trackeditor.feature_track_import.domain.usecase.TrackImportUseCase
@@ -47,6 +51,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.osmdroid.util.GeoPoint
+import kotlin.Long
 
 
 @HiltViewModel
@@ -65,6 +70,10 @@ class MapViewModel @Inject constructor(
     private val joinTracksUseCase: JoinTracksUseCase,
     private val stringProvider: StringProvider,
     private val hapticFeedback: HapticFeedback,
+    private val applyFilterUseCase: ApplyFilterUseCase,
+
+    private val filterTool: FilterTool,
+
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
@@ -170,14 +179,20 @@ class MapViewModel @Inject constructor(
 
         _actions.value = mapOf(
             DataDestination.EDIT_TOOL_POPUP to tools.map { type ->
-                val action = actionHandlers[type]
+                val action = actionHandlers[type] // existing callback
+                val executor: EditorTool? = when(type) {
+                    ActionType.FILTER -> filterTool
+                    else -> null
+                }
+
                 ActionDescriptor(
                     type.icon,
                     type.label,
                     action,
+                    executor,
                     type.selectionCount,
                     type,
-                    type.group
+                    type.group,
                 )
             }
         )
@@ -590,6 +605,19 @@ class MapViewModel @Inject constructor(
             }
 
             hasStartedCalculationsInThread = false
+        }
+    }
+
+    fun applyFilter(params: FilterParams){
+
+        /*if(params.succeeded){
+            _editState.update { it.copy(currentSelectedTracks = mutableListOf(), currentSelectedPoints = mutableListOf()) }
+        }*/
+
+        _editState.update {
+            it.copy(currentSelectedTracks = mutableListOf(),
+                currentSelectedPoints = mutableListOf(),
+                version = System.nanoTime())
         }
     }
 }

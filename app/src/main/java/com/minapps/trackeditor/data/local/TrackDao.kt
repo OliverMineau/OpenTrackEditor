@@ -318,7 +318,6 @@ interface TrackDao {
         }
     }
 
-
     @Query(
         """
         UPDATE waypoints
@@ -327,5 +326,15 @@ interface TrackDao {
     """
     )
     suspend fun changeTrackId(fromTrackId: Int, toTrackId: Int)
+
+    @Query(
+        """
+        SELECT COUNT(waypointId)
+        FROM waypoints
+        WHERE trackOwnerId = :trackId AND
+        waypointId BETWEEN :p1 AND :p2
+    """
+    )
+    suspend fun getIntervalSize(trackId: Int, p1: Double, p2: Double): Int
 }
 

@@ -36,19 +36,24 @@ import androidx.core.view.size
 import androidx.core.view.get
 import com.google.android.gms.location.LocationServices
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.minapps.trackeditor.core.domain.model.Waypoint
+import com.minapps.trackeditor.core.domain.tool.ToolDialog
+import com.minapps.trackeditor.core.domain.tool.ToolUiContext
 import com.minapps.trackeditor.feature_map_editor.domain.model.EditState
 import com.minapps.trackeditor.feature_map_editor.domain.model.ProgressData
 import com.minapps.trackeditor.core.domain.type.ActionType
 import com.minapps.trackeditor.core.domain.type.DataDestination
 import com.minapps.trackeditor.core.domain.util.ToolGroup
+import com.minapps.trackeditor.feature_map_editor.presentation.interaction.ToolResultListener
 import com.minapps.trackeditor.feature_map_editor.presentation.model.ActionDescriptor
+import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.model.FilterParams
 import com.minapps.trackeditor.feature_track_export.presentation.util.showSaveFileDialog
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 
 @AndroidEntryPoint
-class MapActivity : AppCompatActivity(), MapListener {
+class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultListener {
 
     private lateinit var binding: ActivityMapBinding
     private lateinit var mMyLocationOverlay: MyLocationNewOverlay
@@ -60,7 +65,6 @@ class MapActivity : AppCompatActivity(), MapListener {
     private var lastUpdateTime: Long = 0L
     private var trailingJob: Job? = null
     private val updateInterval = 400L // 200ms
-
 
 
     //When file picked call viewmodel's importTrack
@@ -120,14 +124,15 @@ class MapActivity : AppCompatActivity(), MapListener {
 
         // Initialize toolbox popup
         toolboxPopup =
-            ToolboxPopup(findViewById(R.id.popup_container), layoutInflater, lifecycleScope)
+            ToolboxPopup(this,findViewById(R.id.popup_container), layoutInflater, lifecycleScope, this)
 
         // Start observing ViewModel state flows
         observeViewModel()
 
-
         handleIntent(intent)
     }
+
+
 
 
     private fun requestLocationPermissionIfNeeded() {
@@ -172,7 +177,7 @@ class MapActivity : AppCompatActivity(), MapListener {
                 R.id.nav_edit -> {
                     editNav.visibility = View.VISIBLE
                     mapViewModel.onToolSelected(ActionType.EDIT)
-                    editNav.post {clearBottomNavSelection(editNav)}
+                    editNav.post { clearBottomNavSelection(editNav) }
 
                 }
 
@@ -195,15 +200,15 @@ class MapActivity : AppCompatActivity(), MapListener {
 
         editNav.setOnItemSelectedListener {
 
-            mapRenderer.selectTrack(null, false)
+            //mapRenderer.selectTrack(null, false)
 
             when (it.itemId) {
                 R.id.nav_toolbox -> {
                     val wasShown = toolboxPopup.show()
-                    if(wasShown == 1){
+                    if (wasShown == 1) {
                         mapViewModel.onToolSelected(ActionType.TOOLBOX)
                         true
-                    }else if (wasShown == 0){
+                    } else if (wasShown == 0) {
                         mapViewModel.onToolSelected(ActionType.EDIT)
                         clearBottomNavSelection(editNav)
                         false
@@ -339,9 +344,14 @@ class MapActivity : AppCompatActivity(), MapListener {
         toolboxPopup.toolSelected(event.currentSelectedTool)
         updateSelectedToolUI(event.currentSelectedTool)
 
-        if(event.currentSelectedTool != ActionType.SELECT &&
-            event.currentSelectedTool != ActionType.TOOLBOX){
+        if (event.currentSelectedTool != ActionType.SELECT &&
+            event.currentSelectedTool != ActionType.TOOLBOX
+        ) {
             mapRenderer.clearAllSelections()
+        }
+
+        if(event.currentSelectedTracks.isEmpty()){
+            mapRenderer.deselectTracks()
         }
     }
 
@@ -389,10 +399,10 @@ class MapActivity : AppCompatActivity(), MapListener {
                 } else if (item.itemId == R.id.nav_toolbox && tool != ActionType.REMOVE && tool != ActionType.ADD && tool != ActionType.VIEW && tool != ActionType.SELECT) {
                     item.isChecked = true
                     return
-                }else if (item.itemId == R.id.nav_hand && tool == ActionType.HAND) {
+                } else if (item.itemId == R.id.nav_hand && tool == ActionType.HAND) {
                     item.isChecked = true
                     return
-                }else if (item.itemId == R.id.nav_selection && tool == ActionType.SELECT) {
+                } else if (item.itemId == R.id.nav_selection && tool == ActionType.SELECT) {
                     item.isChecked = true
                     return
                 }
@@ -518,9 +528,6 @@ class MapActivity : AppCompatActivity(), MapListener {
     }
 
 
-
-
-
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleIntent(intent)
@@ -540,6 +547,36 @@ class MapActivity : AppCompatActivity(), MapListener {
                 }
             }
         }
+    }
+
+
+    /************* EditorTool interface Functions *************/
+
+    /**
+     *  Called when tool clicked
+     *
+     * @param T
+     * @param dialog
+     * @return
+     */
+    override suspend fun <T : Any> showDialog(dialog: ToolDialog<T>): T? {
+        return dialog.show(this)
+    }
+
+    /**
+     * Called when tool error/finished
+     *
+     * @param message
+     */
+    override fun showToast(message: String) =
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+
+    override fun getEditState(): EditState{
+        return mapViewModel.editState.value
+    }
+
+    override fun onFilterApplied(params: FilterParams) {
+        mapViewModel.applyFilter(params)
     }
 
 

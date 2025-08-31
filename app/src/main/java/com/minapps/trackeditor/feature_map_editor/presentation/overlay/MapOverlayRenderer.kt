@@ -800,6 +800,11 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         colorTrackSegment()
     }
 
+    fun deselectTracks(){
+        selectedPolylines = mutableListOf()
+        colorTracks()
+    }
+
     private fun colorTracks() {
         displayedPolylines.forEach { id, renderData ->
             if (selectedPolylines.contains(id)) {
@@ -906,6 +911,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
     fun clearAllSelections() {
         clearTrackOverlaySelection()
         clearPointOverlaySelection()
+
         mMap.invalidate()
     }
 

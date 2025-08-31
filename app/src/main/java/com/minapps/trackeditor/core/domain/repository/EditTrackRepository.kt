@@ -94,5 +94,7 @@ interface EditTrackRepository {
     suspend fun getVisibleTrackWaypointsChunk(trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double, chunkSize: Int, offset: Int): List<Waypoint>
     suspend fun renumberTrack(trackId: Int, newStart: Double, descending: Boolean, indexDescending: Boolean)
     suspend fun changeTrackId(fromTrackId: Int, toTrackId: Int)
+    suspend fun getIntervalSize(trackId: Int, p1: Double, p2: Double): Int
+    suspend fun getIntervalSize(trackId: Int): Int
 
 }

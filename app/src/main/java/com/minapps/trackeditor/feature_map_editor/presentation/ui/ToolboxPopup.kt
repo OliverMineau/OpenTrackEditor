@@ -4,6 +4,7 @@ import android.graphics.Color
 import android.graphics.Color.*
 import android.graphics.PorterDuff
 import android.graphics.drawable.AnimatedVectorDrawable
+import android.text.Selection
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -15,17 +16,23 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.children
 import androidx.core.view.isEmpty
+import androidx.lifecycle.lifecycleScope
 import com.minapps.trackeditor.R
+import com.minapps.trackeditor.core.domain.tool.ToolUiContext
 import com.minapps.trackeditor.core.domain.type.ActionType
+import com.minapps.trackeditor.core.domain.util.SelectionCount
 import com.minapps.trackeditor.core.domain.util.ToolGroup
+import com.minapps.trackeditor.feature_map_editor.presentation.interaction.ToolResultListener
 import com.minapps.trackeditor.feature_map_editor.presentation.model.ActionDescriptor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 class ToolboxPopup(
+    private val toolResultListener: ToolResultListener,
     private val popupContainer: FrameLayout,
     private val inflater: LayoutInflater,
-    private val coroutineScope: CoroutineScope
+    private val coroutineScope: CoroutineScope,
+    private val toolUiContext: ToolUiContext
 ) {
 
     private var isUnfolded = false
@@ -50,6 +57,7 @@ class ToolboxPopup(
     //List of all tools to select and deselect
     var toolViews: MutableList<Pair<ActionDescriptor, View>> = mutableListOf()
 
+    var onToolClick: ((Boolean) -> Unit)? = null
 
     /**
      * Called to show popup menu
@@ -347,7 +355,10 @@ class ToolboxPopup(
         menuItems.reversed().forEach { item ->
             val itemView = inflater.inflate(R.layout.tool_item, toolboxMenu, false)
 
-            if(item.group != ToolGroup.FILE_SYSTEM){
+            // If not in file system group
+            // And if can be selected more than null
+            // (One time actions so don't change icon to be selected)
+            if(item.group != ToolGroup.FILE_SYSTEM && item.selectionCount != SelectionCount.NONE){
                 toolViews.add(item to itemView)
             }
 
@@ -373,7 +384,11 @@ class ToolboxPopup(
                     lastSelectedItemView = itemView
 
                     coroutineScope.launch {
-                        item.action.invoke(selectedItemCount[item.type] == 0)
+                        //item.action.invoke(selectedItemCount[item.type] == 0)
+                        item.action.invoke(true)
+                        // Launch associated tools execution (dialog + usecases)
+                        item.executor?.launch(toolResultListener, toolUiContext, selectedItemCount[item.type] == 0)
+
                     }
                 }
             }
