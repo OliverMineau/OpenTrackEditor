@@ -575,8 +575,10 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
         return mapViewModel.editState.value
     }
 
-    override fun onFilterApplied(params: FilterParams) {
-        mapViewModel.applyFilter(params)
+    override fun onToolResult(tool: ActionType, parameters: Any?) {
+        lifecycleScope.launch {
+            mapViewModel.onToolResult(tool, parameters)
+        }
     }
 
 

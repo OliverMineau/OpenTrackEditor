@@ -29,8 +29,17 @@ class UpdateSelectionUseCase @Inject constructor(
     ): List<SelectionResult> {
         val results = mutableListOf<SelectionResult>()
 
-        val selectedTracks = manageTrackSelection(trackId, select, currentState)
+        var selectedTracks = manageTrackSelection(trackId, select, currentState)
         val selectedPoints = managePointSelection(trackId, pointId, currentState)
+
+        if(selectedPoints.isNotEmpty() && pointId != null){
+            selectedTracks = mutableListOf()
+            selectedPoints.forEach { pointId ->
+                selectedTracks.add(pointId.first)
+            }
+        }else{
+            selectedPoints.clear()
+        }
 
         results.add(
             SelectionResult.UpdatedState(

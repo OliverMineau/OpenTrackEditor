@@ -4,6 +4,7 @@ import android.util.Log
 import com.minapps.trackeditor.R
 import com.minapps.trackeditor.core.domain.tool.EditorTool
 import com.minapps.trackeditor.core.domain.tool.ToolUiContext
+import com.minapps.trackeditor.core.domain.type.ActionType
 import com.minapps.trackeditor.core.domain.usecase.GetSelectedWaypointsIntervalSizeUseCase
 import com.minapps.trackeditor.feature_map_editor.presentation.MapViewModel
 import com.minapps.trackeditor.feature_map_editor.presentation.interaction.ToolResultListener
@@ -34,7 +35,7 @@ class FilterTool @Inject constructor (
         // If No track selected
         if(hasSelectedTracks){
             uiContext.showToast("Select track or segment to filter")
-            listener.onFilterApplied(FilterParams(null, false))
+            listener.onToolResult(ActionType.FILTER,FilterParams(null, false))
             return
         }
 
@@ -48,7 +49,7 @@ class FilterTool @Inject constructor (
             point2 = editState.currentSelectedPoints[1]
             if(point1.first != point2.first){
                 uiContext.showToast("Points must belong to same track")
-                listener.onFilterApplied(FilterParams(null, false))
+                listener.onToolResult(ActionType.FILTER,FilterParams(null, false))
                 return
             }
             waypointCount = getSelectedWaypointsIntervalSizeUseCase(point1.first, point1.second, point2.second)
@@ -58,7 +59,7 @@ class FilterTool @Inject constructor (
 
         if(waypointCount == null){
             uiContext.showToast("No waypoints selected")
-            listener.onFilterApplied(FilterParams(null, false))
+            listener.onToolResult(ActionType.FILTER,FilterParams(null, false))
             return
         }
 
@@ -68,13 +69,15 @@ class FilterTool @Inject constructor (
 
             // Apply filtering logic
             val filtered = applyFilterUseCase(params)
+            params.succeeded = true
+
             // Provide feedback to the user
             uiContext.showToast("${params.filterType?.label} filtering ${if(filtered) "applied" else "failed"}")
 
-            listener.onFilterApplied(params)
+            listener.onToolResult(ActionType.FILTER,params)
             return
         }
 
-        listener.onFilterApplied(FilterParams(null, false))
+        listener.onToolResult(ActionType.FILTER,FilterParams(null, false))
     }
 }

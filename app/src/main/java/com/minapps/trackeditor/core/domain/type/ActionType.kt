@@ -18,10 +18,12 @@ enum class ActionType(
     val label: String?,
     val selectionCount: SelectionCount?,
     val group: ToolGroup? = ToolGroup.NONE,
+    // Deselect tracks and points when clicked
+    val deselect: Boolean = false,
 ) {
     // No action
-    NONE(null, "None", null),
-    HAND(R.drawable.hand_24, "Hand", SelectionCount.ONE, ToolGroup.ALL),
+    NONE(null, "None", null, deselect = true),
+    HAND(R.drawable.hand_24, "Hand", SelectionCount.ONE, ToolGroup.ALL, true),
     SPACER(null, null, null),
 
     // File & system actions
@@ -30,9 +32,10 @@ enum class ActionType(
         R.drawable.mode_landscape_24,
         "Screenshot",
         SelectionCount.NONE,
-        ToolGroup.FILE_SYSTEM
+        ToolGroup.FILE_SYSTEM,
+        true
     ),
-    DELETE(R.drawable.trash_24, "Delete", SelectionCount.NONE, ToolGroup.FILE_SYSTEM),
+    DELETE(R.drawable.trash_24, "Delete", SelectionCount.NONE, ToolGroup.FILE_SYSTEM, true),
 
     // Visual tools
     ELEVATION(R.drawable.curve_arrow_24, "Elevation", SelectionCount.MULTIPLE),
@@ -64,13 +67,13 @@ enum class ActionType(
     MAGIC_FILTER(R.drawable.sweep_24, "Magic filter", SelectionCount.NONE, ToolGroup.TRACK_EDITING),
 
     // Edit Bottom Navigation
-    ADD(R.drawable.map_marker_plus_24, "Add", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
-    REMOVE(R.drawable.map_marker_cross_24, "Remove", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
+    ADD(R.drawable.map_marker_plus_24, "Add", SelectionCount.ONE, ToolGroup.TRACK_EDITING, true),
+    REMOVE(R.drawable.map_marker_cross_24, "Remove", SelectionCount.ONE, ToolGroup.TRACK_EDITING, true),
     SELECT(R.drawable.map_location_track_24, "Select", SelectionCount.MULTIPLE, ToolGroup.ALL),
 
 
     // Main Bottom Navigation
-    VIEW(R.drawable.map_marker_24, "View", SelectionCount.ONE, ToolGroup.TRACK_EDITING),
+    VIEW(R.drawable.map_marker_24, "View", SelectionCount.ONE, ToolGroup.TRACK_EDITING, true),
     EDIT(R.drawable.file_edit_24, "Edit", SelectionCount.MULTIPLE, ToolGroup.TRACK_EDITING),
     TOOLBOX(R.drawable.tools_24, "Toolbox", SelectionCount.MULTIPLE, ToolGroup.TRACK_EDITING),
 }

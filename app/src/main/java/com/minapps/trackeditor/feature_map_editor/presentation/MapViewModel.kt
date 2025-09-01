@@ -18,6 +18,7 @@ import com.minapps.trackeditor.core.domain.type.ActionType
 import com.minapps.trackeditor.core.domain.type.DataDestination
 import com.minapps.trackeditor.core.domain.usecase.HandleMapViewportChangeUseCase
 import com.minapps.trackeditor.core.domain.usecase.Viewport
+import com.minapps.trackeditor.core.domain.util.ToolGroup
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointToSelectedTrackUseCase
 import com.minapps.trackeditor.feature_track_export.domain.usecase.ExportTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointUseCase
@@ -32,9 +33,12 @@ import com.minapps.trackeditor.feature_map_editor.domain.usecase.UpdateSelection
 import com.minapps.trackeditor.feature_map_editor.presentation.model.ActionDescriptor
 import com.minapps.trackeditor.feature_map_editor.presentation.util.HapticFeedback
 import com.minapps.trackeditor.feature_map_editor.presentation.util.StringProvider
+import com.minapps.trackeditor.feature_map_editor.tools.delete.DeleteTool
+import com.minapps.trackeditor.feature_map_editor.tools.export.ExportTool
 import com.minapps.trackeditor.feature_map_editor.tools.filter.FilterTool
 import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.model.FilterParams
 import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.usecase.ApplyFilterUseCase
+import com.minapps.trackeditor.feature_map_editor.tools.join.JoinTool
 import com.minapps.trackeditor.feature_track_export.domain.model.ExportFormat
 import com.minapps.trackeditor.feature_track_import.domain.model.DataStreamProgress
 import com.minapps.trackeditor.feature_track_import.domain.usecase.TrackImportUseCase
@@ -51,6 +55,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.osmdroid.util.GeoPoint
+import java.lang.reflect.Parameter
 import kotlin.Long
 
 
@@ -63,16 +68,16 @@ class MapViewModel @Inject constructor(
     private val displayTrackUseCase: DisplayTrackUseCase,
     private val exportTrackUseCase: ExportTrackUseCase,
     private val trackImportUseCase: TrackImportUseCase,
-    private val deleteSelectedUseCase: DeleteSelectedUseCase,
     private val addWaypointToSelectedTrackUseCase: AddWaypointToSelectedTrackUseCase,
     private val handleMapViewportChangeUseCase: HandleMapViewportChangeUseCase,
     private val updateSelectionUseCase: UpdateSelectionUseCase,
-    private val joinTracksUseCase: JoinTracksUseCase,
     private val stringProvider: StringProvider,
     private val hapticFeedback: HapticFeedback,
-    private val applyFilterUseCase: ApplyFilterUseCase,
 
     private val filterTool: FilterTool,
+    private val joinTool: JoinTool,
+    private val deleteTool: DeleteTool,
+    private val exportTool: ExportTool,
 
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
@@ -180,8 +185,11 @@ class MapViewModel @Inject constructor(
         _actions.value = mapOf(
             DataDestination.EDIT_TOOL_POPUP to tools.map { type ->
                 val action = actionHandlers[type] // existing callback
-                val executor: EditorTool? = when(type) {
+                val executor: EditorTool? = when (type) {
                     ActionType.FILTER -> filterTool
+                    ActionType.JOIN -> joinTool
+                    ActionType.DELETE -> deleteTool
+                    ActionType.EXPORT -> exportTool
                     else -> null
                 }
 
@@ -199,111 +207,6 @@ class MapViewModel @Inject constructor(
 
 
     }
-
-    /**
-     * Propagates selected tool to UI
-     * /!\ Update version, if same tool selected twice, wont trigger /!\
-     *
-     * @param action
-     */
-    fun onToolSelected(action: ActionType, isSelected: Boolean = true) {
-
-        hapticFeedback.vibrate(30)
-
-        var action = action
-        if (!isSelected) {
-            action = ActionType.EDIT
-        }
-
-        viewModelScope.launch {
-
-            when (action) {
-                ActionType.EXPORT -> {
-                    _editState.update {
-                        it.copy(
-                            currentSelectedTool = action,
-                            version = System.nanoTime()
-                        )
-                    }
-
-                    performExportTrack()
-                }
-
-                ActionType.DELETE -> {
-                    performDelete()
-                }
-
-                ActionType.JOIN -> {
-                    performJoin()
-                }
-
-                // Set selected tool and reset selections
-                else -> {
-
-                    var freezeSelection =
-                        (action == ActionType.SELECT || action == ActionType.TOOLBOX)
-
-                    _editState.update {
-
-                        if (freezeSelection) {
-                            it.copy(
-                                currentSelectedTool = action,
-                                version = System.nanoTime()
-                            )
-                        } else {
-                            it.copy(
-                                currentSelectedTool = action,
-                                currentSelectedTracks = mutableListOf(),
-                                currentSelectedPoints = mutableListOf(),
-                                version = System.nanoTime()
-                            )
-                        }
-
-                    }
-                }
-            }
-        }
-        Log.d("debug", "Selected ${action.label}")
-    }
-
-
-    private suspend fun performExportTrack() {
-        Log.d("debug", "Exporting Track Fun")
-
-        // Emit event to UI to show dialog with default filename
-        val defaultTrackName = stringProvider.getString(R.string.track_no_name)
-        _showExportDialog.emit(defaultTrackName)
-    }
-
-    /**
-     * Called to delete selected waypoint.s/track.s
-     *
-     */
-    private fun performDelete() {
-        viewModelScope.launch {
-            val update = deleteSelectedUseCase(
-                editState.value.currentSelectedTracks,
-                editState.value.currentSelectedPoints
-            )
-            if (update != null) {
-                _waypointEvents.emit(update)
-            }
-            _editState.update { it.copy(currentSelectedPoints = mutableListOf()) }
-        }
-    }
-
-    private suspend fun performJoin(){
-        val results = joinTracksUseCase(editState.value.currentSelectedPoints)
-
-        results?.forEach { result ->
-            when (result) {
-                is WaypointUpdate.AddedList -> _waypointEvents.emit(result)
-                is WaypointUpdate.RemovedTracks -> _waypointEvents.emit(result)
-                else -> {}
-            }
-        }
-    }
-
 
 
     /**
@@ -327,7 +230,7 @@ class MapViewModel @Inject constructor(
             _waypointEvents.emit(WaypointUpdate.Added(trackId, point))
 
             // Select track after adding point
-            if(!selectedTrackIds.contains(trackId)){
+            if (!selectedTrackIds.contains(trackId)) {
                 selectedTrackIds.add(trackId)
                 _editState.update { it.copy(currentSelectedTracks = selectedTrackIds) }
             }
@@ -434,19 +337,25 @@ class MapViewModel @Inject constructor(
                             version = System.nanoTime()
                         )
                     }
+
                     is SelectionResult.WaypointAdded -> _waypointEvents.emit(
                         WaypointUpdate.Added(result.trackId, result.waypoint)
                     )
+
                     is SelectionResult.WaypointRemoved -> _waypointEvents.emit(
                         WaypointUpdate.RemovedById(result.trackId, result.waypointId)
                     )
+
                     SelectionResult.None -> {}
                 }
             }
 
             hapticFeedback.vibrate(30)
         }
-        return UiMapState(editState.value.currentSelectedTracks, editState.value.currentSelectedPoints)
+        return UiMapState(
+            editState.value.currentSelectedTracks,
+            editState.value.currentSelectedPoints
+        )
     }
 
 
@@ -559,7 +468,7 @@ class MapViewModel @Inject constructor(
     private var hasStartedCalculationsInThread = false
 
 
-    // TODO : Works but should be redesigned (pls)
+// TODO : Works but should be redesigned (pls)
     /**
      * When user moves map, recalculate what tracks should be displayed and
      * with which algorithm
@@ -608,16 +517,120 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    fun applyFilter(params: FilterParams){
 
-        /*if(params.succeeded){
-            _editState.update { it.copy(currentSelectedTracks = mutableListOf(), currentSelectedPoints = mutableListOf()) }
-        }*/
+    /**
+     * Propagates selected tool to UI
+     * /!\ Update version, if same tool selected twice, wont trigger /!\
+     *
+     * @param action
+     */
+    fun onToolSelected(action: ActionType, isSelected: Boolean = true) {
 
-        _editState.update {
-            it.copy(currentSelectedTracks = mutableListOf(),
-                currentSelectedPoints = mutableListOf(),
-                version = System.nanoTime())
+        hapticFeedback.vibrate(30)
+
+        var action = action
+        if (!isSelected) {
+            action = ActionType.EDIT
+        }
+
+        viewModelScope.launch {
+
+            val freezeSelection =
+                (action == ActionType.SELECT ||
+                        action == ActionType.TOOLBOX ||
+                        !action.deselect)
+
+            _editState.update {
+
+                if (freezeSelection) {
+                    it.copy(
+                        currentSelectedTool = action,
+                        version = System.nanoTime()
+                    )
+                } else {
+                    it.copy(
+                        currentSelectedTool = action,
+                        currentSelectedTracks = mutableListOf(),
+                        currentSelectedPoints = mutableListOf(),
+                        version = System.nanoTime()
+                    )
+                }
+
+            }
+        }
+        Log.d("debug", "Selected ${action.label}, " +
+                "trakcs:${editState.value.currentSelectedTracks}, " +
+                "points: ${editState.value.currentSelectedPoints}")
+    }
+
+    /**
+     * Called when tool finished processing
+     *
+     * @param tool
+     * @param parameters
+     */
+    suspend fun onToolResult(tool: ActionType, parameters: Any?) {
+
+        when (tool) {
+            ActionType.FILTER -> {
+                parameters as FilterParams
+                sendFilterResults(parameters)
+            }
+
+            ActionType.JOIN -> {
+                parameters as List<*>?
+                sendJoinResults(parameters)
+            }
+
+            ActionType.DELETE -> {
+                parameters as WaypointUpdate?
+                sendDeleteResults(parameters)
+            }
+
+            ActionType.EXPORT -> {
+                sendExportResults()
+            }
+
+            else -> return
+        }
+
+    }
+
+    suspend fun sendJoinResults(parameters: List<*>?) {
+        parameters?.forEach { result ->
+            when (result) {
+                is WaypointUpdate.AddedList -> _waypointEvents.emit(result)
+                is WaypointUpdate.RemovedTracks -> _waypointEvents.emit(result)
+                else -> {}
+            }
         }
     }
+
+    fun sendFilterResults(parameters: FilterParams) {
+        if (parameters.succeeded) {
+            _editState.update {
+                it.copy(
+                    currentSelectedTracks = mutableListOf(),
+                    currentSelectedPoints = mutableListOf(),
+                    version = System.nanoTime()
+                )
+            }
+        }
+    }
+
+    suspend fun sendDeleteResults(parameters: WaypointUpdate?) {
+        if (parameters != null) {
+            _waypointEvents.emit(parameters)
+        }
+        _editState.update { it.copy(currentSelectedPoints = mutableListOf()) }
+
+    }
+
+    private suspend fun sendExportResults() {
+        // Emit event to UI to show dialog with default filename
+        val defaultTrackName = stringProvider.getString(R.string.track_no_name)
+        _showExportDialog.emit(defaultTrackName)
+    }
+
+
 }
