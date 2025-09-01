@@ -35,7 +35,11 @@ class UpdateSelectionUseCase @Inject constructor(
         if(selectedPoints.isNotEmpty() && pointId != null){
             selectedTracks = mutableListOf()
             selectedPoints.forEach { pointId ->
-                selectedTracks.add(pointId.first)
+
+                if(!selectedTracks.contains(pointId.first)){
+                    selectedTracks.add(pointId.first)
+                }
+
             }
         }else{
             selectedPoints.clear()

@@ -575,9 +575,9 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
         return mapViewModel.editState.value
     }
 
-    override fun onToolResult(tool: ActionType, parameters: Any?) {
+    override fun onToolResult(tool: ActionType, result: Any?) {
         lifecycleScope.launch {
-            mapViewModel.onToolResult(tool, parameters)
+            mapViewModel.onToolResult(tool, result)
         }
     }
 

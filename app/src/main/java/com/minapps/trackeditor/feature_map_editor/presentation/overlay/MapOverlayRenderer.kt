@@ -14,6 +14,7 @@ import com.minapps.trackeditor.feature_map_editor.presentation.MovingPointBundle
 import com.minapps.trackeditor.feature_map_editor.presentation.MutablePointAdapter
 import com.minapps.trackeditor.feature_map_editor.presentation.interaction.PointInteractionListener
 import com.minapps.trackeditor.feature_map_editor.presentation.util.PaintType
+import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.usecase.EvenIntervalDecimationUseCase
 import org.osmdroid.api.IGeoPoint
 import org.osmdroid.api.IMapController
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -632,6 +633,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
 
             is WaypointUpdate.RemovedTracks -> handleRemovedTrack(event.trackIds)
             is WaypointUpdate.JoinedTracks -> handleJoinedTrack(event)
+            is WaypointUpdate.FilteredTrack -> handleFilteredTrack(event)
         }
 
         redrawSelection()
@@ -751,7 +753,6 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
      */
     private fun handleWaypointRemovedById(trackId: Int, id: Double) {
 
-
         val renderData = displayedPolylines[trackId]
         if (renderData == null) return
 
@@ -782,13 +783,12 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
     }
 
     private fun handleJoinedTrack(event: WaypointUpdate.JoinedTracks){
-
         // Delete second track
         mMap.overlays.remove(displayedPolylines[event.trackIdRemoved]?.polyline)
         mMap.overlays.remove(displayedPolylines[event.trackIdRemoved]?.overlay)
+    }
 
-
-        //Redisplay first track
+    private fun handleFilteredTrack(event: WaypointUpdate.FilteredTrack){
 
     }
 

@@ -96,5 +96,7 @@ interface EditTrackRepository {
     suspend fun changeTrackId(fromTrackId: Int, toTrackId: Int)
     suspend fun getIntervalSize(trackId: Int, p1: Double, p2: Double): Int
     suspend fun getIntervalSize(trackId: Int): Int
+    suspend fun removeWaypointsByStep(trackId: Int, step: Int, p1: Double, p2: Double)
+    suspend fun removeWaypointsByStep(trackId: Int, step: Int)
 
 }

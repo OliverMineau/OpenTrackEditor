@@ -29,6 +29,9 @@ class EvenIntervalDecimation : FilterUI() {
             }
         }
 
+        //Send default value
+        onValueChange(FilterType.EVEN_INTERVAL_DECIMATION((waypointCount / 2)))
+
         val layout = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             addView(slider)

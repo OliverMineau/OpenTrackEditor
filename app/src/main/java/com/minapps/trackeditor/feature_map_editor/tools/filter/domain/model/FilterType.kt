@@ -6,10 +6,6 @@ sealed class FilterType(val label: String, val description: String) {
 
     companion object {
         val entries: List<FilterType> = listOf(
-            RAMER_DOUGLAS_PEUCKER(),
-            DISTANCE_BASED(),
-            MOVING_AVERAGE(),
-            KALMAN(),
             EVEN_INTERVAL_DECIMATION(),
         )
     }

@@ -215,4 +215,12 @@ class EditTrackRepositoryImpl @Inject constructor(
         return dao.countWaypointsForTrack(trackId)
     }
 
+    override suspend fun removeWaypointsByStep(trackId: Int, step: Int, p1: Double, p2: Double){
+        dao.removeWaypointsByStep(trackId, step, p1, p2)
+    }
+
+    override suspend fun removeWaypointsByStep(trackId: Int, step: Int) {
+        dao.removeWaypointsByStep(trackId, step)
+    }
+
 }

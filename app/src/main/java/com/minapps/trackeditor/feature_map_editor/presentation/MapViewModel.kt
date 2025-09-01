@@ -18,16 +18,13 @@ import com.minapps.trackeditor.core.domain.type.ActionType
 import com.minapps.trackeditor.core.domain.type.DataDestination
 import com.minapps.trackeditor.core.domain.usecase.HandleMapViewportChangeUseCase
 import com.minapps.trackeditor.core.domain.usecase.Viewport
-import com.minapps.trackeditor.core.domain.util.ToolGroup
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointToSelectedTrackUseCase
 import com.minapps.trackeditor.feature_track_export.domain.usecase.ExportTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.ClearAllUseCase
-import com.minapps.trackeditor.feature_map_editor.domain.usecase.DeleteSelectedUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.DisplayTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.GetTrackWaypointsUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.model.SelectionResult
-import com.minapps.trackeditor.feature_map_editor.domain.usecase.JoinTracksUseCase
 import com.minapps.trackeditor.feature_map_editor.presentation.model.UIAction
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.UpdateSelectionUseCase
 import com.minapps.trackeditor.feature_map_editor.presentation.model.ActionDescriptor
@@ -36,8 +33,7 @@ import com.minapps.trackeditor.feature_map_editor.presentation.util.StringProvid
 import com.minapps.trackeditor.feature_map_editor.tools.delete.DeleteTool
 import com.minapps.trackeditor.feature_map_editor.tools.export.ExportTool
 import com.minapps.trackeditor.feature_map_editor.tools.filter.FilterTool
-import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.model.FilterParams
-import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.usecase.ApplyFilterUseCase
+import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.model.FilterResult
 import com.minapps.trackeditor.feature_map_editor.tools.join.JoinTool
 import com.minapps.trackeditor.feature_track_export.domain.model.ExportFormat
 import com.minapps.trackeditor.feature_track_import.domain.model.DataStreamProgress
@@ -55,8 +51,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.osmdroid.util.GeoPoint
-import java.lang.reflect.Parameter
-import kotlin.Long
 
 
 @HiltViewModel
@@ -569,22 +563,22 @@ class MapViewModel @Inject constructor(
      * @param tool
      * @param parameters
      */
-    suspend fun onToolResult(tool: ActionType, parameters: Any?) {
+    suspend fun onToolResult(tool: ActionType, result: Any?) {
 
         when (tool) {
             ActionType.FILTER -> {
-                parameters as FilterParams
-                sendFilterResults(parameters)
+                result as FilterResult
+                sendFilterResults(result)
             }
 
             ActionType.JOIN -> {
-                parameters as List<*>?
-                sendJoinResults(parameters)
+                result as List<*>?
+                sendJoinResults(result)
             }
 
             ActionType.DELETE -> {
-                parameters as WaypointUpdate?
-                sendDeleteResults(parameters)
+                result as WaypointUpdate?
+                sendDeleteResults(result)
             }
 
             ActionType.EXPORT -> {
@@ -596,8 +590,8 @@ class MapViewModel @Inject constructor(
 
     }
 
-    suspend fun sendJoinResults(parameters: List<*>?) {
-        parameters?.forEach { result ->
+    suspend fun sendJoinResults(result: List<*>?) {
+        result?.forEach { result ->
             when (result) {
                 is WaypointUpdate.AddedList -> _waypointEvents.emit(result)
                 is WaypointUpdate.RemovedTracks -> _waypointEvents.emit(result)
@@ -606,8 +600,8 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    fun sendFilterResults(parameters: FilterParams) {
-        if (parameters.succeeded) {
+    suspend fun sendFilterResults(result: FilterResult) {
+        if (result.succeeded) {
             _editState.update {
                 it.copy(
                     currentSelectedTracks = mutableListOf(),
@@ -615,6 +609,18 @@ class MapViewModel @Inject constructor(
                     version = System.nanoTime()
                 )
             }
+        }
+
+        // TODO Reload track
+        result.update.forEach {
+            when(it){
+                is WaypointUpdate.FilteredTrack -> {
+                    displayTrackUseCase(it.trackId, false)
+                }
+
+                else -> {}
+            }
+            _waypointEvents.emit(it)
         }
     }
 

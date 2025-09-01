@@ -191,6 +191,84 @@ interface TrackDao {
     @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId = :trackId")
     suspend fun countWaypointsForTrack(trackId: Int): Int
 
+    /*@Query(
+        """
+    DELETE FROM waypoints
+    WHERE waypointId IN (
+        SELECT waypointId FROM (
+            SELECT waypointId, ROW_NUMBER() OVER (ORDER BY waypointId ASC) AS rn
+            FROM waypoints
+            WHERE trackOwnerId = :trackId
+              AND waypointId BETWEEN :p1 AND :p2
+        )
+        WHERE rn % :step = 0
+    )
+"""
+    )
+    suspend fun removeWaypointsByStep(trackId: Int, step: Int, p1: Double, p2: Double)
+
+    @Query(
+        """
+    DELETE FROM waypoints
+    WHERE waypointId IN (
+        SELECT waypointId FROM (
+            SELECT waypointId, ROW_NUMBER() OVER (ORDER BY waypointId ASC) AS rn
+            FROM waypoints
+            WHERE trackOwnerId = :trackId
+        )
+        WHERE rn % :step = 0
+    )
+"""
+    )
+    suspend fun removeWaypointsByStep(trackId: Int, step: Int)*/
+
+
+    @Query("""
+    DELETE FROM waypoints
+    WHERE trackOwnerId = :trackId
+      AND waypointId BETWEEN :p1 AND :p2
+      AND waypointId NOT IN (
+          SELECT waypointId FROM (
+              SELECT waypointId, ROW_NUMBER() OVER (ORDER BY waypointId ASC) AS rn
+              FROM waypoints
+              WHERE trackOwnerId = :trackId
+                AND waypointId BETWEEN :p1 AND :p2
+          )
+          WHERE rn % :step = 0 OR waypointId = :p1 OR waypointId = :p2
+          )
+    """)
+    suspend fun removeWaypointsByStep(
+        trackId: Int,
+        step: Int,
+        p1: Double,
+        p2: Double
+    )
+
+    @Query("""
+    DELETE FROM waypoints
+    WHERE trackOwnerId = :trackId
+      AND waypointId NOT IN (
+          SELECT waypointId FROM (
+              SELECT waypointId,
+                     ROW_NUMBER() OVER (ORDER BY waypointId ASC) AS rn,
+                     COUNT(*) OVER () AS total
+              FROM waypoints
+              WHERE trackOwnerId = :trackId
+          )
+          WHERE rn % :step = 0 
+             OR rn = 1   
+             OR rn = total
+      )
+""")
+    suspend fun removeWaypointsByStep(
+        trackId: Int,
+        step: Int
+    )
+
+
+
+
+
     @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId in (:trackIds)")
     suspend fun countWaypointsForTracks(trackIds: List<Int>): Int
 
