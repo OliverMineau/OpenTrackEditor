@@ -99,4 +99,7 @@ interface EditTrackRepository {
     suspend fun removeWaypointsByStep(trackId: Int, step: Int, p1: Double, p2: Double)
     suspend fun removeWaypointsByStep(trackId: Int, step: Int)
 
+    suspend fun reverseTrack(trackId: Int, p1: Double, p2: Double)
+    suspend fun reverseTrack(trackId: Int)
+
 }

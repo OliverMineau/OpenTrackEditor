@@ -1,17 +1,13 @@
 package com.minapps.trackeditor.feature_map_editor.tools.filter
 
-import android.util.Log
-import com.minapps.trackeditor.R
+
 import com.minapps.trackeditor.core.domain.tool.EditorTool
 import com.minapps.trackeditor.core.domain.tool.ToolUiContext
 import com.minapps.trackeditor.core.domain.type.ActionType
 import com.minapps.trackeditor.core.domain.usecase.GetSelectedWaypointsIntervalSizeUseCase
-import com.minapps.trackeditor.feature_map_editor.presentation.MapViewModel
 import com.minapps.trackeditor.feature_map_editor.presentation.interaction.ToolResultListener
-import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.model.FilterParams
 import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.model.FilterResult
 import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.model.FilterSelection
-import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.model.FilterType
 import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.usecase.ApplyFilterUseCase
 import com.minapps.trackeditor.feature_map_editor.tools.filter.presentation.FilterDialog
 import jakarta.inject.Inject
@@ -34,7 +30,7 @@ class FilterTool @Inject constructor (
         val hasSelectedTracks = editState.currentSelectedTracks.size != 1
         val hasSelectedPoints = editState.currentSelectedPoints.size == 2
 
-        var trackId: Int? = null
+        var trackId: Int?
         var pointA: Double? = null
         var pointB: Double? = null
 
@@ -51,6 +47,7 @@ class FilterTool @Inject constructor (
         var point2: Pair<Int, Double>
         var waypointCount: Int?
 
+        // Check selected points
         if(hasSelectedPoints){
             point1 = editState.currentSelectedPoints[0]
             point2 = editState.currentSelectedPoints[1]
@@ -79,6 +76,7 @@ class FilterTool @Inject constructor (
             return
         }
 
+        // Remove end waypoints to count
         waypointCount -= 2
 
         // Ask the user for parameters
@@ -87,12 +85,12 @@ class FilterTool @Inject constructor (
 
             // Apply filtering logic
             val selection = FilterSelection(trackId, pointA, pointB)
-
             val result = applyFilterUseCase(selection,params)
 
             // Provide feedback to the user
             uiContext.showToast("${params.filterType?.label} filtering ${if(result?.succeeded == true) "applied" else "failed"}")
 
+            // Send back results
             listener.onToolResult(ActionType.FILTER, result)
             return
         }

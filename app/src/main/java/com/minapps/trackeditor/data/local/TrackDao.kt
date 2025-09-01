@@ -43,20 +43,12 @@ interface TrackDao {
 
     @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId = :trackId AND latitude BETWEEN :latSouth AND :latNorth AND longitude BETWEEN :lonWest AND :lonEast")
     suspend fun getVisibleTrackWaypointsCount(
-        trackId: Int,
-        latNorth: Double,
-        latSouth: Double,
-        lonWest: Double,
-        lonEast: Double
+        trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double
     ): Double
 
     @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId AND latitude BETWEEN :latSouth AND :latNorth AND longitude BETWEEN :lonWest AND :lonEast ORDER BY waypointId ASC")
     suspend fun getVisibleTrackWaypoints(
-        trackId: Int,
-        latNorth: Double,
-        latSouth: Double,
-        lonWest: Double,
-        lonEast: Double
+        trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double
     ): List<WaypointEntity>
 
     @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId AND latitude BETWEEN :latSouth AND :latNorth AND longitude BETWEEN :lonWest AND :lonEast ORDER BY waypointId ASC LIMIT :chunkSize OFFSET :offset")
@@ -79,10 +71,7 @@ interface TrackDao {
 """
     )
     suspend fun getTracksWithVisibleWaypoints(
-        latNorth: Double,
-        latSouth: Double,
-        lonWest: Double,
-        lonEast: Double
+        latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double
     ): List<WaypointEntity>
 
     @Query(
@@ -94,10 +83,7 @@ interface TrackDao {
 """
     )
     suspend fun getTracksWithVisibleWaypointsCount(
-        latNorth: Double,
-        latSouth: Double,
-        lonWest: Double,
-        lonEast: Double
+        latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double
     ): Double
 
     @Query(
@@ -109,10 +95,7 @@ interface TrackDao {
 """
     )
     suspend fun getTrackIdsWithVisibleWaypoints(
-        latNorth: Double,
-        latSouth: Double,
-        lonWest: Double,
-        lonEast: Double
+        latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double
     ): List<Int>
 
 
@@ -140,9 +123,7 @@ interface TrackDao {
         val existing = getTrackById(waypoint.trackOwnerId)
         val trackId = existing?.trackId ?: insertTrack(
             TrackEntity(
-                name = "Untitled Track",
-                description = null,
-                createdAt = System.currentTimeMillis()
+                name = "Untitled Track", description = null, createdAt = System.currentTimeMillis()
             )
         ).toInt()
         insertWaypoint(waypoint.copy(trackOwnerId = trackId))
@@ -191,39 +172,9 @@ interface TrackDao {
     @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId = :trackId")
     suspend fun countWaypointsForTrack(trackId: Int): Int
 
-    /*@Query(
-        """
-    DELETE FROM waypoints
-    WHERE waypointId IN (
-        SELECT waypointId FROM (
-            SELECT waypointId, ROW_NUMBER() OVER (ORDER BY waypointId ASC) AS rn
-            FROM waypoints
-            WHERE trackOwnerId = :trackId
-              AND waypointId BETWEEN :p1 AND :p2
-        )
-        WHERE rn % :step = 0
-    )
-"""
-    )
-    suspend fun removeWaypointsByStep(trackId: Int, step: Int, p1: Double, p2: Double)
 
     @Query(
         """
-    DELETE FROM waypoints
-    WHERE waypointId IN (
-        SELECT waypointId FROM (
-            SELECT waypointId, ROW_NUMBER() OVER (ORDER BY waypointId ASC) AS rn
-            FROM waypoints
-            WHERE trackOwnerId = :trackId
-        )
-        WHERE rn % :step = 0
-    )
-"""
-    )
-    suspend fun removeWaypointsByStep(trackId: Int, step: Int)*/
-
-
-    @Query("""
     DELETE FROM waypoints
     WHERE trackOwnerId = :trackId
       AND waypointId BETWEEN :p1 AND :p2
@@ -236,15 +187,14 @@ interface TrackDao {
           )
           WHERE rn % :step = 0 OR waypointId = :p1 OR waypointId = :p2
           )
-    """)
+    """
+    )
     suspend fun removeWaypointsByStep(
-        trackId: Int,
-        step: Int,
-        p1: Double,
-        p2: Double
+        trackId: Int, step: Int, p1: Double, p2: Double
     )
 
-    @Query("""
+    @Query(
+        """
     DELETE FROM waypoints
     WHERE trackOwnerId = :trackId
       AND waypointId NOT IN (
@@ -259,14 +209,11 @@ interface TrackDao {
              OR rn = 1   
              OR rn = total
       )
-""")
-    suspend fun removeWaypointsByStep(
-        trackId: Int,
-        step: Int
+"""
     )
-
-
-
+    suspend fun removeWaypointsByStep(
+        trackId: Int, step: Int
+    )
 
 
     @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId in (:trackIds)")
@@ -308,12 +255,7 @@ interface TrackDao {
     """
     )
     suspend fun getWaypointsInBoundingBox(
-        trackId: Int,
-        south: Double,
-        north: Double,
-        west: Double,
-        east: Double,
-        step: Int = 1
+        trackId: Int, south: Double, north: Double, west: Double, east: Double, step: Int = 1
     ): List<WaypointEntity>
 
 
@@ -348,9 +290,7 @@ interface TrackDao {
         """
     )
     suspend fun reassignIdsAscending(
-        trackId: Int,
-        newStart: Double,
-        indexDescending: Boolean
+        trackId: Int, newStart: Double, indexDescending: Boolean
     )
 
 
@@ -376,9 +316,7 @@ interface TrackDao {
         """
     )
     suspend fun reassignIdsDescending(
-        trackId: Int,
-        newStart: Double,
-        indexDescending: Boolean
+        trackId: Int, newStart: Double, indexDescending: Boolean
     )
 
     @Transaction
@@ -414,5 +352,75 @@ interface TrackDao {
     """
     )
     suspend fun getIntervalSize(trackId: Int, p1: Double, p2: Double): Int
+
+
+    @Transaction
+    suspend fun reverseTrack(trackId: Int) {
+        // Phase 1: Shift IDs out of the way
+        shiftIds(trackId)
+
+        // Phase 2: Reassign reversed IDs
+        reassignReversedIds(trackId)
+    }
+
+    @Query(
+        """
+        UPDATE waypoints
+        SET waypointId = waypointId + 1000000
+        WHERE trackOwnerId = :trackId
+    """
+    )
+    suspend fun shiftIds(trackId: Int)
+
+    @Query(
+        """
+        UPDATE waypoints
+        SET waypointId = (
+            (SELECT (MIN(waypointId) - 1000000) + (MAX(waypointId) - 1000000)
+             FROM waypoints WHERE trackOwnerId = :trackId
+            ) - (waypointId - 1000000)
+        )
+        WHERE trackOwnerId = :trackId
+    """
+    )
+    suspend fun reassignReversedIds(trackId: Int)
+
+
+    @Transaction
+    suspend fun reverseTrack(trackId: Int, p1: Double, p2: Double) {
+        // Phase 1: Shift IDs out of the way
+        shiftIds(trackId, p1, p2)
+
+        // Phase 2: Reassign reversed IDs
+        reassignReversedIds(trackId, p1, p2)
+    }
+
+    @Query(
+        """
+        UPDATE waypoints
+        SET waypointId = waypointId + 1000000
+        WHERE trackOwnerId = :trackId
+          AND waypointId BETWEEN :p1 AND :p2
+    """
+    )
+    suspend fun shiftIds(trackId: Int, p1: Double, p2: Double)
+
+    @Query(
+        """
+        UPDATE waypoints
+        SET waypointId = (
+            (SELECT (MIN(waypointId) - 1000000) + (MAX(waypointId) - 1000000)
+             FROM waypoints
+             WHERE trackOwnerId = :trackId
+               AND waypointId BETWEEN (:p1 + 1000000) AND (:p2 + 1000000)
+            ) - (waypointId - 1000000)
+        )
+        WHERE trackOwnerId = :trackId
+          AND waypointId BETWEEN (:p1 + 1000000) AND (:p2 + 1000000)
+    """
+    )
+    suspend fun reassignReversedIds(trackId: Int, p1: Double, p2: Double)
+
+
 }
 

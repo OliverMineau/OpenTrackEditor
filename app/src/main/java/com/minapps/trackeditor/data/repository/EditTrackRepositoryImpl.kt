@@ -223,4 +223,12 @@ class EditTrackRepositoryImpl @Inject constructor(
         dao.removeWaypointsByStep(trackId, step)
     }
 
+    override suspend fun reverseTrack(trackId: Int, p1: Double, p2: Double){
+        dao.reverseTrack(trackId, p1, p2)
+    }
+
+    override suspend fun reverseTrack(trackId: Int){
+        dao.reverseTrack(trackId)
+    }
+
 }

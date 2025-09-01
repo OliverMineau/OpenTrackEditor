@@ -9,6 +9,7 @@ class RamerDouglasPeuckerUseCase @Inject constructor(
 ) {
 
     operator fun invoke() : Boolean {
+        // TODO
         return true
     }
 }

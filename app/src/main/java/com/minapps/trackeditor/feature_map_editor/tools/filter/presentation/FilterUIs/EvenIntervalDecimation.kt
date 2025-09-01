@@ -29,7 +29,7 @@ class EvenIntervalDecimation : FilterUI() {
             }
         }
 
-        //Send default value
+        // Send default value when selected
         onValueChange(FilterType.EVEN_INTERVAL_DECIMATION((waypointCount / 2)))
 
         val layout = LinearLayout(context).apply {

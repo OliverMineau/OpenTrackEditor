@@ -32,8 +32,6 @@ class EvenIntervalDecimationUseCase @Inject constructor(
 
         val step = pointCount / totalWaypoints
 
-        Log.d("Filter", "Remove every $step")
-
         if (selection.pointA == null || selection.pointB == null) {
             repository.removeWaypointsByStep(selection.trackId, step)
         } else {

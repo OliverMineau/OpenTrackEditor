@@ -13,7 +13,6 @@ class JoinTool @Inject constructor (
     private val joinTracksUseCase: JoinTracksUseCase,
 ) : EditorTool {
 
-
     override suspend fun launch(
         listener: ToolResultListener,
         uiContext: ToolUiContext,

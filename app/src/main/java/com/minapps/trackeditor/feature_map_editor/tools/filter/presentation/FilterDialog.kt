@@ -42,19 +42,24 @@ import kotlin.coroutines.resume
  */
 class FilterDialog(val waypointCount: Int) : ToolDialog<FilterParams> {
 
+    // If we want to display potential size
     //      Waypoint   Trackpoint
     //GPX	80–150 B	90–200 B	Verbose, every <trkpt> has full XML tags
     //KML	100–150 B	20–30 B	    Uses single <coordinates> block for all points
 
 
     override val title: String = "Filter Track"
-
-    // Make these class-level so displayFilterUI can access them
     private lateinit var toolDescription: TextView
     private lateinit var container: LinearLayout
     private lateinit var filterSpinner: Spinner
     private var resultParameters: FilterType? = null
 
+    /**
+     * Show dialog
+     *
+     * @param context
+     * @return
+     */
     override suspend fun show(context: Any): FilterParams? {
         val activity = context as? Activity ?: return null
 

@@ -35,6 +35,7 @@ import com.minapps.trackeditor.feature_map_editor.tools.export.ExportTool
 import com.minapps.trackeditor.feature_map_editor.tools.filter.FilterTool
 import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.model.FilterResult
 import com.minapps.trackeditor.feature_map_editor.tools.join.JoinTool
+import com.minapps.trackeditor.feature_map_editor.tools.reverse.ReverseTool
 import com.minapps.trackeditor.feature_track_export.domain.model.ExportFormat
 import com.minapps.trackeditor.feature_track_import.domain.model.DataStreamProgress
 import com.minapps.trackeditor.feature_track_import.domain.usecase.TrackImportUseCase
@@ -51,6 +52,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.osmdroid.util.GeoPoint
+import kotlin.collections.forEach
 
 
 @HiltViewModel
@@ -72,6 +74,7 @@ class MapViewModel @Inject constructor(
     private val joinTool: JoinTool,
     private val deleteTool: DeleteTool,
     private val exportTool: ExportTool,
+    private val reverseTool: ReverseTool,
 
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
@@ -184,6 +187,7 @@ class MapViewModel @Inject constructor(
                     ActionType.JOIN -> joinTool
                     ActionType.DELETE -> deleteTool
                     ActionType.EXPORT -> exportTool
+                    ActionType.REVERSE -> reverseTool
                     else -> null
                 }
 
@@ -585,6 +589,11 @@ class MapViewModel @Inject constructor(
                 sendExportResults()
             }
 
+            ActionType.REVERSE -> {
+                result as WaypointUpdate?
+                sendReverseResults(result)
+            }
+
             else -> return
         }
 
@@ -611,7 +620,6 @@ class MapViewModel @Inject constructor(
             }
         }
 
-        // TODO Reload track
         result.update.forEach {
             when(it){
                 is WaypointUpdate.FilteredTrack -> {
@@ -636,6 +644,13 @@ class MapViewModel @Inject constructor(
         // Emit event to UI to show dialog with default filename
         val defaultTrackName = stringProvider.getString(R.string.track_no_name)
         _showExportDialog.emit(defaultTrackName)
+    }
+
+    private suspend fun sendReverseResults(result: WaypointUpdate?) {
+        when(result){
+            is WaypointUpdate.ReversedTrack -> displayTrackUseCase(result.trackId, false)
+            else -> return
+        }
     }
 
 

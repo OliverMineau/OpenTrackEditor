@@ -14,6 +14,8 @@ class ApplyFilterUseCase @Inject constructor(
     private val ramerDouglasPeuckerUseCase: RamerDouglasPeuckerUseCase,
     private val evenIntervalDecimationUseCase: EvenIntervalDecimationUseCase,
 ) {
+
+    // TODO Add remaining filters
     suspend operator fun invoke(selection : FilterSelection, params: FilterParams): FilterResult? {
         return when (params.filterType) {
             is FilterType.DISTANCE_BASED -> return null
