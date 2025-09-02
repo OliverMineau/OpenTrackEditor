@@ -6,6 +6,7 @@ import com.minapps.trackeditor.feature_track_export.data.formatter.GpxExporter
 import com.minapps.trackeditor.feature_track_import.data.factory.ImporterFactory
 import com.minapps.trackeditor.feature_track_import.data.factory.ImporterFactoryImpl
 import com.minapps.trackeditor.feature_track_import.data.parser.GpxParser
+import com.minapps.trackeditor.feature_track_import.data.parser.KmlParser
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -17,10 +18,12 @@ object ImportTrackProvidesModule {
 
     @Provides
     fun provideGpxParser(): GpxParser = GpxParser()
+    @Provides
+    fun provideKmlParser(): KmlParser = KmlParser()
 
     @Provides
     fun provideImporterFactory(
         gpxParser: GpxParser,
-        //kmlParser: KmlParser
-    ): ImporterFactory = ImporterFactoryImpl(gpxParser/*,kmlExporter*/)
+        kmlParser: KmlParser
+    ): ImporterFactory = ImporterFactoryImpl(gpxParser, kmlParser)
 }

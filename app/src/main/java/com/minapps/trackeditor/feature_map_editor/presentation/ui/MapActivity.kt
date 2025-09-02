@@ -124,15 +124,20 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
 
         // Initialize toolbox popup
         toolboxPopup =
-            ToolboxPopup(this,findViewById(R.id.popup_container), layoutInflater, lifecycleScope, this)
+            ToolboxPopup(
+                this,
+                findViewById(R.id.popup_container),
+                layoutInflater,
+                lifecycleScope,
+                this
+            )
 
         // Start observing ViewModel state flows
         observeViewModel()
 
         handleIntent(intent)
+
     }
-
-
 
 
     private fun requestLocationPermissionIfNeeded() {
@@ -286,8 +291,8 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
 
                 launch {
                     mapViewModel.showExportDialog.collect { defaultFilename ->
-                        showSaveFileDialog(this@MapActivity) { fileName, fileExtension, exportAll ->
-                            mapViewModel.toolExport(fileName)
+                        showSaveFileDialog(this@MapActivity) { fileName, exportFormat, exportAll ->
+                            mapViewModel.toolExport(fileName, exportFormat)
                         }
                     }
                 }
@@ -315,7 +320,14 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
 
                 launch {
                     mapViewModel.progressState.collect { progressData ->
-                        handleProgressEvent(progressData)
+                        //handleProgressEvent(progressData)
+                        handleLoadingEvent(progressData)
+                    }
+                }
+
+                launch {
+                    mapViewModel.toastEvents.collect { message ->
+                        showToastEvent(message)
                     }
                 }
             }
@@ -350,35 +362,46 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
             mapRenderer.clearAllSelections()
         }
 
-        if(event.currentSelectedTracks.isEmpty()){
+        if (event.currentSelectedTracks.isEmpty()) {
             mapRenderer.deselectTracks()
         }
     }
 
-    //TODO BUG progress somewhere
-    fun handleProgressEvent(data: ProgressData) {
 
-        if (data.message != null) {
-            Toast.makeText(this, data.message, Toast.LENGTH_SHORT).show()
-        }
-
+    fun handleLoadingEvent(data: ProgressData) {
         val progressBar = binding.progressBar
         val progressTextView = binding.progressTextView
-        if (data.isDisplayed) {
-            progressBar.visibility = View.VISIBLE
-            progressTextView.visibility = View.VISIBLE
-        } else {
-            Log.d("debug", "Mapacti, set progress 0")
-            progressBar.setProgress(0, false)
-            progressTextView.text = "0%"
-            progressBar.visibility = View.GONE
-            progressTextView.visibility = View.GONE
-            return
-        }
 
-        progressBar.setProgress(data.progress, true)
-        progressTextView.text = "${data.progress}%"
+        val show = data.isDisplayed
+
+        if (show) {
+            if (!data.isDeterminate) {
+                // Indeterminate mode
+                progressBar.isIndeterminate = true
+                progressTextView.text = data.message
+                progressTextView.visibility = View.VISIBLE
+            } else {
+                // Determinate mode
+                progressBar.isIndeterminate = false
+                progressBar.setProgress(data.progress, true)
+
+                val text =
+                    "${if (data.message == null) "" else "${data.message} - "}${data.progress}%"
+                progressTextView.text = text
+                progressTextView.visibility = View.VISIBLE
+            }
+
+            progressBar.visibility = View.VISIBLE
+
+        } else {
+            progressTextView.visibility = View.GONE
+            progressBar.isIndeterminate = false
+            progressBar.setProgress(0, false)
+            progressBar.visibility = View.GONE
+
+        }
     }
+
 
     private fun updateSelectedToolUI(tool: ActionType) {
         val navBinding = BottomNavigationBinding.bind(binding.root)
@@ -549,6 +572,10 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
         }
     }
 
+    fun showToastEvent(message: String){
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
 
     /************* EditorTool interface Functions *************/
 
@@ -571,7 +598,7 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
     override fun showToast(message: String) =
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
 
-    override fun getEditState(): EditState{
+    override fun getEditState(): EditState {
         return mapViewModel.editState.value
     }
 

@@ -55,6 +55,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.osmdroid.util.GeoPoint
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.collections.forEach
 
 
@@ -98,6 +101,9 @@ class MapViewModel @Inject constructor(
     // Expose progress (Import, Export)
     private val _progressState = MutableStateFlow(ProgressData())
     val progressState: StateFlow<ProgressData> = _progressState
+
+    private val _toastEvents = MutableSharedFlow<String>()
+    val toastEvents: MutableSharedFlow<String> = _toastEvents
 
     // Expose selected export parameters
     private val _showExportDialog = MutableSharedFlow<String>()
@@ -157,7 +163,7 @@ class MapViewModel @Inject constructor(
             //Make MapViewModel listen to changes on "repository.addedTracks"
             repository.addedTracks.collect { (trackId, center) ->
                 //If added load waypoints of given track id
-                loadTrackWaypoints(trackId, center)
+                loadTrackWaypointsAndUpdate(trackId, center)
             }
 
         }
@@ -266,9 +272,21 @@ class MapViewModel @Inject constructor(
      *
      * @param trackId
      */
+    suspend fun loadTrackWaypointsAndUpdate(trackId: Int, center: Boolean) {
+
+        _progressState.update {
+            ProgressData(progress = 0, isDisplayed = true, isDeterminate = false, message = "Processing tracks")
+        }
+
+        loadTrackWaypoints(trackId, center)
+
+        _progressState.update {
+            ProgressData(progress = 0, isDisplayed = false, isDeterminate = false, message = null)
+        }
+    }
+
     suspend fun loadTrackWaypoints(trackId: Int, center: Boolean) {
         val waypoints = getTrackWaypointsUseCase(trackId, null, null, null, null)
-
         if (waypoints.isNotEmpty()) {
             //Reemit points for mapActivity
             val points = waypoints.map { wp -> SimpleWaypoint(wp.id, wp.lat, wp.lng) }
@@ -360,9 +378,9 @@ class MapViewModel @Inject constructor(
     }
 
 
-    fun toolExport(fileName: String) {
+    fun toolExport(fileName: String, format: ExportFormat) {
 
-        val format = ExportFormat.GPX
+        //val format = ExportFormat.GPX
 
         viewModelScope.launch {
             val trackIds = editState.value.currentSelectedTracks
@@ -372,7 +390,7 @@ class MapViewModel @Inject constructor(
             }
 
             Log.d("debug", "Progress show")
-            _progressState.update { it.copy(isDisplayed = true) }
+            _progressState.update { ProgressData(progress = 0, isDisplayed = true, isDeterminate = true, message = null) }
 
             exportTrackUseCase(trackIds, fileName, format).collect { exportResult ->
                 when (exportResult) {
@@ -380,31 +398,24 @@ class MapViewModel @Inject constructor(
                         Log.d("debug", "export success, mapvm")
                         Log.d("debug", "Progress close")
                         _progressState.update {
-                            it.copy(
-                                isDisplayed = false,
-                                message = "Track exported successfully !"
-                            )
+                            ProgressData(progress = 0, isDisplayed = false, isDeterminate = true, message = null)
                         }
+                        _toastEvents.emit("Track exported successfully !")
                     }
 
                     is DataStreamProgress.Error -> {
                         //_exportResult.emit(Result.failure(exportResult.message))
                         Log.d("debug", "export fail : ${exportResult.message}")
                         _progressState.update {
-                            it.copy(
-                                isDisplayed = false,
-                                message = "Exporting track failed."
-                            )
+                            ProgressData(progress = 0, isDisplayed = false, isDeterminate = true, message = null)
                         }
+                        _toastEvents.emit("Exporting track failed.")
                     }
 
                     is DataStreamProgress.Progress -> {
                         Log.d("debug", "export progress ${exportResult.percent}, mapvm")
                         _progressState.update {
-                            it.copy(
-                                progress = exportResult.percent,
-                                message = null
-                            )
+                            ProgressData(progress = exportResult.percent, isDisplayed = false, isDeterminate = true, message = "Exporting track")
                         }
                     }
                 }
@@ -418,45 +429,42 @@ class MapViewModel @Inject constructor(
 
         viewModelScope.launch {
             trackImportUseCase(uri).collect { importProgress ->
-                _progressState.update { it.copy(isDisplayed = true) }
-
+                _progressState.update {ProgressData(progress = 0, isDisplayed = true, isDeterminate = true, message = null)
+                }
                 when (importProgress) {
                     is DataStreamProgress.Completed -> {
 
                         var isFirst = true
                         for (id in importProgress.trackIds) {
-                            val displayed = displayTrackUseCase(id, isFirst)
+
+                            loadTrackWaypoints(id, isFirst)
                             isFirst = false
-                            _progressState.update {
-                                it.copy(
-                                    isDisplayed = false,
-                                    message = "Imported track successfully"
-                                )
-                            }
+
                             Log.d(
                                 "debug",
-                                "VM received finished, trackID:${id}, displayed:$displayed"
+                                "VM received finished, trackID:${id}, displayed true"
                             )
                         }
+
+                        _progressState.update {
+                            ProgressData(progress = 0, isDisplayed = false, isDeterminate = true, message = null)
+                        }
+
+                        _toastEvents.emit("Imported track successfully")
                     }
 
                     is DataStreamProgress.Error -> {
                         Log.d("debug", "VM received ERROR! ${importProgress.message}")
                         _progressState.update {
-                            it.copy(
-                                isDisplayed = false,
-                                message = "Importing failed"
-                            )
+                            ProgressData(progress = 0, isDisplayed = false, isDeterminate = true, message = null)
                         }
+                        _toastEvents.emit("Importing track failed")
                     }
 
                     is DataStreamProgress.Progress -> {
                         Log.d("debug", "VM received progress : ${importProgress.percent}%")
                         _progressState.update {
-                            it.copy(
-                                progress = importProgress.percent,
-                                message = null
-                            )
+                            ProgressData(progress = importProgress.percent, isDisplayed = true, isDeterminate = true, message = "Importing track")
                         }
                     }
                 }
@@ -494,6 +502,10 @@ class MapViewModel @Inject constructor(
 
             hasStartedCalculationsInThread = true
 
+            _progressState.update {
+                ProgressData(progress = 0, isDisplayed = true, isDeterminate = false, message = "Processing track view")
+            }
+
             val result = withContext(Dispatchers.Default) {
                 handleMapViewportChangeUseCase(
                     viewport,
@@ -512,6 +524,10 @@ class MapViewModel @Inject constructor(
                     val points = waypoints.map { wp -> SimpleWaypoint(wp.id, wp.lat, wp.lng) }
                     _waypointEvents.emit(WaypointUpdate.ViewChanged(trackId, points))
                 }
+            }
+
+            _progressState.update {
+                ProgressData(progress = 0, isDisplayed = false, isDeterminate = false, message = null)
             }
 
             hasStartedCalculationsInThread = false

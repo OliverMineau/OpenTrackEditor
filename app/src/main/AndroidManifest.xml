@@ -39,6 +39,8 @@
                 <!-- file:// and content:// URIs -->
                 <data android:scheme="file" android:host="*" android:pathPattern=".*\\.gpx"/>
                 <data android:scheme="content" android:host="*" android:pathPattern=".*\\.gpx"/>
+                <data android:scheme="file" android:host="*" android:pathPattern=".*\\.kml"/>
+                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.kml"/>
                 <data android:mimeType="*/*"/>
             </intent-filter>
 

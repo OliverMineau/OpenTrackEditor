@@ -3,6 +3,7 @@ package com.minapps.trackeditor.feature_track_export.di
 import com.minapps.trackeditor.feature_track_export.data.factory.ExporterFactory
 import com.minapps.trackeditor.feature_track_export.data.factory.ExporterFactoryImpl
 import com.minapps.trackeditor.feature_track_export.data.formatter.GpxExporter
+import com.minapps.trackeditor.feature_track_export.data.formatter.KmlExporter
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,8 +17,11 @@ object ExportTrackProvidesModule {
     fun provideGpxExporter(): GpxExporter = GpxExporter()
 
     @Provides
+    fun provideKmlExporter(): KmlExporter = KmlExporter()
+
+    @Provides
     fun provideExporterFactory(
         gpxExporter: GpxExporter,
-        //kmlExporter: KmlExporter
-    ): ExporterFactory = ExporterFactoryImpl(gpxExporter/*,kmlExporter*/)
+        kmlExporter: KmlExporter
+    ): ExporterFactory = ExporterFactoryImpl(gpxExporter,kmlExporter)
 }

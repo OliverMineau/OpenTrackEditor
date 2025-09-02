@@ -66,6 +66,8 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/progress_bar"
         android:text=""
+        android:gravity="center"
+        android:textAlignment="center"
         android:textColor="@color/black"/>
 
     <com.google.android.material.progressindicator.LinearProgressIndicator

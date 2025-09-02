@@ -6,6 +6,7 @@ import android.util.Log
 import com.minapps.trackeditor.core.domain.model.Track
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.feature_map_editor.presentation.util.CountingInputStream
+import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import org.xmlpull.v1.XmlPullParser
@@ -18,7 +19,7 @@ import java.io.InputStream
  * Parser implementation for GPX files.
  * Reads GPX XML data from the provided Uri and converts it to an ImportedTrack.
  */
-class GpxParser : TrackParser {
+class GpxParser @Inject constructor() : TrackParser {
 
     /**
      * Checks if the file Uri corresponds to a GPX file by extension.
@@ -56,7 +57,6 @@ class GpxParser : TrackParser {
             var lon = 0.0
             var ele: Double? = null
             var time: String? = null
-            var hasEmitedTrack = false
 
             while (eventType != XmlPullParser.END_DOCUMENT) {
                 when (eventType) {
@@ -71,12 +71,6 @@ class GpxParser : TrackParser {
                             }
 
                             "trkpt" -> {
-                                // TODO Has to be changed, only parses one track
-                                /*if (!hasEmitedTrack) {
-                                    emit(ParsedData.TrackMetadata(Track(0, name, "", 0, null)))
-                                    hasEmitedTrack = true
-                                }*/
-
                                 lat = parser.getAttributeValue(null, "lat").toDouble()
                                 lon = parser.getAttributeValue(null, "lon").toDouble()
                                 ele = null

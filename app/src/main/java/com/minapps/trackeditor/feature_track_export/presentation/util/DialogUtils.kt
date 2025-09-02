@@ -9,10 +9,11 @@ import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import com.minapps.trackeditor.R
+import com.minapps.trackeditor.feature_track_export.domain.model.ExportFormat
 
 fun showSaveFileDialog(
     context: Context,
-    onFileNameEntered: (String, String, Boolean) -> Unit // returns fileName + chosen extension
+    onFileNameEntered: (String, ExportFormat, Boolean) -> Unit // returns fileName + chosen extension
 ) {
     val input = EditText(context).apply {
         hint = "Enter file name (without extension)"
@@ -22,7 +23,7 @@ fun showSaveFileDialog(
         )
     }
 
-    val spinner = createRoundedSpinner(context, listOf("GPX", "KML"))
+    val spinner = createRoundedSpinner(context, ExportFormat.entries.map { it.name })
 
     val checkboxEAT = CheckBox(context).apply { text = "Export all tracks" }
 
@@ -42,8 +43,11 @@ fun showSaveFileDialog(
             val fileName = input.text.toString().trim()
             val type = spinner.selectedItem.toString().lowercase()
 
+            val selectedName = spinner.selectedItem.toString()
+            val format = ExportFormat.valueOf(selectedName)
+
             if (fileName.isNotEmpty() && isAllowed(fileName)) {
-                onFileNameEntered("$fileName.$type", type, checkboxEAT.isChecked)
+                onFileNameEntered("$fileName.$type", format, checkboxEAT.isChecked)
             } else {
                 val msg = if (fileName.isEmpty())
                     "File name cannot be empty"

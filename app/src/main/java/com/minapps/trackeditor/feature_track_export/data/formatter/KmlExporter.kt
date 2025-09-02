@@ -8,13 +8,13 @@ import java.util.Locale
 import kotlin.text.iterator
 
 /**
- * GPX Exporter
- * Creates GPX file from in app data
+ * KML Exporter
+ * Creates KML file from in app data
  *
- * TODO Populate all possible GPX metadata
+ * TODO Populate all possible KML metadata
  *
  */
-class GpxExporter @Inject constructor() : TrackExporter {
+class KmlExporter @Inject constructor() : TrackExporter {
 
     // Export File Header
     override fun exportHeader(
@@ -24,38 +24,30 @@ class GpxExporter @Inject constructor() : TrackExporter {
         writer.write("\n")
         writer.write(
             """
-    <gpx
-        version="1.1"
-        creator="OpenTrackEditorApp"
-        xmlns="http://www.topografix.com/GPX/1/1"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd"
-    >
-    """.trimIndent()
+                <kml xmlns="http://www.opengis.net/kml/2.2">
+                <Document>
+                <name>OpenTrackEditor</name>
+                <description>
+                <![CDATA[
+                  Edited with <a href="https://olivermineau.com/opentrackeditor">OpenTrackEditor</a>
+                ]]>
+                </description>
+            """.trimIndent()
         )
         writer.write("\n")
-        writer.write(
-            """
-    <metadata>
-      <link href="https://olivermineau.com/opentrackeditor">
-        <text>Edited with OpenTrackEditor, an OpenSource app</text>
-        <type>website</type>
-      </link>
-    </metadata>
-    """.trimIndent()
-        )
-        writer.write("\n")
-
     }
+
 
     // Export Track Segment Header
     override fun exportTrackSegmentHeader(name: String, writer: Writer) {
-        writer.write("<trk>")
+        writer.write("<Placemark>")
         writer.write("\n")
 
         writer.write("  <name>${escapeXml(name)}</name>")
         writer.write("\n")
-        writer.write("  <trkseg>")
+        writer.write("  <LineString>")
+        writer.write("\n")
+        writer.write("      <coordinates>")
         writer.write("\n")
     }
 
@@ -68,37 +60,26 @@ class GpxExporter @Inject constructor() : TrackExporter {
             val latStr = String.format(Locale.US, "%f", wp.lat)
             val lonStr = String.format(Locale.US, "%f", wp.lng)
 
-            writer.write("    <trkpt lat=\"$latStr\" lon=\"$lonStr\">")
-            writer.write("\n")
-            wp.elv?.let {
-                writer.write("      <ele>${String.format(Locale.US, "%f", it)}</ele>")
-                writer.write("\n")
-            }
-
-            wp.time?.let {
-                writer.write("      <time>$it</time>")
-                writer.write("\n")
-            }
-
-            writer.write("    </trkpt>")
+            writer.write("    $lonStr,$latStr${if(wp.elv!=null) ",${wp.elv}" else ""}")
             writer.write("\n")
         }
-
-
     }
 
     // Export Track Segment Footer
     override fun exportTrackSegmentFooter(writer: Writer) {
-        writer.write("  </trkseg>")
+        writer.write("      </coordinates>")
         writer.write("\n")
-        writer.write("</trk>")
+        writer.write("  </LineString>")
+        writer.write("\n")
+        writer.write("</Placemark>")
         writer.write("\n")
     }
 
     // Export File Footer
     override fun exportFooter(writer: Writer) {
-        writer.write("</gpx>")
+        writer.write("</Document>")
         writer.write("\n")
+        writer.write("</kml>")
     }
 
     // Convert to safe string
