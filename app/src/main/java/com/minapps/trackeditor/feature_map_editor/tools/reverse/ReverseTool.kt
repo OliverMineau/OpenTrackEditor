@@ -25,7 +25,7 @@ class ReverseTool @Inject constructor(
         val points = uiContext.getEditState().currentSelectedPoints
 
         // Get track or point or error selection
-        val selectionType = SelectionUtil.getSelectionType(trackIds, points)
+        val selectionType = SelectionUtil.getSelectionType(trackIds, points, 1, null, true)
 
         when(selectionType){
             SelectionType.TRACK_ONLY , SelectionType.POINTS -> {

@@ -75,5 +75,5 @@ enum class ActionType(
     // Main Bottom Navigation
     VIEW(R.drawable.map_marker_24, "View", SelectionCount.ONE, ToolGroup.TRACK_EDITING, true),
     EDIT(R.drawable.file_edit_24, "Edit", SelectionCount.MULTIPLE, ToolGroup.TRACK_EDITING),
-    TOOLBOX(R.drawable.tools_24, "Toolbox", SelectionCount.MULTIPLE, ToolGroup.TRACK_EDITING),
+    TOOLBOX(R.drawable.tools_24, "Toolbox", SelectionCount.NONE, ToolGroup.TRACK_EDITING),
 }

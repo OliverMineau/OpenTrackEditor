@@ -14,6 +14,7 @@ import com.minapps.trackeditor.core.domain.type.InsertPosition
  */
 data class EditState(
     val currentSelectedTool: ActionType = ActionType.NONE,
+    val lastSelectedTool: ActionType = ActionType.NONE,
     val currentSelectedTracks: MutableList<Int> = mutableListOf(),
     val currentSelectedPoints: MutableList<Pair<Int, Double>> = mutableListOf(),
     val direction: InsertPosition = InsertPosition.BACK,

@@ -207,10 +207,10 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
                     val wasShown = toolboxPopup.show()
                     if (wasShown == 1) {
                         mapViewModel.onToolSelected(ActionType.TOOLBOX)
-                        true
+                        false
                     } else if (wasShown == 0) {
-                        mapViewModel.onToolSelected(ActionType.EDIT)
-                        clearBottomNavSelection(editNav)
+                        mapViewModel.onToolSelected(ActionType.TOOLBOX)
+                        //clearBottomNavSelection(editNav)
                         false
                     }
                     false

@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minapps.trackeditor.R
+import com.minapps.trackeditor.core.common.util.SelectionType
 import com.minapps.trackeditor.feature_map_editor.domain.model.EditState
 import com.minapps.trackeditor.feature_map_editor.domain.model.ProgressData
 import com.minapps.trackeditor.feature_map_editor.domain.model.SimpleWaypoint
@@ -18,6 +19,8 @@ import com.minapps.trackeditor.core.domain.type.ActionType
 import com.minapps.trackeditor.core.domain.type.DataDestination
 import com.minapps.trackeditor.core.domain.usecase.HandleMapViewportChangeUseCase
 import com.minapps.trackeditor.core.domain.usecase.Viewport
+import com.minapps.trackeditor.core.domain.util.SelectionCount
+import com.minapps.trackeditor.core.domain.util.ToolGroup
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointToSelectedTrackUseCase
 import com.minapps.trackeditor.feature_track_export.domain.usecase.ExportTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointUseCase
@@ -526,13 +529,9 @@ class MapViewModel @Inject constructor(
 
         hapticFeedback.vibrate(30)
 
-        var action = action
-        if (!isSelected) {
-            action = ActionType.EDIT
-        }
-
         viewModelScope.launch {
 
+            // Do not clear track and point selection lists
             val freezeSelection =
                 (action == ActionType.SELECT ||
                         action == ActionType.TOOLBOX ||
@@ -540,14 +539,22 @@ class MapViewModel @Inject constructor(
 
             _editState.update {
 
+                if(action.selectionCount == SelectionCount.NONE &&
+                    action != ActionType.ADD &&
+                    action != ActionType.REMOVE){
+                    return@launch
+                }
+
                 if (freezeSelection) {
                     it.copy(
                         currentSelectedTool = action,
+                        lastSelectedTool = editState.value.currentSelectedTool,
                         version = System.nanoTime()
                     )
                 } else {
                     it.copy(
                         currentSelectedTool = action,
+                        lastSelectedTool = editState.value.currentSelectedTool,
                         currentSelectedTracks = mutableListOf(),
                         currentSelectedPoints = mutableListOf(),
                         version = System.nanoTime()
@@ -556,8 +563,9 @@ class MapViewModel @Inject constructor(
 
             }
         }
-        Log.d("debug", "Selected ${action.label}, " +
-                "trakcs:${editState.value.currentSelectedTracks}, " +
+        Log.d("debug", "Selected ${editState.value.currentSelectedTool}, " +
+                "Last tool : ${editState.value.lastSelectedTool}, " +
+                "tracks:${editState.value.currentSelectedTracks}, " +
                 "points: ${editState.value.currentSelectedPoints}")
     }
 
