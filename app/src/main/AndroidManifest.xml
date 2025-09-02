@@ -9,6 +9,24 @@
 
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <queries>
+        <!-- For email apps -->
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
+
+        <!-- For web browsers -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
     <application
         android:name=".TrackEditorApp"
         android:allowBackup="true"

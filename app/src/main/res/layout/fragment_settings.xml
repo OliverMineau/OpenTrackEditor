@@ -1,0 +1,102 @@
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white"
+    android:clickable="true"
+    android:focusable="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <Space
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <ImageView
+            android:layout_width="100dp"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:src="@drawable/ote_shadow"
+            app:tint="@color/black" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:text="OpenTrackEditor"
+            android:textAlignment="center"
+            android:textColor="@color/black"
+            android:textSize="30sp"
+            android:textStyle="bold" />
+
+        <Space
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:justificationMode="inter_word"
+            android:paddingHorizontal="30dp"
+            android:text="@string/settings_info"
+            android:textAlignment="center"
+            android:textColor="@color/black"
+            android:textSize="15sp" />
+
+        <Space
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/mail_btn"
+                android:layout_width="20dp"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="50dp"
+                android:text=""
+                app:icon="@drawable/envelope_24"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                android:layout_weight="1"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/dev_btn"
+                android:layout_width="20dp"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="50dp"
+                android:text=""
+                app:icon="@drawable/code_window_24"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                android:layout_weight="1"/>
+        </LinearLayout>
+
+        <Space
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="2" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

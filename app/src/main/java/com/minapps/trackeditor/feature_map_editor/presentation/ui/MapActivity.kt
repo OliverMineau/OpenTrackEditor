@@ -47,6 +47,7 @@ import com.minapps.trackeditor.core.domain.util.ToolGroup
 import com.minapps.trackeditor.feature_map_editor.presentation.interaction.ToolResultListener
 import com.minapps.trackeditor.feature_map_editor.presentation.model.ActionDescriptor
 import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.model.FilterParams
+import com.minapps.trackeditor.feature_settings.presentation.SettingsFragment
 import com.minapps.trackeditor.feature_track_export.presentation.util.showSaveFileDialog
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -92,6 +93,7 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) centerMapOnMyLocationOnce()
         }
+
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -183,20 +185,29 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
                     editNav.visibility = View.VISIBLE
                     mapViewModel.onToolSelected(ActionType.EDIT)
                     editNav.post { clearBottomNavSelection(editNav) }
-
+                    hideSettings()
                 }
 
                 R.id.nav_add_track -> {
                     openFileExplorer()
                     mapViewModel.onToolSelected(ActionType.NONE)
+                    hideSettings()
                 }
 
                 R.id.nav_view -> {
                     mapViewModel.onToolSelected(ActionType.VIEW)
+                    hideSettings()
                 }
 
                 R.id.nav_settings -> {
                     mapViewModel.onToolSelected(ActionType.NONE)
+                    val fragment = SettingsFragment()
+
+                    // Load the fragment
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.settings_container, fragment)
+                        .addToBackStack(null) // optional, for back navigation
+                        .commit()
                 }
             }
             mapRenderer.selectTrack(null, false)
@@ -248,6 +259,15 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
                 }
 
             }
+        }
+    }
+
+    private fun hideSettings(){
+        val fragment = supportFragmentManager.findFragmentById(R.id.settings_container)
+        if (fragment != null) {
+            supportFragmentManager.beginTransaction()
+                .remove(fragment)
+                .commit()
         }
     }
 

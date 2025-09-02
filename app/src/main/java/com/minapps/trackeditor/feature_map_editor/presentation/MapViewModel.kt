@@ -3,6 +3,7 @@ package com.minapps.trackeditor.feature_map_editor.presentation
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minapps.trackeditor.R
@@ -63,6 +64,9 @@ import kotlin.collections.forEach
 
 @HiltViewModel
 class MapViewModel @Inject constructor(
+
+    private val savedStateHandle: SavedStateHandle,
+
     private val repository: EditTrackRepository,
     private val addWaypointUseCase: AddWaypointUseCase,
     private val clearAllUseCase: ClearAllUseCase,

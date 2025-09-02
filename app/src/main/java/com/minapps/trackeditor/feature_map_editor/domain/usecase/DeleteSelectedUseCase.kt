@@ -16,13 +16,14 @@ class DeleteSelectedUseCase @Inject constructor(
 
         return when {
 
+            // I prefer deleting whole track if only one point is selected
             // If one point selected
-            selectedPoints.size == 1 -> {
+            /*selectedPoints.size == 1 -> {
                 val point = selectedPoints.first()
                 // Delete point
                 deleteWaypointUseCase(point.first, point.second)
                 WaypointUpdate.RemovedById(point.first, point.second)
-            }
+            }*/
 
             // If two points selected delete segment
             selectedPoints.size == 2 -> {
@@ -33,7 +34,7 @@ class DeleteSelectedUseCase @Inject constructor(
             }
 
             // If only track.s selected
-            selectedPoints.isEmpty() && selectedTracks.isNotEmpty() -> {
+            selectedTracks.isNotEmpty() -> {
                 deleteTrackUseCase(selectedTracks)
                 WaypointUpdate.RemovedTracks(selectedTracks)
             }

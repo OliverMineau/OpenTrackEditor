@@ -1,4 +1,18 @@
 <resources>
     <string name="app_name">OpenTrackEditor</string>
     <string name="track_no_name">Untitled Track</string>
+
+    <string name="settings_info">Thank you for using OpenTrackEditor !\n\n
+        OpenTrackEditor started as a student project and has grown into an open-source tool thanks
+        to all of your feedback. We\'re constantly working to improve your experience, but we know that sometimes the feature
+        you need might not be available yet!\n\n
+        If that happens, we\'d love to hear from you. Send us an email with your feedback or
+        suggestions, or let us know if you encounter any bugs. Your input helps us make
+        OpenTrackEditor even better.\n\n\n\n
+
+        Want to help maintain and shape the future of this tool?
+    </string>
+
+    <string name="website_url">http://olivermineau.com/opentrackeditor</string>
+
 </resources>
