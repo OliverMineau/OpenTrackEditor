@@ -26,7 +26,6 @@
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
 
-
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
@@ -34,14 +33,27 @@
     <img src="images/ote_logo.png" alt="Logo" width="80" height="80">
   </a>
 
-<h3 align="center">OpenTrackEditor</h3>
+  <h3 align="center">OpenTrackEditor</h3>
 
   <p align="center">
-        A multifunctional tool to help you manage your GPS files !
+    A multifunctional tool to help you manage your GPS files !
     <br />
     <a href="https://github.com/OliverMineau/OpenTrackEditor"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
+  </p>
+
+  <p align="center">
+    <a href="https://play.google.com/store/apps/details?id=com.minapps.trackeditor">
+      <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" 
+           alt="Get it on Google Play" 
+           width="200"/>
+    </a>
+  </p>
+
+[![Downloads](https://playbadges.pavi2410.com/badge/downloads?id=com.minapps.trackeditor&pretty)](https://play.google.com/store/apps/details?id=com.minapps.trackeditor)
+
+    
+
+  <p align="center">
     <a href="https://github.com/OliverMineau/OpenTrackEditor">View Demo</a>
     &middot;
     <a href="https://github.com/OliverMineau/OpenTrackEditor/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
@@ -49,7 +61,6 @@
     <a href="https://github.com/OliverMineau/OpenTrackEditor/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
   </p>
 </div>
-
 
 
 <!-- TABLE OF CONTENTS -->
@@ -83,18 +94,30 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-<p align="center">
-<img src="images/preview.png" alt="Logo" width="100" height="200">
-</p>
-
 OpenTrackEditor started as a student project and has grown into an open-source Android tool thanks to all of your feedback. 
 
 This tool will help you manage your GPS files with an intuitive UI. Think of it as **LibreOffice for GPX and KML file.**
 
-The current features implemented are :
+Create your own tracks from scratch or load any .gpx or .kml file of any size into the app to begin the process. Tracks with millions of waypoints can be loaded and edited.
+
+
+
+<p align="center">
+<img src="images/preview.png" alt="Logo" width="120" height="240">
+<img src="images/previewImport.png" alt="Logo" width="120" height="240">
+<img src="images/previewSelection1.png" alt="Logo" width="120" height="240">
+<img src="images/previewFilter.png" alt="Logo" width="120" height="240">
+<img src="images/previewToolbox.png" alt="Logo" width="120" height="240">
+<img src="images/previewView.png" alt="Logo" width="120" height="240">
+<img src="images/previewExport.png" alt="Logo" width="120" height="240">
+
+</p>
+
+
+The current implemented features are :
     
     
-- **Edit tracks**
+- **Edit tracks :**
   - Move
   - Add
   - Delete
@@ -104,7 +127,7 @@ The current features implemented are :
     - **Even Interval Decimation :** Removes a fixed number of points evenly along the track to simplify it.
     - 🚧 **Many more filters to come**
   - 🚧 **Many more tools to come**
-- **Import / Export / Convert**
+- **Import / Export / Convert :**
   - GPX
   - KM
 
@@ -137,7 +160,6 @@ Follow these steps to set up the project locally and run it on your device or em
 1. Clone the repository
    ```sh
    git clone https://github.com/OliverMineau/OpenTrackEditor.git
-
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
