@@ -56,9 +56,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.osmdroid.util.GeoPoint
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlin.collections.forEach
 
 
@@ -172,23 +169,15 @@ class MapViewModel @Inject constructor(
 
         }
 
+        // List of the displayed tools
         val tools = listOf(
             ActionType.EXPORT,
-            ActionType.SCREENSHOT,
             ActionType.SPACER,
             ActionType.DELETE,
             ActionType.SPACER,
-            ActionType.ELEVATION,
-            ActionType.LAYERS,
-            ActionType.SPACER,
             ActionType.REVERSE,
-            ActionType.REMOVE_DUPS,
-            ActionType.REMOVE_BUGS,
-            ActionType.CUT,
             ActionType.JOIN,
-            ActionType.REDUCE_NOISE,
             ActionType.FILTER,
-            ActionType.MAGIC_FILTER,
             ActionType.SPACER
         )
 
