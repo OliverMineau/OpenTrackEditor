@@ -129,7 +129,7 @@ The current implemented features are :
   - 🚧 **Many more tools to come**
 - **Import / Export / Convert :**
   - GPX
-  - KM
+  - KLM
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -219,7 +219,7 @@ Here’s how to use OpenTrackEditor once installed :
     - Select tracks or segment
     - Click the reverse tool to reverse
 
-  - **Join tracks :** <img src="images/tools/reverse.svg" width="20" style="vertical-align:middle;"/>
+  - **Join tracks :** <img src="images/tools/join.svg" width="20" style="vertical-align:middle;"/>
     - Select the endpoints of two different tracks 
     - Click the join tool to combine them making one track
 
@@ -227,10 +227,6 @@ Here’s how to use OpenTrackEditor once installed :
     - Select track or segment
     - Click the filter tool
     - Choose which filter you want to apply
-
-  - **Reverse track or segment :** <img src="images/tools/reverse.svg" width="20" style="vertical-align:middle;"/>
-    - Select tracks or segment
-    - Click the reverse tool to reverse
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
