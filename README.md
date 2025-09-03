@@ -169,44 +169,102 @@ Follow these steps to set up the project locally and run it on your device or em
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-Here’s how to use OpenTrackEditor once installed:
+Here’s how to use OpenTrackEditor once installed :
 
-1. **Open a GPS file**  
-   - Tap “Open” and select a GPX or KML file from your device.
 
-2. **Edit your tracks**  
-   - ✅ Move points  
-   - ✅ Add new points  
-   - ✅ Delete points  
-   - ✅ Reverse or join tracks
 
-3. **Apply filters** (coming soon 🚧)  
-   - Even Interval Decimation  
-   - Kalman Filter  
-   - Moving Average  
-   - Distance Based  
-   - Ramer Douglas Peucker  
+- **Import a GPS file :** <img src="images/tools/import.svg" width="20" style="vertical-align:middle;"/>
+  - Select any .gpx or .kml files to import
+  - Wait for it to import and process your track
 
-4. **Export your tracks**  
-   - Save as GPX or KML for use in other apps.
+- **View map :** <img src="images/tools/view.svg" width="20" style="vertical-align:middle;"/>
+  - View your tracks
+  - All input is disabled
 
-<p align="center">
-  <img src="images/usage-example.png" alt="Editing a track in OpenTrackEditor" width="300">
-</p>
+- **Edit track :** <img src="images/tools/edit.svg" width="20" style="vertical-align:middle;"/>
+  - Open the editing navigation bar
 
-_For more examples and detailed instructions, see the [Documentation](https://example.com)_
+- **Move waypoints:** <img src="images/tools/move.svg" width="20" style="vertical-align:middle;"/>
+  - Long press a waypoint and drag it to the desired position
+
+- **Remove waypoint :** <img src="images/tools/deletePoint.svg" width="20" style="vertical-align:middle;"/>
+  - Click on a waypoint to delete it
+
+- **Add waypoint :** <img src="images/tools/addPoint.svg" width="20" style="vertical-align:middle;"/>
+  - If no track is selected :
+    - Click anywhere on the map to add a waypoint and create a track.
+  - If a track is selected :
+    - Click on the end points of the track to add waypoints from that end.
+    - Click on a wypoint in the middle of the track to add one besides it
+
+- **Select tracks or segments :** <img src="images/tools/select.svg" width="20" style="vertical-align:middle;"/>
+  - Select tracks :
+    - Click on the track itself to select it
+  - Select a segment :
+    - Click on a waypoint then click on a second waypoint of the same track
+
+- **Toolbox :** <img src="images/tools/toolbox.svg" width="20" style="vertical-align:middle;"/>
+  - Click to open the tool box. It contains all the other tools
+  - When opened a menu will appear on the right of the screen. Click on the arrows  in that menu to show the name of each tool.
+
+  - **Export tracks :** <img src="images/tools/export.svg" width="20" style="vertical-align:middle;"/>
+    - Select the tracks you want to export
+    - Click the export tool, choose a name and the desired format 
+
+  - **Delete tracks or segment :** <img src="images/tools/delete.svg" width="20" style="vertical-align:middle;"/>
+    - Select tracks or segment
+    - Click the delete tool to delete
+
+  - **Reverse track or segment :** <img src="images/tools/reverse.svg" width="20" style="vertical-align:middle;"/>
+    - Select tracks or segment
+    - Click the reverse tool to reverse
+
+  - **Join tracks :** <img src="images/tools/reverse.svg" width="20" style="vertical-align:middle;"/>
+    - Select the endpoints of two different tracks 
+    - Click the join tool to combine them making one track
+
+  - **Filter track or segment :** <img src="images/tools/filter.svg" width="20" style="vertical-align:middle;"/>
+    - Select track or segment
+    - Click the filter tool
+    - Choose which filter you want to apply
+
+  - **Reverse track or segment :** <img src="images/tools/reverse.svg" width="20" style="vertical-align:middle;"/>
+    - Select tracks or segment
+    - Click the reverse tool to reverse
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 
 <!-- ROADMAP -->
 ## Roadmap
 
-- [ ] Feature 1
-- [ ] Feature 2
-- [ ] Feature 3
-    - [ ] Nested Feature
+### In Progress / Planned Features
+
+#### Core Features
+- [ ] Edit track date/time and EXIF data
+- [ ] Statistics per file (summary and graphs)
+- [ ] Text editor mode for GPX files
+- [ ] File fixer (repair broken GPX/KML files)
+- [ ] Open GPX files with OTE as **track editor** or **text editor**
+- [ ] Merge multiple segments into one track
+- [ ] Cut tool
+- [ ] Remove duplicate points
+- [ ] Remove bugs (will use one of the filters) kind of short cut
+- [ ] Reduce noise (will use one of the filters) kind of short cut
+- [ ] Elevation view
+- [ ] Screenshot export
+- [ ] Map layers (satellite, topographic, etc.)
+- [ ] Add Ramer–Douglas–Peucker filter : Removes points that don’t significantly change the shape of the track.
+- [ ] Add Distance-Based filter : Keep only points that are a minimum distance apart.
+- [ ] Add Moving Average filter : Smooths coordinates by averaging neighboring points.
+- [ ] Add Kalman filter : Advanced filter that predicts and corrects positions based on motion.
+
+#### Improvements
+- [ ] Display track names when exporting
+- [ ] Add info box (track + waypoint metadata)
+- [ ] Error handling system with detailed error codes
+- [ ] Extract timestamps from GPX and KML files
 
 See the [open issues](https://github.com/OliverMineau/OpenTrackEditor/issues) for a full list of proposed features (and known issues).
 
@@ -250,20 +308,9 @@ Distributed under the project_license. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Your Name - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
+Oliver Mineau - minapps.apps@gmail.com
 
 Project Link: [https://github.com/OliverMineau/OpenTrackEditor](https://github.com/OliverMineau/OpenTrackEditor)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
-
-* []()
-* []()
-* []()
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
