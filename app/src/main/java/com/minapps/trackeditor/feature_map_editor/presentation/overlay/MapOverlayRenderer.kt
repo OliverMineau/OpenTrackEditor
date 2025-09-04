@@ -45,7 +45,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
     data class SelectedPoint(
         var trackId: Int,
         var id: Double,
-        var overlay: SimpleFastPointOverlay
+        var overlay: SimpleFastPointOverlay?
     )
 
     data class TrackRenderData(
@@ -233,6 +233,10 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         displayedPolylines[trackId] =
             TrackRenderData(polylinePair.first, polylinePair.second, indexMap, reverseIndexMap)
 
+        // Color track selection
+        colorPoints()
+        colorTrackSegment()
+
         mMap.invalidate()
     }
 
@@ -285,6 +289,10 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         // Update display list
         displayedPolylines[trackId]?.polyline = polylinePair.first
         displayedPolylines[trackId]?.overlay = polylinePair.second
+
+        // Color track selection
+        colorPoints()
+        colorTrackSegment()
 
         mMap.invalidate()
     }
@@ -797,8 +805,10 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
 
     fun selectTrack(trackId: Int?, select: Boolean, pointId: Double? = null) {
         val state = mapViewModel.selectedTrack(trackId, select, pointId)
+        Log.d("State selection", "Selection state : ${state.selectedPoints}")
         selectedPolylines = state.selectedTrackIds
         colorTracks()
+        clearAllSelections()
         colorPoints(state.selectedPoints)
         colorTrackSegment()
     }
@@ -820,19 +830,38 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         mMap.invalidate()
     }
 
-    private fun colorPoints(newSelectedPoints: MutableList<Pair<Int, Double>>) {
+    /**
+     * Color the given selection or color last saved selection of points
+     *
+     * @param newSelectedPoints
+     */
+    private fun colorPoints(newSelectedPoints: MutableList<Pair<Int, Double>>? = null) {
 
-        // Remove last overlays
-        clearAllSelections()
+        // If points, color given selection
+        if(newSelectedPoints != null){
 
-        // Display new overlays
-        newSelectedPoints.forEachIndexed { index, newPoint ->
-            val overlay = getPointOverlay(newPoint.first, newPoint.second, index)
-            if (overlay == null) return@forEachIndexed
-            selectedPoints.add(SelectedPoint(newPoint.first, newPoint.second, overlay))
-            mMap.overlays.add(overlay)
+            // Create and display new overlays
+            newSelectedPoints.forEachIndexed { index, newPoint ->
+                val overlay = getPointOverlay(newPoint.first, newPoint.second, index)
+                selectedPoints.add(SelectedPoint(newPoint.first, newPoint.second, overlay))
+                // Don't display null overlay
+                if(overlay == null) return@forEachIndexed
+                mMap.overlays.add(overlay)
+            }
         }
+        // If no points, color last selection
+        else{
+            selectedPoints.forEachIndexed { index, selectedPoint ->
+                // Create overlay if point in view (loaded)
+                if(selectedPoint.overlay == null){
+                    val overlay = getPointOverlay(selectedPoint.trackId, selectedPoint.id, index)
+                    selectedPoint.overlay = overlay
+                    if(overlay == null) return
+                    mMap.overlays.add(overlay)
+                }
 
+            }
+        }
         mMap.invalidate()
     }
 
@@ -844,7 +873,18 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
 
         val renderData = displayedPolylines[trackId] ?: return null
 
-        val index = renderData.indexMap[id] ?: return null
+
+        var index = renderData.indexMap[id]?: return null
+        /*if(index == null){
+            val minId = renderData.reverseIndexMap[0]?: return null
+            val maxId = renderData.reverseIndexMap[(renderData.indexMap.size-1)]?: return null
+
+            if(id > minId){
+                index = (renderData.indexMap.size-1)
+            }else{
+                index = 0
+            }
+        }*/
 
         val point = listOf(renderData.polyline.actualPoints[index])
         val theme = SimplePointTheme(point)
@@ -874,12 +914,16 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
 
     private fun colorTrackSegment() {
 
+        Log.d("Selection", "selected : $selectedPoints")
         if (selectedPoints.size != 2) return
 
         var trackId: Int? = null
         var first: Double? = null
         var last: Double? = null
+
+        // Check if on same track if so get the points
         selectedPoints.forEach { point ->
+
             if (trackId == null) {
                 trackId = point.trackId
                 first = point.id
@@ -890,10 +934,11 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             }
         }
 
+        // Return if no track
         val renderData = displayedPolylines[trackId] ?: return
         val points = renderData.polyline.actualPoints
-        val ind1 = renderData.indexMap[first] ?: return
-        val ind2 = renderData.indexMap[last] ?: return
+        val ind1 = renderData.indexMap[first] ?: 0
+        val ind2 = renderData.indexMap[last] ?: (points.size - 1)
 
         val f = min(ind1, ind2)
         val l = max(ind1, ind2)
@@ -912,6 +957,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
     }
 
     fun clearAllSelections() {
+        Log.d("Clear selection", "Clear selection")
         clearTrackOverlaySelection()
         clearPointOverlaySelection()
 
@@ -929,20 +975,24 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
     fun clearPointOverlaySelection() {
         // Remove point overlays
         selectedPoints.forEach { selectedPoint ->
-            mMap.overlays.remove(selectedPoint.overlay)
+            if(selectedPoint.overlay != null){
+                mMap.overlays.remove(selectedPoint.overlay)
+            }
         }
         selectedPoints.clear()
     }
 
     fun redrawSelection() {
-        if (selectedTrackOverlay != null) {
-            mMap.overlays.remove(selectedTrackOverlay)
-            mMap.overlays.add(selectedTrackOverlay)
+        selectedTrackOverlay?.let {
+            mMap.overlays.remove(it)
+            mMap.overlays.add(it)
         }
 
-        selectedPoints.forEach { selectedPoint ->
-            mMap.overlays.remove(selectedPoint.overlay)
-            mMap.overlays.add(selectedPoint.overlay)
+        selectedPoints.forEach { sp ->
+            sp.overlay?.let { ov ->
+                mMap.overlays.remove(ov)
+                mMap.overlays.add(ov)
+            }
         }
 
         mMap.invalidate()

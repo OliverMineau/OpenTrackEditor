@@ -36,10 +36,12 @@
   <h3 align="center">OpenTrackEditor</h3>
 
   <p align="center">
-    A multifunctional tool to help you manage your GPS files !
-    <br />
-    <a href="https://github.com/OliverMineau/OpenTrackEditor"><strong>Explore the docs »</strong></a>
-  </p>
+  A multifunctional tool to help you manage your GPS files!
+  <br />
+  <a href="https://olivermineau.com/opentrackeditor"><strong>Learn more about the project »</strong></a>
+  <br />
+  <a href="https://github.com/OliverMineau/OpenTrackEditor"><strong>Explore the docs »</strong></a>
+</p>
 
   <p align="center">
     <a href="https://play.google.com/store/apps/details?id=com.minapps.trackeditor">
@@ -96,7 +98,7 @@
 
 OpenTrackEditor started as a student project and has grown into an open-source Android tool thanks to all of your feedback. 
 
-This tool will help you manage your GPS files with an intuitive UI. Think of it as **LibreOffice for GPX and KML file.**
+This tool will help you manage your GPS files with an intuitive UI. Think of it as **LibreOffice for GPX and KML files.**
 
 Create your own tracks from scratch or load any .gpx or .kml file of any size into the app to begin the process. Tracks with millions of waypoints can be loaded and edited.
 
@@ -129,7 +131,7 @@ The current implemented features are :
   - 🚧 **Many more tools to come**
 - **Import / Export / Convert :**
   - GPX
-  - KLM
+  - KML
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -160,6 +162,7 @@ Follow these steps to set up the project locally and run it on your device or em
 1. Clone the repository
    ```sh
    git clone https://github.com/OliverMineau/OpenTrackEditor.git
+   ```
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -195,7 +198,7 @@ Here’s how to use OpenTrackEditor once installed :
     - Click anywhere on the map to add a waypoint and create a track.
   - If a track is selected :
     - Click on the end points of the track to add waypoints from that end.
-    - Click on a wypoint in the middle of the track to add one besides it
+    - Click on a waypoint in the middle of the track to add one besides it
 
 - **Select tracks or segments :** <img src="images/tools/select.svg" width="20" style="vertical-align:middle;"/>
   - Select tracks :
@@ -282,6 +285,8 @@ Don't forget to give the project a star! Thanks again!
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+You can view the docs for more information on the project structure : [https://olivermineau.com/opentrackeditor](https://olivermineau.com/opentrackeditor)
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Top contributors:
@@ -305,6 +310,9 @@ Distributed under the project_license. See `LICENSE.txt` for more information.
 ## Contact
 
 Oliver Mineau - minapps.apps@gmail.com
+
+Project Website: [https://olivermineau.com/opentrackeditor](https://olivermineau.com/opentrackeditor)
+
 
 Project Link: [https://github.com/OliverMineau/OpenTrackEditor](https://github.com/OliverMineau/OpenTrackEditor)
 

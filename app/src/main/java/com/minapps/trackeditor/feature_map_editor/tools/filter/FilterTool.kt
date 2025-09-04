@@ -56,7 +56,6 @@ class FilterTool @Inject constructor (
                 listener.onToolResult(ActionType.FILTER,FilterResult(false, listOf()))
                 return
             }
-            waypointCount = getSelectedWaypointsIntervalSizeUseCase(point1.first, point1.second, point2.second)
 
             if(point1.second > point2.second){
                 pointA = point2.second
@@ -65,6 +64,8 @@ class FilterTool @Inject constructor (
                 pointA = point1.second
                 pointB = point2.second
             }
+
+            waypointCount = getSelectedWaypointsIntervalSizeUseCase(point1.first, pointA, pointB)
 
         } else{
             waypointCount = getSelectedWaypointsIntervalSizeUseCase(editState.currentSelectedTracks.first())
