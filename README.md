@@ -240,28 +240,37 @@ Here’s how to use OpenTrackEditor once installed :
 
 ### In Progress / Planned Features
 
-#### Core Features
-- [ ] Edit track date/time and EXIF data
-- [ ] Statistics per file (summary and graphs)
-- [ ] Text editor mode for GPX files
+#### UI map edition tools :
+- [ ] Tool : Cut 
+- [ ] Tool : Remove duplicate points 
+- [ ] Tool : Remove bugs (will use one of the filters) kind of short cut
+- [ ] Tool : Reduce noise (will use one of the filters) kind of short cut
+- [ ] Tool : Elevation graph
+- [ ] Tool : Screenshot export (centered tracks, can add the statistics or not on the image)
+- [ ] Tool : Map layers (satellite, topographic, etc.)
+- [ ] Tool : Add info box in a corner of the screen displaying track and waypoint info like : selected track: name, size, ...; waypoint: lat, long, elevation, ...
+- [ ] Tool : Generate fake waypoint timestamps (ask user for speed, or total track time, link speed with altitude data if possible)
+- [ ] Filter tool : Add Ramer–Douglas–Peucker filter : Removes points that don’t significantly change the shape of the track.
+- [ ] Filter tool : Add Distance-Based filter : Keep only points that are a minimum distance apart.
+- [ ] Filter tool : Add Moving Average filter : Smooths coordinates by averaging neighboring points.
+- [ ] Filter tool : Add Kalman filter : Advanced filter that predicts and corrects positions based on motion.
+
+#### New feature :
+
+- [ ] Text editor mode for files
+- [ ] Edit track date/time and EXIF data - user friendly ui
+- [ ] Statistics per file / on screen tracks (summary and graphs)
 - [ ] File fixer (repair broken GPX/KML files)
-- [ ] Open GPX files with OTE as **track editor** or **text editor**
-- [ ] Merge multiple segments into one track
-- [ ] Cut tool
-- [ ] Remove duplicate points
-- [ ] Remove bugs (will use one of the filters) kind of short cut
-- [ ] Reduce noise (will use one of the filters) kind of short cut
-- [ ] Elevation view
-- [ ] Screenshot export
-- [ ] Map layers (satellite, topographic, etc.)
-- [ ] Add Ramer–Douglas–Peucker filter : Removes points that don’t significantly change the shape of the track.
-- [ ] Add Distance-Based filter : Keep only points that are a minimum distance apart.
-- [ ] Add Moving Average filter : Smooths coordinates by averaging neighboring points.
-- [ ] Add Kalman filter : Advanced filter that predicts and corrects positions based on motion.
+
+- [ ] Open GPX files with OTE as **track editor** or **text editor** (partially done the first one)
+
 
 #### Improvements
 - [ ] Display track names when exporting
-- [ ] Add info box (track + waypoint metadata)
+- [ ] Ask user to enter track names when exporting or creating new track ?
+- [ ] Display processing progressbar when executing background tasks
+- [ ] Merge multiple segments into one track (at import)
+- [ ] Generate elevation/altitude data (when adding/moving waypoints)
 - [ ] Error handling system with detailed error codes
 - [ ] Extract timestamps from GPX and KML files
 
