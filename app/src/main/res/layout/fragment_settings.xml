@@ -9,10 +9,10 @@
     <ScrollView
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -30,18 +30,19 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
                 android:fontFamily="monospace"
                 android:gravity="center"
                 android:text="OpenTrackEditor"
                 android:textAlignment="center"
                 android:textColor="@color/black"
                 android:textSize="30sp"
-                android:textStyle="bold"
-                android:layout_marginTop="16dp"/>
+                android:textStyle="bold" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
                 android:fontFamily="monospace"
                 android:gravity="center"
                 android:justificationMode="inter_word"
@@ -49,15 +50,14 @@
                 android:text="@string/settings_info"
                 android:textAlignment="center"
                 android:textColor="@color/black"
-                android:textSize="15sp"
-                android:layout_marginTop="16dp"/>
+                android:textSize="15sp"/>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
                 android:gravity="center"
-                android:orientation="horizontal"
-                android:layout_marginTop="24dp">
+                android:orientation="horizontal">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/mail_btn"
@@ -67,7 +67,9 @@
                     android:text=""
                     app:icon="@drawable/envelope_24"
                     app:iconGravity="textStart"
-                    app:iconPadding="0dp"/>
+                    app:iconPadding="0dp"
+                    android:backgroundTint="@color/black"
+                    app:iconTint="@color/light_grey"/>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/dev_btn"
@@ -77,333 +79,467 @@
                     android:text=""
                     app:icon="@drawable/code_window_24"
                     app:iconGravity="textStart"
-                    app:iconPadding="0dp"/>
+                    app:iconPadding="0dp"
+                    android:backgroundTint="@color/black"
+                    app:iconTint="@color/light_grey"/>
             </LinearLayout>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="How to :"
-                android:textSize="40dp"
                 android:fontFamily="monospace"
                 android:gravity="center"
+                android:padding="30sp"
+                android:text="How to :"
                 android:textColor="@color/black"
-                android:padding="30sp"/>
+                android:textSize="40dp" />
+
 
             <!-- Import GPS file -->
-            <LinearLayout
-                android:layout_width="wrap_content"
+                   <com.google.android.material.card.MaterialCardView
+                app:cardBackgroundColor="@color/grey_white"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="16dp"
+                android:padding="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
 
-                <ImageView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/add_document_24"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Import a GPS file :\n
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/add_document_24" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="Import a GPS file :\n
 - Select any .gpx or .kml files to import\n
 - Wait for it to import and process your track"
-                    android:textSize="14sp"
-                    android:textColor="@color/black"
-                    android:gravity="center"/>
-            </LinearLayout>
+                        android:textColor="@color/black"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
 
             <!-- View map -->
-            <LinearLayout
-                android:layout_width="wrap_content"
+                   <com.google.android.material.card.MaterialCardView
+                app:cardBackgroundColor="@color/grey_white"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="16dp"
+                android:padding="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
 
-                <ImageView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/map_marker_24"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="View map:\n
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/map_marker_24" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="View map:\n
 - View your tracks\n
 - All input is disabled"
-                    android:textSize="14sp"
-                    android:textColor="@color/black"
-                    android:gravity="center"/>
-            </LinearLayout>
+                        android:textColor="@color/black"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Edit track -->
-            <LinearLayout
-                android:layout_width="wrap_content"
+                   <com.google.android.material.card.MaterialCardView
+                app:cardBackgroundColor="@color/grey_white"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="16dp"
+                android:padding="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
 
-                <ImageView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/file_edit_24"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Edit track:\n
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/file_edit_24" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="Edit track:\n
 - Open the editing navigation bar"
-                    android:textSize="14sp"
-                    android:textColor="@color/black"
-                    android:gravity="center"/>
-            </LinearLayout>
+                        android:textColor="@color/black"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Move waypoints -->
-            <LinearLayout
-                android:layout_width="wrap_content"
+                   <com.google.android.material.card.MaterialCardView
+                app:cardBackgroundColor="@color/grey_white"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="16dp"
+                android:padding="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
 
-                <ImageView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/hand_24"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Move waypoints:\n
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/hand_24" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="Move waypoints:\n
 - Long press a waypoint and drag it to the desired position"
-                    android:textSize="14sp"
-                    android:textColor="@color/black"
-                    android:gravity="center"/>
-            </LinearLayout>
+                        android:textColor="@color/black"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Remove waypoint -->
-            <LinearLayout
-                android:layout_width="wrap_content"
+                   <com.google.android.material.card.MaterialCardView
+                app:cardBackgroundColor="@color/grey_white"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="16dp"
+                android:padding="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
 
-                <ImageView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/map_marker_cross_24"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Remove waypoint:\n
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/map_marker_cross_24" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="Remove waypoint:\n
 - Click on a waypoint to delete it"
-                    android:textSize="14sp"
-                    android:textColor="@color/black"
-                    android:gravity="center"/>
-            </LinearLayout>
+                        android:textColor="@color/black"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Add waypoint -->
-            <LinearLayout
-                android:layout_width="wrap_content"
+                   <com.google.android.material.card.MaterialCardView
+                app:cardBackgroundColor="@color/grey_white"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="16dp"
+                android:padding="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
 
-                <ImageView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/map_marker_plus_24"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Add waypoint:\n
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/map_marker_plus_24" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="Add waypoint:\n
 - If no track is selected :\n
 - Click anywhere on the map to add a waypoint and create a track.\n
 - If a track is selected :\n
 - Click on the end points of the track to add waypoints from that end.\n
 - Click on a wypoint in the middle of the track to add one besides it"
-                    android:textSize="14sp"
-                    android:textColor="@color/black"
-                    android:gravity="center"/>
-            </LinearLayout>
+                        android:textColor="@color/black"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Select tracks or segment -->
-            <LinearLayout
-                android:layout_width="wrap_content"
+                   <com.google.android.material.card.MaterialCardView
+                app:cardBackgroundColor="@color/grey_white"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="16dp"
+                android:padding="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
 
-                <ImageView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/map_location_track_24"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Select tracks or segment:\n
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/map_location_track_24" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="Select tracks or segment:\n
 - Select tracks :\n
 - Click on the track itself to select it\n
 - Select a segment :\n
 - Click on a waypoint then click on a second waypoint of the same track\n"
-                    android:textSize="14sp"
-                    android:textColor="@color/black"
-                    android:gravity="center"/>
-            </LinearLayout>
+                        android:textColor="@color/black"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Toolbox -->
-            <LinearLayout
-                android:layout_width="wrap_content"
+                   <com.google.android.material.card.MaterialCardView
+                app:cardBackgroundColor="@color/grey_white"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="16dp"
+                android:padding="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
 
-                <ImageView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/tools_24"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Toolbox:\n
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/tools_24" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="Toolbox:\n
 - Click to open the tool box. It contains all the other tools\n
 - When opened a menu will appear on the right of the screen. Click on the arrows  in that menu to show the name of each tool."
-                    android:textSize="14sp"
-                    android:textColor="@color/black"
-                    android:gravity="center"/>
-            </LinearLayout>
+                        android:textColor="@color/black"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Export tracks -->
-            <LinearLayout
-                android:layout_width="wrap_content"
+                   <com.google.android.material.card.MaterialCardView
+                app:cardBackgroundColor="@color/grey_white"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="16dp"
+                android:padding="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
 
-                <ImageView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/file_export_24"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Export tracks:\n
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/file_export_24" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="Export tracks:\n
 - Select the tracks you want to export\n
 - Click the export tool, choose a name and the desired format "
-                    android:textSize="14sp"
-                    android:textColor="@color/black"
-                    android:gravity="center"/>
-            </LinearLayout>
+                        android:textColor="@color/black"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Delete tracks or segment -->
-            <LinearLayout
-                android:layout_width="wrap_content"
+                   <com.google.android.material.card.MaterialCardView
+                app:cardBackgroundColor="@color/grey_white"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="16dp"
+                android:padding="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
 
-                <ImageView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/trash_24"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Delete tracks or segment:\n
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/trash_24" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="Delete tracks or segment:\n
 - Select tracks or segment\n
 - Click the delete tool to delete"
-                    android:textSize="14sp"
-                    android:textColor="@color/black"
-                    android:gravity="center"/>
-            </LinearLayout>
+                        android:textColor="@color/black"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Reverse track or segment -->
-            <LinearLayout
-                android:layout_width="wrap_content"
+                   <com.google.android.material.card.MaterialCardView
+                app:cardBackgroundColor="@color/grey_white"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="16dp"
+                android:padding="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
 
-                <ImageView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/rotate_reverse_24"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Reverse track or segment:\n
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/rotate_reverse_24" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="Reverse track or segment:\n
 - Select tracks or segment\n
 - Click the reverse tool to reverse"
-                    android:textSize="14sp"
-                    android:textColor="@color/black"
-                    android:gravity="center"/>
-            </LinearLayout>
+                        android:textColor="@color/black"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Join tracks -->
-            <LinearLayout
-                android:layout_width="wrap_content"
+                   <com.google.android.material.card.MaterialCardView
+                app:cardBackgroundColor="@color/grey_white"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="16dp"
+                android:padding="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
 
-                <ImageView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/link_alt_24"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Join tracks:\n
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/link_alt_24" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="Join tracks:\n
 - Select the endpoints of two different tracks\n
 - Click the join tool to combine them making one track"
-                    android:textSize="14sp"
-                    android:textColor="@color/black"
-                    android:gravity="center"/>
-            </LinearLayout>
+                        android:textColor="@color/black"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!--  -->
-            <LinearLayout
-                android:layout_width="wrap_content"
+                   <com.google.android.material.card.MaterialCardView
+                app:cardBackgroundColor="@color/grey_white"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="16dp"
+                android:padding="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
 
-                <ImageView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/filter_24"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Filter track or segment:\n
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/filter_24" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="Filter track or segment:\n
 - Select track or segment\n
 - Click the filter tool\n
 - Choose which filter you want to apply"
-                    android:textSize="14sp"
-                    android:textColor="@color/black"
-                    android:gravity="center"/>
-            </LinearLayout>
+                        android:textColor="@color/black"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
     </ScrollView>

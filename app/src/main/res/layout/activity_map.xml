@@ -40,6 +40,8 @@
         app:iconPadding="0dp"
         android:layout_marginStart="20dp"
         app:iconGravity="textStart"
+        android:backgroundTint="@color/black"
+        app:iconTint="@color/grey_white"
         app:layout_constraintBottom_toTopOf="@+id/edit_bottom_navigation"
         app:layout_constraintStart_toStartOf="parent"/>
 
@@ -49,6 +51,8 @@
         android:layout_height="50dp"
         android:text=""
         app:icon="@drawable/minus_24"
+        android:backgroundTint="@color/black"
+        app:iconTint="@color/grey_white"
         app:iconGravity="textStart"
         app:iconPadding="0dp"
         android:layout_marginEnd="20dp"
@@ -85,7 +89,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="40dp"
         android:progress="0"
-        app:indicatorColor="@color/primary_teal"
+        app:indicatorColor="@color/bright_orange"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"

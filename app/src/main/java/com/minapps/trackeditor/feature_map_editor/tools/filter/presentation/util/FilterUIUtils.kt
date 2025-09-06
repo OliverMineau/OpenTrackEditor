@@ -1,6 +1,7 @@
 package com.minapps.trackeditor.feature_map_editor.tools.filter.presentation.util
 
 import android.content.Context
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
@@ -19,6 +20,7 @@ object FilterUIUtils {
         return TextView(context).apply {
             textAlignment = View.TEXT_ALIGNMENT_CENTER
             setPadding(10, 10, 10, paddingBottom)
+            setTextColor(ContextCompat.getColor(context, R.color.black))
         }
     }
 
@@ -28,7 +30,9 @@ object FilterUIUtils {
                 return super.getView(position, convertView, parent).apply {
                     (this as? TextView)?.apply {
                         gravity = Gravity.CENTER
-                        setTextColor(ContextCompat.getColor(context, R.color.text_dark))
+                        setTextColor(ContextCompat.getColor(context, R.color.exportDialog))
+                        setBackgroundColor(ContextCompat.getColor(context, R.color.black))
+                        setTypeface(typeface, Typeface.BOLD)
                     }
                 }
             }
@@ -37,8 +41,9 @@ object FilterUIUtils {
                 return super.getDropDownView(position, convertView, parent).apply {
                     (this as? TextView)?.apply {
                         gravity = Gravity.CENTER
-                        setTextColor(ContextCompat.getColor(context, R.color.text_dark))
-                        setBackgroundColor(ContextCompat.getColor(context, R.color.background_light))
+                        setTextColor(ContextCompat.getColor(context, R.color.exportDialog))
+                        setBackgroundColor(ContextCompat.getColor(context, R.color.black))
+                        setTypeface(typeface, Typeface.BOLD)
                     }
                 }
             }
@@ -53,12 +58,11 @@ object FilterUIUtils {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = 24f
-                setColor(ContextCompat.getColor(context, R.color.background_light))
-                setStroke(3, ContextCompat.getColor(context, R.color.primary_teal))
+                setColor(ContextCompat.getColor(context, R.color.black))
+                setStroke(3, ContextCompat.getColor(context, R.color.light_grey))
             }
             setPadding(16, 16, 16, 16)
         }
     }
-
 
 }

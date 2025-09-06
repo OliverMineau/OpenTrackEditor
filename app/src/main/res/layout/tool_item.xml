@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
@@ -14,14 +15,14 @@
         android:visibility="gone"
         android:layout_width="24dp"
         android:layout_height="15dp"
-        android:background="@drawable/dotted">
-    </View>
+        android:background="@drawable/dotted"/>
 
     <ImageView
         android:id="@+id/icon"
         android:layout_width="24dp"
         android:layout_height="24dp"
-        android:src="@drawable/tools_24"/>
+        android:src="@drawable/tools_24"
+        app:tint="@color/light_grey" />
 
     <TextView
         android:id="@+id/label"
@@ -30,6 +31,7 @@
         android:text="Tool Name"
         android:paddingStart="8dp"
         android:visibility="gone"
+        android:textColor="@color/light_grey"
         android:alpha="0"
         android:maxLines="1"
         android:ellipsize="end"

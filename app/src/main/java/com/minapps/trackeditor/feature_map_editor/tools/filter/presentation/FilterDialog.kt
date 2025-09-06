@@ -2,6 +2,7 @@ package com.minapps.trackeditor.feature_map_editor.tools.filter.presentation
 
 import android.app.Activity
 import android.content.Context
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.util.Log
 import android.view.Gravity
@@ -68,6 +69,7 @@ class FilterDialog(val waypointCount: Int) : ToolDialog<FilterParams> {
             toolDescription = TextView(activity).apply {
                 textAlignment = TEXT_ALIGNMENT_CENTER
                 setPadding(10, 10, 10, 20)
+                setTextColor(ContextCompat.getColor(context, R.color.black))
             }
 
             filterSpinner = createRoundedSpinner(activity, FilterType.entries.map { it.label })
@@ -92,8 +94,16 @@ class FilterDialog(val waypointCount: Int) : ToolDialog<FilterParams> {
                 addView(toolDescription)
             }
 
+            val titleView = TextView(context).apply {
+                text = title
+                setTextColor(ContextCompat.getColor(context, R.color.black))
+                textSize = 20f
+                setTypeface(typeface, Typeface.BOLD)
+                setPadding(40, 40, 40, 0)
+            }
+
             val dialog = AlertDialog.Builder(activity)
-                .setTitle(title)
+                .setCustomTitle(titleView)
                 .setView(container)
                 .setPositiveButton("Apply") { dlg, _ ->
                     val selectedFilter = FilterType.entries[filterSpinner.selectedItemPosition]
@@ -153,7 +163,7 @@ private fun styleDialogWindow(dialog: AlertDialog, context: Context) {
     dialog.window?.setBackgroundDrawable(
         GradientDrawable().apply {
             cornerRadius = 32f
-            setColor(ContextCompat.getColor(context, R.color.primary_blue))
+            setColor(ContextCompat.getColor(context, R.color.exportDialog))
         }
     )
 }
@@ -162,11 +172,11 @@ private fun styleDialogButtons(dialog: AlertDialog, context: Context) {
     dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.apply {
         textSize = 18f
         setPadding(32, 16, 32, 16)
-        setTextColor(ContextCompat.getColor(context, R.color.apply))
+        setTextColor(ContextCompat.getColor(context, R.color.black))
     }
     dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.apply {
         textSize = 18f
         setPadding(32, 16, 32, 16)
-        setTextColor(ContextCompat.getColor(context, R.color.cancel))
+        setTextColor(ContextCompat.getColor(context, R.color.black))
     }
 }

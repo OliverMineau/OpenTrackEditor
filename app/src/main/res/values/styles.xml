@@ -16,5 +16,12 @@
         <item name="android:windowExitAnimation">@anim/slide_out_down</item>
     </style>
 
+    <style name="CustomSlider" parent="Widget.Material3.Slider">
+        <item name="thumbTint">@color/black</item>
+        <item name="trackColorActive">@color/black</item>
+        <item name="trackColorInactive">@color/grey_white</item>
+        <item name="tickColor">@color/orange</item>
+    </style>
+
 
 </resources>

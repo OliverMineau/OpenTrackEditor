@@ -4,6 +4,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.util.Log
+import androidx.core.content.ContextCompat
+import com.minapps.trackeditor.R
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.common.MutablePair
 import com.minapps.trackeditor.feature_map_editor.domain.model.SimpleWaypoint
@@ -449,8 +451,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
     ): MutablePair<Polyline, CustomSimpleFastPointOverlay?> {
 
         Log.d("select", "display wp trkid : $trackId")
-        val selectedColor = Color.YELLOW
-        val unselectedColor = Color.RED
+        val selectedColor = ContextCompat.getColor(mMap.context, R.color.selectedTrack)
 
         val paintColor =
             if (mapViewModel.editState.value.currentSelectedTracks.isNotEmpty() && mapViewModel.editState.value.currentSelectedTracks.contains(
@@ -680,7 +681,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
 
         clearAllSelections()
 
-        displayTrack(trackId, Color.YELLOW, false)
+        displayTrack(trackId, ContextCompat.getColor(mMap.context, R.color.selectedTrack), false)
 
         //mMap.invalidate()
     }
@@ -718,12 +719,12 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
     private fun handleWaypointAddedList(
         trackId: Int, points: List<SimpleWaypoint>, center: Boolean
     ) {
-        displayTrack(points, trackId, Color.RED, center)
+        displayTrack(points, trackId, ContextCompat.getColor(mMap.context, R.color.unselectedTrack), center)
     }
 
     private fun handleWaypointViewChanged(trackId: Int, points: List<SimpleWaypoint>) {
         Log.d("debugOpti", "Sent To update")
-        displayTrack(points, trackId, Color.RED, false)
+        displayTrack(points, trackId, ContextCompat.getColor(mMap.context, R.color.unselectedTrack), false)
     }
 
     /**
@@ -733,7 +734,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
      * @param points
      */
     private fun handleWaypointMoved(trackId: Int, points: List<Pair<Double, Double>>) {
-        displayLiveModification(points, trackId, Color.rgb(255, 128, 0))
+        displayLiveModification(points, trackId, ContextCompat.getColor(mMap.context, R.color.unselectedTrack))//Color.rgb(255, 128, 0))
     }
 
     /**
@@ -785,7 +786,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         clearAllSelections()
 
         // Rebuild overlay
-        displayTrack(trackId, Color.YELLOW, false)
+        displayTrack(trackId, ContextCompat.getColor(mMap.context, R.color.selectedTrack), false)
     }
 
     /**
@@ -821,9 +822,9 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
     private fun colorTracks() {
         displayedPolylines.forEach { id, renderData ->
             if (selectedPolylines.contains(id)) {
-                renderData.polyline.outlinePaint.color = Color.YELLOW
+                renderData.polyline.outlinePaint.color = ContextCompat.getColor(mMap.context, R.color.selectedTrack)
             } else {
-                renderData.polyline.outlinePaint.color = Color.RED
+                renderData.polyline.outlinePaint.color = ContextCompat.getColor(mMap.context, R.color.unselectedTrack)
             }
         }
 
@@ -889,11 +890,11 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         val point = listOf(renderData.polyline.actualPoints[index])
         val theme = SimplePointTheme(point)
 
-        val colorList = mapOf(0 to Color.GREEN, 1 to Color.MAGENTA)
+        val colorList = mapOf(0 to ContextCompat.getColor(mMap.context, R.color.firstPoint), 1 to ContextCompat.getColor(mMap.context, R.color.lastPoint))
 
         // Create paint
         val paint = Paint().apply {
-            color = colorList[colorIndex] ?: Color.GREEN
+            color = colorList[colorIndex] ?: ContextCompat.getColor(mMap.context, R.color.firstPoint)
             style = Paint.Style.FILL
             isAntiAlias = true
         }
@@ -944,7 +945,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         val l = max(ind1, ind2)
         val polyline = Polyline(mMap).apply {
             setPoints(points.subList(f, l + 1))
-            outlinePaint.color = Color.BLUE
+            outlinePaint.color = ContextCompat.getColor(mMap.context, R.color.selectedSegment)
             outlinePaint.strokeWidth = 10f
             setOnClickListener { _, _, _ -> false }
         }

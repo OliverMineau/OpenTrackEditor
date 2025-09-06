@@ -3,6 +3,23 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
+
+    <color name="dark_blue">#14213D</color>
+    <color name="dark_yellow">#FCA311</color>
+    <color name="bright_yellow">#FCD511</color>
+    <color name="grey_white">#E5E5E5</color>
+
+    <color name="second_white">#FFFCF2</color>
+    <color name="light_grey">#CCC5B9</color>
+    <color name="grey">#403D39</color>
+    <color name="dark_grey">#252422</color>
+    <color name="orange">#954425</color>
+    <color name="bright_orange">#EB5E28</color>
+
+
+
+
+
     <!-- Backgrounds -->
     <color name="background_light">#F9FAFB</color>
     <color name="background_dark">#121212</color>
@@ -35,10 +52,28 @@
     <color name="text_light">#FFFFFF</color>
     <color name="trash">#d90000</color>
     <color name="cancel">#B80C0C</color>
-    <color name="apply">#54DB59</color>
+    <color name="apply">#2C712E</color>
+    <color name="apply_">#54DB59</color>
 
     <color name="selectedTool">@color/primary_blue</color>
     <color name="selectedFeature">@color/secondary_coral</color>
     <color name="unselectedTool">#FFCCCCCC</color>
+
+    <color name="unselectedTrack">@color/bright_orange</color>
+    <color name="selectedTrack">#F6E203</color>
+    <color name="selectedSegment">#C51162</color>
+
+    <color name="firstPoint">#FF00FF00</color>
+    <color name="lastPoint">#FF0000</color>
+
+
+    <color name="exportDialog">#A03D06</color>
+
+
+
+    <!--<color name="firstPoint">#02E0FF</color>
+    <color name="lastPoint">#072BF8</color>-->
+
+
 
 </resources>

@@ -80,6 +80,12 @@ class FilterTool @Inject constructor (
         // Remove end waypoints to count
         waypointCount -= 2
 
+        if(waypointCount<=0){
+            uiContext.showToast("Not enough waypoints")
+            listener.onToolResult(ActionType.FILTER,FilterResult(false, listOf()))
+            return
+        }
+
         // Ask the user for parameters
         val params = uiContext.showDialog(FilterDialog(waypointCount))
         if (params != null) {

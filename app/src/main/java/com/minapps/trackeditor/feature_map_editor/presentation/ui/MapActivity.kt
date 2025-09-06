@@ -2,10 +2,14 @@ package com.minapps.trackeditor.feature_map_editor.presentation.ui
 
 import ToolboxPopup
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.location.LocationManager
 import android.os.Bundle
 import android.util.Log
+import android.view.MotionEvent
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -66,6 +70,9 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
     private var lastUpdateTime: Long = 0L
     private var trailingJob: Job? = null
     private val updateInterval = 400L // 200ms
+    private val fallbackGeoPoint = GeoPoint(45.71232, 5.12749)
+    private var zoomToEgg = false
+
 
 
     //When file picked call viewmodel's importTrack
@@ -160,12 +167,28 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
                         mapViewModel.singleTapConfirmed(it)
                     }
                 }
+                zoomToEgg = false
                 return true
             }
 
-            override fun longPressHelper(p: GeoPoint?) = false
+            override fun longPressHelper(p: GeoPoint?) : Boolean{
+                zoomToEgg = false
+                return true
+            }
         }
         binding.osmmap.overlays.add(MapEventsOverlay(mapEventsReceiver))
+
+        binding.osmmap.setOnTouchListener { v, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    Log.d("OSM", "User touched the map")
+                    zoomToEgg = false
+                    v.performClick()
+                }
+            }
+            false
+        }
+
     }
 
 
@@ -521,6 +544,9 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
 
     fun setupZoom() {
         binding.plusBtn.setOnClickListener {
+            if(zoomToEgg){
+                binding.osmmap.controller.setCenter(fallbackGeoPoint)
+            }
             binding.osmmap.controller.zoomIn()
         }
         binding.minusBtn.setOnClickListener {
@@ -536,13 +562,30 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
         ) {
             // Permission granted, get location
             val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                location?.let {
-                    val geoPoint = GeoPoint(it.latitude, it.longitude)
-                    binding.osmmap.controller.setCenter(geoPoint)
-                    binding.osmmap.controller.animateTo(geoPoint)
+
+            // Check if location is enabled
+            val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            val isLocationEnabled =
+                locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                        locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+
+            if (isLocationEnabled) {
+                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                    location?.let {
+                        val geoPoint = GeoPoint(it.latitude, it.longitude)
+                        binding.osmmap.controller.setCenter(geoPoint)
+                        binding.osmmap.controller.animateTo(geoPoint)
+                    }
                 }
+            } else {
+                // Fallback location if GPS is OFF
+                zoomToEgg = true
+                binding.osmmap.controller.setCenter(fallbackGeoPoint)
+                binding.osmmap.controller.animateTo(fallbackGeoPoint)
             }
+
+
+
         } else {
             // Request permission if not granted
             ActivityCompat.requestPermissions(
@@ -562,6 +605,10 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 centerMapOnMyLocationOnce()
+            }else{
+                val geoPoint = GeoPoint(45.71232, 5.12749)
+                binding.osmmap.controller.setCenter(geoPoint)
+                binding.osmmap.controller.animateTo(geoPoint)
             }
         }
     }

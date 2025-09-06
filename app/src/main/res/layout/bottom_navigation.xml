@@ -11,6 +11,8 @@
         android:visibility="gone"
         app:menu="@menu/edit_menu"
         app:labelVisibilityMode="labeled"
+        app:itemIconTint="@color/nav_item_color"
+        app:itemTextColor="@color/nav_item_color"
         app:layout_constraintBottom_toTopOf="@id/main_bottom_navigation"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
@@ -23,6 +25,8 @@
         android:layout_height="wrap_content"
         app:menu="@menu/main_menu"
         app:labelVisibilityMode="unlabeled"
+        app:itemIconTint="@color/nav_item_color"
+        app:itemTextColor="@color/nav_item_color"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />

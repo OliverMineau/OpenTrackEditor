@@ -1,5 +1,6 @@
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/main_tool_layout"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
@@ -29,7 +30,8 @@
                 android:paddingLeft="8dp"
                 android:paddingTop="8dp"
                 android:paddingBottom="8dp"
-                android:paddingRight="8dp"/>
+                android:paddingRight="8dp"
+                app:tint="@color/light_grey" />
 
         </LinearLayout>
 

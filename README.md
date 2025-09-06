@@ -250,6 +250,7 @@ Here’s how to use OpenTrackEditor once installed :
 - [ ] Tool : Map layers (satellite, topographic, etc.)
 - [ ] Tool : Add info box in a corner of the screen displaying track and waypoint info like : selected track: name, size, ...; waypoint: lat, long, elevation, ...
 - [ ] Tool : Generate fake waypoint timestamps (ask user for speed, or total track time, link speed with altitude data if possible)
+- [ ] Tool : Magic Tool that in one click removes duplicates, bugs and filter the tracks if waypoints are really close (all automatic)
 - [ ] Filter tool : Add Ramer–Douglas–Peucker filter : Removes points that don’t significantly change the shape of the track.
 - [ ] Filter tool : Add Distance-Based filter : Keep only points that are a minimum distance apart.
 - [ ] Filter tool : Add Moving Average filter : Smooths coordinates by averaging neighboring points.
@@ -273,6 +274,7 @@ Here’s how to use OpenTrackEditor once installed :
 - [ ] Generate elevation/altitude data (when adding/moving waypoints)
 - [ ] Error handling system with detailed error codes
 - [ ] Extract timestamps from GPX and KML files
+- [ ] Add translations
 
 See the [open issues](https://github.com/OliverMineau/OpenTrackEditor/issues) for a full list of proposed features (and known issues).
 
