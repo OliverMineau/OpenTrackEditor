@@ -32,5 +32,7 @@ output.json
 # Google Services config
 google-services.json
 
+/app/src/main/java/com/minapps/trackeditor/firebase/
+
 # Android profiling files
 *.hprof

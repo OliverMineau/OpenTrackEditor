@@ -1,6 +1,7 @@
 package com.minapps.trackeditor.feature_track_export.domain.usecase
 
 
+import com.minapps.trackeditor.firebase.FirebaseRepository
 import com.minapps.trackeditor.feature_track_export.domain.model.ExportFormat
 import com.minapps.trackeditor.core.domain.repository.ExportTrackRepository
 import com.minapps.trackeditor.feature_track_import.domain.model.DataStreamProgress
@@ -32,7 +33,14 @@ class ExportTrackUseCase @Inject constructor(
         // Call repo in charge of setting up the export
         repository.saveExportedTrack(trackIds, fileName, exportFormat).collect { exportProgress ->
             when(exportProgress){
-                is DataStreamProgress.Completed -> emit(exportProgress)
+                is DataStreamProgress.Completed -> {
+                    emit(exportProgress)
+
+                    var firebaseRepo: FirebaseRepository? = null
+                    firebaseRepo?.increment(exportFormat) { newValue ->
+                        println("New counter value: $newValue")
+                    }
+                }
                 is DataStreamProgress.Error -> emit(exportProgress)
                 is DataStreamProgress.Progress -> emit(exportProgress)
             }

@@ -5,7 +5,6 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.location.LocationManager
 import android.os.Bundle
 import android.util.Log
@@ -40,7 +39,6 @@ import androidx.core.view.size
 import androidx.core.view.get
 import com.google.android.gms.location.LocationServices
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.domain.tool.ToolDialog
 import com.minapps.trackeditor.core.domain.tool.ToolUiContext
 import com.minapps.trackeditor.feature_map_editor.domain.model.EditState
@@ -50,7 +48,6 @@ import com.minapps.trackeditor.core.domain.type.DataDestination
 import com.minapps.trackeditor.core.domain.util.ToolGroup
 import com.minapps.trackeditor.feature_map_editor.presentation.interaction.ToolResultListener
 import com.minapps.trackeditor.feature_map_editor.presentation.model.ActionDescriptor
-import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.model.FilterParams
 import com.minapps.trackeditor.feature_settings.presentation.SettingsFragment
 import com.minapps.trackeditor.feature_track_export.presentation.util.showSaveFileDialog
 import kotlinx.coroutines.Job
@@ -108,7 +105,6 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
 
         val userAgentValue = "com.minapps.trackeditor"
         Configuration.getInstance().userAgentValue = userAgentValue
-
 
         // Inflate layout
         binding = ActivityMapBinding.inflate(layoutInflater)
@@ -674,6 +670,5 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
             mapViewModel.onToolResult(tool, result)
         }
     }
-
 
 }
