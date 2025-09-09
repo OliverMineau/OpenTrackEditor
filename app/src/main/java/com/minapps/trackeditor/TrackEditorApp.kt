@@ -9,7 +9,7 @@ class TrackEditorApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // Delete track database
+        // Delete track database on load
         deleteDatabase("track_editor_db")
     }
 

@@ -51,8 +51,6 @@ class CustomSimpleFastPointOverlay(
 
 
     override fun onTouchEvent(event: MotionEvent, mapView: MapView): Boolean {
-        // TODO: Implement touch handling
-
         val x = event.x
         val y = event.y
 
@@ -83,8 +81,6 @@ class CustomSimpleFastPointOverlay(
 
     override fun onLongPress(e: MotionEvent, mapView: MapView): Boolean {
         Log.d("debug","Long pressed point index")
-        // TODO: Implement long press handling
-
         isDragging = onSingleTapConfirmed(e,mapView)
 
         if(selectedBundle.isInit){

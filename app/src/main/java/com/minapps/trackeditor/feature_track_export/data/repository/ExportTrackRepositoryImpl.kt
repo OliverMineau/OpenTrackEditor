@@ -55,13 +55,6 @@ class ExportTrackRepositoryImpl @Inject constructor(
             return@flow
         }
 
-        // Only get track metadata
-        /*val track = dao.getTrackById(trackId)?.toDomain(null)
-        if (track == null) {
-            emit(DataStreamProgress.Error("No track found for track $trackId"))
-            return@flow
-        }*/
-
         // Get exporter (GPX, KML..)
         val exporter = exporterFactory.getExporter(exportFormat)
 
@@ -116,7 +109,6 @@ class ExportTrackRepositoryImpl @Inject constructor(
             }
 
             // Write footer
-
             exporter.exportFooter(writer)
             writer.close()
         }

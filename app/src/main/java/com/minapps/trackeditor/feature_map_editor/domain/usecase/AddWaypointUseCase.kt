@@ -19,10 +19,6 @@ class AddWaypointUseCase @Inject constructor(
 ) {
 
 
-
-    //var direction: Double? = 1.0
-    //var position: InsertPosition = InsertPosition.BACK
-
     /**
      * Creates and adds a new waypoint to the given track.
      *
@@ -65,57 +61,6 @@ class AddWaypointUseCase @Inject constructor(
         repository.addWaypoint(waypoint, updateUi)
     }
 
-    /*/**
-     * Update marker for adding points
-     * IF start of track clicked : Position = FRONT (add to front of track on future clicks)
-     * IF end of track clicked : Position = BACK (add to back of track on future clicks)
-     * IF middle of track clicked : Position = MIDDLE (add waypoint next to clicked point)
-     *
-     * @param trackId
-     * @param marker
-     * @return index of point if point has to be inserted in middle of track
-     * if not : null
-     */
-    suspend fun updateMarker(trackId: Int, marker: Double?): Waypoint? {
-        Log.d("new point", "Marker : $marker")
-
-        val first = repository.getTrackFirstWaypointIndex(trackId)
-        val last = repository.getTrackLastWaypointIndex(trackId)
-        var dir = InsertPosition.BACK
-
-        var newPoint: Waypoint? = null
-
-        if (marker != null) {
-
-            if (marker == first) {
-                dir = InsertPosition.FRONT
-            } else if (marker == last) {
-                dir = InsertPosition.BACK
-            } else {
-                val index = repository.getWaypointIndex(trackId, marker)
-                if (index != null) {
-                    val startPoint = repository.getWaypoint(trackId, index)
-                    val endPoint = repository.getWaypoint(trackId, index + 1)
-
-                    if (startPoint != null && endPoint != null) {
-                        dir = InsertPosition.MIDDLE
-                        this.position = InsertPosition.MIDDLE
-                        val latlong = getWaypointCoords(startPoint, endPoint)
-                        val newInnerId = (startPoint.id + endPoint.id) / 2.0
-                        Log.d("ADD", "nenewInnerId :$newInnerId")
-
-                        newPoint =
-                            Waypoint(newInnerId, latlong.first, latlong.second, null, null, trackId)
-
-                        this.invoke(latlong.first, latlong.second, newInnerId, trackId, false)
-                    }
-                }
-            }
-        }
-        this.position = dir
-        Log.d("AddWpUC", "Chosen dir : ${this.position}")
-        return newPoint
-    }*/
 
     /**
      * Get the index of the next waypoint
@@ -150,20 +95,5 @@ class AddWaypointUseCase @Inject constructor(
 
         return newId
     }
-
-    /**
-     * Calculate approximative new waypoint coordinates
-     *
-     * @param start
-     * @param end
-     * @return
-     */
-    private fun getWaypointCoords(start: Waypoint, end: Waypoint): Pair<Double, Double> {
-        val midLat = (start.lat + end.lat) / 2.0
-        val midLng = (start.lng + end.lng) / 2.0
-
-        return Pair(midLat, midLng)
-    }
-
 
 }

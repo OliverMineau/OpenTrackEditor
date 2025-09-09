@@ -49,7 +49,6 @@ class EditTrackRepositoryImpl @Inject constructor(
      * @param waypoints The domain Waypoint to add
      */
     override suspend fun addWaypoints(waypoints: List<Waypoint>) {
-        //TODO
         dao.insertWaypoints(waypoints.map { it.toEntity() })
         Log.d("debug", "Added ${waypoints.size} waypoints")
     }

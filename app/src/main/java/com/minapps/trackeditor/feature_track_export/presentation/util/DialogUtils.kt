@@ -88,8 +88,6 @@ private fun createRoundedSpinner(context: Context, items: List<String>): Spinner
             return super.getView(position, convertView, parent).apply {
                 (this as? TextView)?.apply {
                     gravity = Gravity.CENTER
-                    //setTextColor(ContextCompat.getColor(context, R.color.black))
-                    //setBackgroundColor(ContextCompat.getColor(context, R.color.grey_white))
                     setTextColor(ContextCompat.getColor(context, R.color.exportDialog))
                     setBackgroundColor(ContextCompat.getColor(context, R.color.black))
                     setTypeface(typeface, Typeface.BOLD)
@@ -101,8 +99,6 @@ private fun createRoundedSpinner(context: Context, items: List<String>): Spinner
             return super.getDropDownView(position, convertView, parent).apply {
                 (this as? TextView)?.apply {
                     gravity = Gravity.CENTER
-                    //setTextColor(ContextCompat.getColor(context, R.color.black))
-                    //setBackgroundColor(ContextCompat.getColor(context, R.color.grey_white))
                     setTextColor(ContextCompat.getColor(context, R.color.exportDialog))
                     setBackgroundColor(ContextCompat.getColor(context, R.color.black))
                     setTypeface(typeface, Typeface.BOLD)
@@ -120,8 +116,6 @@ private fun createRoundedSpinner(context: Context, items: List<String>): Spinner
         background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = 24f
-            //setColor(ContextCompat.getColor(context, R.color.grey_white))
-            //setStroke(3, ContextCompat.getColor(context, R.color.grey_white))
             setStroke(3, ContextCompat.getColor(context, R.color.light_grey))
             setColor(Color.BLACK)
         }
@@ -143,13 +137,11 @@ private fun styleDialogButtons(dialog: AlertDialog, context: Context) {
         textSize = 18f
         setPadding(32, 16, 32, 16)
         setTextColor(Color.BLACK)
-        //setTextColor(ContextCompat.getColor(context, R.color.apply))
     }
     dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.apply {
         textSize = 18f
         setPadding(32, 16, 32, 16)
         setTextColor(Color.BLACK)
-        //setTextColor(ContextCompat.getColor(context, R.color.cancel))
     }
 }
 

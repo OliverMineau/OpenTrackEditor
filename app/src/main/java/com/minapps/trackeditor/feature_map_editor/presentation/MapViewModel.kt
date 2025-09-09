@@ -1,13 +1,10 @@
 package com.minapps.trackeditor.feature_map_editor.presentation
 
-import android.content.Context
 import android.net.Uri
 import android.util.Log
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.minapps.trackeditor.R
-import com.minapps.trackeditor.core.common.util.SelectionType
 import com.minapps.trackeditor.feature_map_editor.domain.model.EditState
 import com.minapps.trackeditor.feature_map_editor.domain.model.ProgressData
 import com.minapps.trackeditor.feature_map_editor.domain.model.SimpleWaypoint
@@ -21,7 +18,6 @@ import com.minapps.trackeditor.core.domain.type.DataDestination
 import com.minapps.trackeditor.core.domain.usecase.HandleMapViewportChangeUseCase
 import com.minapps.trackeditor.core.domain.usecase.Viewport
 import com.minapps.trackeditor.core.domain.util.SelectionCount
-import com.minapps.trackeditor.core.domain.util.ToolGroup
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointToSelectedTrackUseCase
 import com.minapps.trackeditor.feature_track_export.domain.usecase.ExportTrackUseCase
 import com.minapps.trackeditor.feature_map_editor.domain.usecase.AddWaypointUseCase
@@ -44,7 +40,6 @@ import com.minapps.trackeditor.feature_track_export.domain.model.ExportFormat
 import com.minapps.trackeditor.feature_track_import.domain.model.DataStreamProgress
 import com.minapps.trackeditor.feature_track_import.domain.usecase.TrackImportUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -59,11 +54,9 @@ import org.osmdroid.util.GeoPoint
 import kotlin.collections.forEach
 
 
+
 @HiltViewModel
 class MapViewModel @Inject constructor(
-
-    private val savedStateHandle: SavedStateHandle,
-
     private val repository: EditTrackRepository,
     private val addWaypointUseCase: AddWaypointUseCase,
     private val clearAllUseCase: ClearAllUseCase,
@@ -83,8 +76,7 @@ class MapViewModel @Inject constructor(
     private val exportTool: ExportTool,
     private val reverseTool: ReverseTool,
 
-    @ApplicationContext private val context: Context,
-) : ViewModel() {
+    ) : ViewModel() {
 
     // Expose data events (Added,Removed,Moved points) to other classes (MapActivity)
     private val _waypointEvents = MutableSharedFlow<WaypointUpdate>()

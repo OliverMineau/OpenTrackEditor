@@ -1,10 +1,10 @@
 package com.minapps.trackeditor.feature_track_export.domain.usecase
 
 
-import com.minapps.trackeditor.firebase.FirebaseRepository
 import com.minapps.trackeditor.feature_track_export.domain.model.ExportFormat
 import com.minapps.trackeditor.core.domain.repository.ExportTrackRepository
 import com.minapps.trackeditor.feature_track_import.domain.model.DataStreamProgress
+import com.minapps.trackeditor.firebase.FirebaseRepository
 import dagger.hilt.android.scopes.ViewModelScoped
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.flow
 
 /**
  * Export track use case
- * exports async by chunks
+ * exports by chunks
  * returns DataStreamProgress
  *
  * @property repository
@@ -36,8 +36,7 @@ class ExportTrackUseCase @Inject constructor(
                 is DataStreamProgress.Completed -> {
                     emit(exportProgress)
 
-                    var firebaseRepo: FirebaseRepository? = null
-                    firebaseRepo?.increment(exportFormat) { newValue ->
+                    FirebaseRepository.increment(exportFormat) { newValue ->
                         println("New counter value: $newValue")
                     }
                 }

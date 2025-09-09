@@ -431,9 +431,6 @@ class ToolboxPopup(
 
             var color: Int
 
-            // TODO Maybe error here
-            // If same group, deselect all except same action/tool or if same tool
-
             // Deselect all if hand selected
             if(tool == ActionType.HAND){
                 changeColor(item.second, LTGRAY)

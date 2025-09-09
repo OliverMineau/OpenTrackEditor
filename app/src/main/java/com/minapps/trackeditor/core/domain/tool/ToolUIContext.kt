@@ -3,7 +3,7 @@ package com.minapps.trackeditor.core.domain.tool
 import com.minapps.trackeditor.feature_map_editor.domain.model.EditState
 
 /**
- * TODO
+ * Class to give Tools access to UI
  *
  */
 interface ToolUiContext {

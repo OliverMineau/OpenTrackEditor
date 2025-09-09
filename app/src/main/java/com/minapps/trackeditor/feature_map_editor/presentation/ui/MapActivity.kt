@@ -2,6 +2,7 @@ package com.minapps.trackeditor.feature_map_editor.presentation.ui
 
 import ToolboxPopup
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -58,7 +59,6 @@ import kotlinx.coroutines.flow.collectLatest
 class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultListener {
 
     private lateinit var binding: ActivityMapBinding
-    private lateinit var mMyLocationOverlay: MyLocationNewOverlay
     private lateinit var mapRenderer: MapOverlayRenderer
     private lateinit var toolboxPopup: ToolboxPopup
 
@@ -82,17 +82,6 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
         }
     }
 
-    /**
-     * TODO :
-     * Reduce the number of points on the poly lines using the douglas pucker algorithm
-     * and then dynamically readjust as needed when the map zooms in and out. Also,
-     * you can clip the polyline at the bounds of the screen, then as the user pans,
-     * rerender the lines based on the new extent. Lines that are completely out of
-     * the view can then be removed from the overlay manager. Using these mechanisms,
-     * you can get pretty good performance with a lot of overlays
-     */
-    private val polylines = mutableMapOf<Int, Polyline>()
-
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) centerMapOnMyLocationOnce()
@@ -103,6 +92,7 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Set user agent string for osmdroid
         val userAgentValue = "com.minapps.trackeditor"
         Configuration.getInstance().userAgentValue = userAgentValue
 
@@ -115,10 +105,10 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
         mapRenderer.setSettings()
         binding.osmmap.addMapListener(this)
 
-        // Request location permission here or check it
+        // Request location permission
         requestLocationPermissionIfNeeded()
 
-        // Setup map event listeners (tap, long press)
+        // Setup map event listeners
         setupMapClickListener()
 
         // Setup bottom navigation UI and event listeners
@@ -145,6 +135,10 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
     }
 
 
+    /**
+     * Get users location to center map
+     *
+     */
     private fun requestLocationPermissionIfNeeded() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED
@@ -155,6 +149,11 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
         }
     }
 
+    /**
+     * Setup osmmap click/touch listeners
+     *
+     */
+    @SuppressLint("ClickableViewAccessibility")
     private fun setupMapClickListener() {
         val mapEventsReceiver = object : MapEventsReceiver {
             override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
@@ -187,7 +186,10 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
 
     }
 
-
+    /**
+     * Setup bottom navigation bars
+     * Main and Edit nav bars
+     */
     private fun setupBottomNav() {
         val navBinding = BottomNavigationBinding.bind(binding.root)
         val mainNav = navBinding.mainBottomNavigation
@@ -234,9 +236,6 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
         }
 
         editNav.setOnItemSelectedListener {
-
-            //mapRenderer.selectTrack(null, false)
-
             when (it.itemId) {
                 R.id.nav_toolbox -> {
                     val wasShown = toolboxPopup.show()
@@ -245,7 +244,6 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
                         false
                     } else if (wasShown == 0) {
                         mapViewModel.onToolSelected(ActionType.TOOLBOX)
-                        //clearBottomNavSelection(editNav)
                         false
                     }
                     false
