@@ -342,7 +342,7 @@ Project Link: [https://github.com/OliverMineau/OpenTrackEditor](https://github.c
 [issues-shield]: https://img.shields.io/github/issues/OliverMineau/OpenTrackEditor.svg?style=for-the-badge
 [issues-url]: https://github.com/OliverMineau/OpenTrackEditor/issues
 [license-shield]: https://img.shields.io/github/license/OliverMineau/OpenTrackEditor.svg?style=for-the-badge
-[license-url]: https://github.com/OliverMineau/OpenTrackEditor/blob/master/LICENSE.txt
+[license-url]: https://github.com/OliverMineau/OpenTrackEditor/blob/main/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/oliver-mineau-b7a4861b2
 [product-screenshot]: images/preview.png
