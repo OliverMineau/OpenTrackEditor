@@ -135,6 +135,7 @@ class GpxParser @Inject constructor() : TrackParser {
 
             if (waypoints.isNotEmpty()) {
                 emit(ParsedData.Waypoints(waypoints))
+                waypoints.clear()
             }
 
 

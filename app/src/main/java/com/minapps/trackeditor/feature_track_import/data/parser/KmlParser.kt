@@ -19,7 +19,7 @@ import java.io.InputStream
  * Parser implementation for KML files.
  * Reads KML XML data from the provided Uri and converts it to an ImportedTrack.
  */
-class KmlParser @Inject constructor(): TrackParser {
+class KmlParser @Inject constructor() : TrackParser {
 
     override fun canHandle(fileUri: Uri): Boolean {
         return fileUri.toString().endsWith(".kml", ignoreCase = true)
@@ -75,14 +75,14 @@ class KmlParser @Inject constructor(): TrackParser {
                             "gx:Track" -> {
                                 waypointId = 0.0
                                 emit(ParsedData.TrackMetadata(Track(0, name, "", 0, null)))
-
+                                inTrack = true
                             }
 
                             // Create track
                             "LineString" -> {
                                 waypointId = 0.0
                                 emit(ParsedData.TrackMetadata(Track(0, name, "", 0, null)))
-
+                                inTrack = true
                             }
 
                             // Get creation time
@@ -95,35 +95,52 @@ class KmlParser @Inject constructor(): TrackParser {
 
                             // Get coords (for track)
                             "gx:coord" -> {
-                                val coordText = parser.nextText().trim()
-                                val parts = coordText.split(" ")
 
-                                // If contains at least lat lon
-                                if (parts.size >= 2) {
-                                    lon = parts[0].toDouble()
-                                    lat = parts[1].toDouble()
+                                if (inTrack) {
 
-                                    // If contains elevation
-                                    ele = if (parts.size == 3) parts[2].toDouble() else null
-                                    waypoints.add(Waypoint(waypointId, lat, lon, ele, time, 0))
-                                    waypointId++
+                                    val coordText = parser.nextText().trim()
+                                    val parts = coordText.split(" ")
+
+                                    // If contains at least lat lon
+                                    if (parts.size >= 2) {
+                                        lon = parts[0].toDouble()
+                                        lat = parts[1].toDouble()
+
+                                        // If contains elevation
+                                        ele = if (parts.size == 3) parts[2].toDouble() else null
+                                        waypoints.add(Waypoint(waypointId, lat, lon, ele, time, 0))
+                                        waypointId++
+                                    }
                                 }
                             }
 
                             // Get coords (for line string)
                             "coordinates" -> {
-                                val coordBlock = parser.nextText().trim()
-                                val coords = coordBlock.split("\\s+".toRegex())
 
-                                // For each block of lat lng (elevation)
-                                for (coord in coords) {
-                                    val parts = coord.split(",")
-                                    if (parts.size >= 2) {
-                                        lon = parts[0].toDouble()
-                                        lat = parts[1].toDouble()
-                                        ele = if (parts.size == 3) parts[2].toDouble() else null
-                                        waypoints.add(Waypoint(waypointId, lat, lon, ele, null, 0))
-                                        waypointId++
+                                if (inTrack) {
+
+                                    val coordBlock = parser.nextText().trim()
+                                    val coords = coordBlock.split("\\s+".toRegex())
+
+                                    // For each block of lat lng (elevation)
+                                    for (coord in coords) {
+                                        val parts = coord.split(",")
+                                        if (parts.size >= 2) {
+                                            lon = parts[0].toDouble()
+                                            lat = parts[1].toDouble()
+                                            ele = if (parts.size == 3) parts[2].toDouble() else null
+                                            waypoints.add(
+                                                Waypoint(
+                                                    waypointId,
+                                                    lat,
+                                                    lon,
+                                                    ele,
+                                                    null,
+                                                    0
+                                                )
+                                            )
+                                            waypointId++
+                                        }
                                     }
                                 }
                             }
@@ -137,6 +154,7 @@ class KmlParser @Inject constructor(): TrackParser {
                                     emit(ParsedData.Waypoints(waypoints.toList()))
                                     waypoints.clear()
                                 }
+                                inTrack = false
                             }
 
                             "LineString" -> {
@@ -144,6 +162,7 @@ class KmlParser @Inject constructor(): TrackParser {
                                     emit(ParsedData.Waypoints(waypoints.toList()))
                                     waypoints.clear()
                                 }
+                                inTrack = false
                             }
                         }
                     }
@@ -167,6 +186,7 @@ class KmlParser @Inject constructor(): TrackParser {
             // Flush remaining waypoints
             if (waypoints.isNotEmpty()) {
                 emit(ParsedData.Waypoints(waypoints))
+                waypoints.clear()
             }
 
             // Emit 100% progress on finish
