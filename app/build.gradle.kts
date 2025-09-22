@@ -51,6 +51,7 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.play.services.location)
+    implementation(libs.androidx.junit.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -66,6 +67,18 @@ dependencies {
 
     implementation("com.google.firebase:firebase-database:22.0.0")
     implementation("com.google.firebase:firebase-analytics:23.0.0")
+
+    // Unit test dependencies
+    testImplementation(libs.junit)                // JUnit for unit tests
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockk)                // For mocking in unit tests
+
+    // Instrumented (Android) tests
+    androidTestImplementation(libs.androidx.junit.v115)        // androidx.test.ext:junit:1.1.5
+    androidTestImplementation(libs.androidx.espresso.core.v351) // Espresso
+    androidTestImplementation(libs.androidx.room.testing)       // Room in-memory DB
+    androidTestImplementation(libs.kotlinx.coroutines.test)     // coroutines-test for suspend tests
+    androidTestImplementation(libs.androidx.core)       // Needed for ApplicationProvider
 }
 
 tasks.withType<DokkaTask>().configureEach {
