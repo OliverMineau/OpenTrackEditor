@@ -6,6 +6,7 @@ import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.core.domain.repository.EditTrackRepository
 import com.minapps.trackeditor.data.local.TrackDao
 import com.minapps.trackeditor.data.local.TrackEntity
+import com.minapps.trackeditor.data.local.WaypointEntity
 import com.minapps.trackeditor.data.mapper.toDomain
 import com.minapps.trackeditor.data.mapper.toEntity
 import jakarta.inject.Inject
@@ -198,10 +199,6 @@ class EditTrackRepositoryImpl @Inject constructor(
         return true
     }
 
-    override suspend fun renumberTrack(trackId: Int, newStart: Double, descending: Boolean, indexDescending: Boolean){
-        dao.renumberTrack(trackId, newStart, descending, indexDescending)
-    }
-
     override suspend fun changeTrackId(fromTrackId: Int, toTrackId: Int){
         dao.changeTrackId(fromTrackId, toTrackId)
     }
@@ -214,13 +211,115 @@ class EditTrackRepositoryImpl @Inject constructor(
         return dao.countWaypointsForTrack(trackId)
     }
 
-    override suspend fun removeWaypointsByStep(trackId: Int, step: Int, p1: Double, p2: Double){
-        dao.removeWaypointsByStep(trackId, step, p1, p2)
+    override suspend fun renumberTrack(
+        trackId: Int,
+        newStart: Double,
+        descending: Boolean,
+        indexDescending: Boolean,
+        toTrackId: Int
+    ){
+        val batchSize = 50000
+
+        // Step 2: total waypoints
+        val totalWaypoints = dao.getTrackWaypointCount(trackId)
+        if (totalWaypoints == 0) return
+
+        // Step 3: renumber in batches
+        var globalIndex = 0
+
+        while (true) {
+            val batch = if (!indexDescending) {
+                dao.getWaypointsBatch(trackId, batchSize, 0)
+            } else {
+                dao.getWaypointsBatchDescending(trackId, batchSize, 0)
+            }
+
+            if (batch.isEmpty()) break
+
+            val newBatch = batch.map { wp ->
+                val newId = if (descending) newStart - globalIndex else newStart + globalIndex
+                val newWp = wp.copy(
+                    waypointId = newId,
+                    trackOwnerId = toTrackId
+                )
+                globalIndex++
+                newWp
+            }
+
+            // Delete old points
+            dao.deleteWaypoints(batch)
+
+            // Add new points
+            dao.insertWaypoints(newBatch)
+
+        }
+
     }
 
-    override suspend fun removeWaypointsByStep(trackId: Int, step: Int) {
-        dao.removeWaypointsByStep(trackId, step)
+
+
+    override suspend fun removeWaypointsByStep(trackId: Int, step: Int, p1: Double, p2: Double){
+        removeWaypointsByStepLogic(trackId, step, p1, p2)
     }
+
+    override suspend fun removeWaypointsByStep(trackId: Int, step: Int){
+        removeWaypointsByStepLogic(trackId, step)
+    }
+
+    private suspend fun removeWaypointsByStepLogic(trackId: Int, step: Int, p1: Double? = null, p2: Double? = null){
+        if (step <= 0) return
+
+        var index = 0
+        val batchSize = 1000
+        var startWp = p1
+        var finishWp = p2
+
+        // If no waypoints selected then remove on all track
+        if(startWp == null || finishWp == null){
+            startWp = dao.getTrackFirstWaypointId(trackId)
+            finishWp = dao.getTrackLastWaypointId(trackId)
+
+            if(startWp == null || finishWp == null){
+                return
+            }
+        }
+
+        var startingId: Double = startWp
+        while (true) {
+
+            // Get waypoints by batch
+            val batch = dao.getWaypointsBatchFromId(trackId, startingId, finishWp, batchSize)
+
+            if (batch.isEmpty() || batch.size == 1) break
+
+            startingId = batch.last().waypointId
+
+
+            val toDelete = batch.filter { waypoint ->
+                val keep = waypoint.waypointId == startWp || waypoint.waypointId == finishWp
+                if (keep) {
+                    index++ // increment even if we keep
+                    startingId = waypoint.waypointId
+
+                    false // do not delete
+                } else {
+                    val delete = index % step != 0
+                    index++
+
+                    if(!delete && finishWp > waypoint.waypointId){
+                        startingId = waypoint.waypointId
+                    }
+
+                    delete
+                }
+            }
+
+            if (toDelete.isNotEmpty()) {
+                dao.deleteWaypoints(toDelete)
+            }
+        }
+    }
+
 
     override suspend fun reverseTrack(trackId: Int, p1: Double, p2: Double){
         dao.reverseTrack(trackId, p1, p2)
@@ -229,5 +328,10 @@ class EditTrackRepositoryImpl @Inject constructor(
     override suspend fun reverseTrack(trackId: Int){
         dao.reverseTrack(trackId)
     }
+
+    override suspend fun deleteWaypointsBatch(trackId: Int, batchSize: Int, offset: Int): Int{
+        return dao.deleteWaypointsBatch(trackId, batchSize, offset)
+    }
+
 
 }

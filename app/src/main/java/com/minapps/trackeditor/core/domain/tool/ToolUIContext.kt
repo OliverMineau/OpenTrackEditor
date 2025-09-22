@@ -9,5 +9,7 @@ import com.minapps.trackeditor.feature_map_editor.domain.model.EditState
 interface ToolUiContext {
     suspend fun <T : Any> showDialog(dialog: ToolDialog<T>): T?
     fun showToast(message: String)
+    fun showProgressBar(message: String)
+    fun hideProgressBar()
     fun getEditState(): EditState
 }

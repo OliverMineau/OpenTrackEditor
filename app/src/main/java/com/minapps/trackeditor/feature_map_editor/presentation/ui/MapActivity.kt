@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Bundle
+import android.preference.PreferenceManager
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
@@ -54,6 +55,8 @@ import com.minapps.trackeditor.feature_track_export.presentation.util.showSaveFi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase
+import org.osmdroid.util.MapTileIndex
 
 @AndroidEntryPoint
 class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultListener {
@@ -71,7 +74,6 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
     private var zoomToEgg = false
 
 
-
     //When file picked call viewmodel's importTrack
     private val filePicker = registerForActivityResult(
         ActivityResultContracts.GetContent()
@@ -86,7 +88,6 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) centerMapOnMyLocationOnce()
         }
-
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -132,6 +133,14 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
 
         handleIntent(intent)
 
+
+
+
+
+
+
+
+
     }
 
 
@@ -166,7 +175,7 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
                 return true
             }
 
-            override fun longPressHelper(p: GeoPoint?) : Boolean{
+            override fun longPressHelper(p: GeoPoint?): Boolean {
                 zoomToEgg = false
                 return true
             }
@@ -183,7 +192,6 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
             }
             false
         }
-
     }
 
     /**
@@ -279,7 +287,7 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
         }
     }
 
-    private fun hideSettings(){
+    private fun hideSettings() {
         val fragment = supportFragmentManager.findFragmentById(R.id.settings_container)
         if (fragment != null) {
             supportFragmentManager.beginTransaction()
@@ -397,11 +405,18 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
             event.currentSelectedTool != ActionType.TOOLBOX
         ) {
             mapRenderer.clearAllSelections()
+
+        }else{
+            if (event.currentSelectedTracks.isEmpty()) {
+                mapRenderer.deselectTracks()
+            }
+
+            if (event.currentSelectedPoints.isEmpty()) {
+                mapRenderer.deselectPoints()
+            }
         }
 
-        if (event.currentSelectedTracks.isEmpty()) {
-            mapRenderer.deselectTracks()
-        }
+
     }
 
 
@@ -538,7 +553,7 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
 
     fun setupZoom() {
         binding.plusBtn.setOnClickListener {
-            if(zoomToEgg){
+            if (zoomToEgg) {
                 binding.osmmap.controller.setCenter(fallbackGeoPoint)
             }
             binding.osmmap.controller.zoomIn()
@@ -579,7 +594,6 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
             }
 
 
-
         } else {
             // Request permission if not granted
             ActivityCompat.requestPermissions(
@@ -599,7 +613,7 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 centerMapOnMyLocationOnce()
-            }else{
+            } else {
                 val geoPoint = GeoPoint(45.71232, 5.12749)
                 binding.osmmap.controller.setCenter(geoPoint)
                 binding.osmmap.controller.animateTo(geoPoint)
@@ -633,7 +647,7 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
         }
     }
 
-    fun showToastEvent(message: String){
+    fun showToastEvent(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
@@ -661,6 +675,16 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
 
     override fun getEditState(): EditState {
         return mapViewModel.editState.value
+    }
+
+    override fun showProgressBar(message: String){
+        val data = ProgressData(0, true, false, message)
+        handleLoadingEvent(data)
+    }
+
+    override fun hideProgressBar(){
+        val data = ProgressData(0, false, false, "")
+        handleLoadingEvent(data)
     }
 
     override fun onToolResult(tool: ActionType, result: Any?) {

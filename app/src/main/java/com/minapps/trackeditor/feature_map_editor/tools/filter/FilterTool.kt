@@ -90,6 +90,8 @@ class FilterTool @Inject constructor (
         val params = uiContext.showDialog(FilterDialog(waypointCount))
         if (params != null) {
 
+            uiContext.showProgressBar("Filtering Track")
+
             // Apply filtering logic
             val selection = FilterSelection(trackId, pointA, pointB)
             val result = applyFilterUseCase(selection,params)
@@ -99,6 +101,8 @@ class FilterTool @Inject constructor (
 
             // Send back results
             listener.onToolResult(ActionType.FILTER, result)
+
+            uiContext.hideProgressBar()
             return
         }
 

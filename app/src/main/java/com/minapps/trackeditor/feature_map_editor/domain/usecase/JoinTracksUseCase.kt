@@ -29,7 +29,7 @@ class JoinTracksUseCase @Inject constructor(
         val trackBPoint = selectedPoints[1]
         val trackB = checkEnds(trackBPoint) ?: return null
 
-        // Get track to edit and to leave depending on situation
+        // Get track to edit and to leave untouched depending on situation
         // If end end -> reset ids of any track from end+1 ascending
         // If start end or end start -> reset ids of start track from end+1
         // If start start -> reset ids of any track from start-1 descending
@@ -41,8 +41,17 @@ class JoinTracksUseCase @Inject constructor(
         }
 
         // If track has to be reversed
+        // If both are end types then last track has to be flipped and increment from last point
+        // eg :
+        // was : 0 1 2 3 4
+        // becomes : 56 55 54 53
         val reverseIndex = (trackA == trackB && trackA == EndType.END)
+
         // If we have to decrement the values
+        // If both are start types then first track has to be decremented from start to finish
+        // eg :
+        // was : 0 1 2 3 4
+        // becomes : -1 -2 -3 -4
         val decrement = (trackA == trackB && trackA == EndType.START)
 
         var id: Double
@@ -54,11 +63,7 @@ class JoinTracksUseCase @Inject constructor(
             id++
         }
 
-        // Set right waypoint ids
-        repository.renumberTrack(trackToEdit.first, id, decrement, reverseIndex)
-
-        // Change track id
-        repository.changeTrackId(trackToEdit.first, trackToLeave.first)
+        repository.renumberTrack(trackToEdit.first, id, decrement, reverseIndex, trackToLeave.first)
 
         val waypoints = repository.getTrackWaypoints(trackToLeave.first)
             .map { SimpleWaypoint(it.id, it.lat, it.lng) }

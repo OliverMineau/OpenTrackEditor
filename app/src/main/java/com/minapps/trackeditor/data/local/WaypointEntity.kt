@@ -32,7 +32,7 @@ import androidx.room.PrimaryKey
         )
     ],
     primaryKeys = ["trackOwnerId", "waypointId"],
-    indices = [Index("trackOwnerId")]
+    indices = [Index(value = ["trackOwnerId", "waypointId"])]
 )
 data class WaypointEntity(
     val waypointId: Double = 0.0,

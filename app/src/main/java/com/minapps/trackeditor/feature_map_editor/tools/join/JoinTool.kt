@@ -35,7 +35,9 @@ class JoinTool @Inject constructor (
             else -> {}
         }
 
+        uiContext.showProgressBar("Joining Tracks")
         val result = joinTracksUseCase(uiContext.getEditState().currentSelectedPoints)
+        uiContext.hideProgressBar()
 
         if(result == null){
             uiContext.showToast("Select two different track endpoints to join")

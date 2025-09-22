@@ -54,7 +54,6 @@ import org.osmdroid.util.GeoPoint
 import kotlin.collections.forEach
 
 
-
 @HiltViewModel
 class MapViewModel @Inject constructor(
     private val repository: EditTrackRepository,
@@ -260,7 +259,12 @@ class MapViewModel @Inject constructor(
     suspend fun loadTrackWaypointsAndUpdate(trackId: Int, center: Boolean) {
 
         _progressState.update {
-            ProgressData(progress = 0, isDisplayed = true, isDeterminate = false, message = "Processing tracks")
+            ProgressData(
+                progress = 0,
+                isDisplayed = true,
+                isDeterminate = false,
+                message = "Processing tracks"
+            )
         }
 
         loadTrackWaypoints(trackId, center)
@@ -375,7 +379,14 @@ class MapViewModel @Inject constructor(
             }
 
             Log.d("debug", "Progress show")
-            _progressState.update { ProgressData(progress = 0, isDisplayed = true, isDeterminate = true, message = null) }
+            _progressState.update {
+                ProgressData(
+                    progress = 0,
+                    isDisplayed = true,
+                    isDeterminate = true,
+                    message = null
+                )
+            }
 
             exportTrackUseCase(trackIds, fileName, format).collect { exportResult ->
                 when (exportResult) {
@@ -383,7 +394,12 @@ class MapViewModel @Inject constructor(
                         Log.d("debug", "export success, mapvm")
                         Log.d("debug", "Progress close")
                         _progressState.update {
-                            ProgressData(progress = 0, isDisplayed = false, isDeterminate = true, message = null)
+                            ProgressData(
+                                progress = 0,
+                                isDisplayed = false,
+                                isDeterminate = true,
+                                message = null
+                            )
                         }
                         _toastEvents.emit("Track exported successfully !")
                     }
@@ -392,7 +408,12 @@ class MapViewModel @Inject constructor(
                         //_exportResult.emit(Result.failure(exportResult.message))
                         Log.d("debug", "export fail : ${exportResult.message}")
                         _progressState.update {
-                            ProgressData(progress = 0, isDisplayed = false, isDeterminate = true, message = null)
+                            ProgressData(
+                                progress = 0,
+                                isDisplayed = false,
+                                isDeterminate = true,
+                                message = null
+                            )
                         }
                         _toastEvents.emit("Exporting track failed.")
                     }
@@ -400,7 +421,12 @@ class MapViewModel @Inject constructor(
                     is DataStreamProgress.Progress -> {
                         Log.d("debug", "export progress ${exportResult.percent}, mapvm")
                         _progressState.update {
-                            ProgressData(progress = exportResult.percent, isDisplayed = false, isDeterminate = true, message = "Exporting track")
+                            ProgressData(
+                                progress = exportResult.percent,
+                                isDisplayed = false,
+                                isDeterminate = true,
+                                message = "Exporting track"
+                            )
                         }
                     }
                 }
@@ -414,7 +440,13 @@ class MapViewModel @Inject constructor(
 
         viewModelScope.launch {
             trackImportUseCase(uri).collect { importProgress ->
-                _progressState.update {ProgressData(progress = 0, isDisplayed = true, isDeterminate = true, message = null)
+                _progressState.update {
+                    ProgressData(
+                        progress = 0,
+                        isDisplayed = true,
+                        isDeterminate = true,
+                        message = null
+                    )
                 }
                 when (importProgress) {
                     is DataStreamProgress.Completed -> {
@@ -432,7 +464,12 @@ class MapViewModel @Inject constructor(
                         }
 
                         _progressState.update {
-                            ProgressData(progress = 0, isDisplayed = false, isDeterminate = true, message = null)
+                            ProgressData(
+                                progress = 0,
+                                isDisplayed = false,
+                                isDeterminate = true,
+                                message = null
+                            )
                         }
 
                         _toastEvents.emit("Imported track successfully")
@@ -441,7 +478,12 @@ class MapViewModel @Inject constructor(
                     is DataStreamProgress.Error -> {
                         Log.d("debug", "VM received ERROR! ${importProgress.message}")
                         _progressState.update {
-                            ProgressData(progress = 0, isDisplayed = false, isDeterminate = true, message = null)
+                            ProgressData(
+                                progress = 0,
+                                isDisplayed = false,
+                                isDeterminate = true,
+                                message = null
+                            )
                         }
                         _toastEvents.emit("Importing track failed")
                     }
@@ -449,7 +491,12 @@ class MapViewModel @Inject constructor(
                     is DataStreamProgress.Progress -> {
                         Log.d("debug", "VM received progress : ${importProgress.percent}%")
                         _progressState.update {
-                            ProgressData(progress = importProgress.percent, isDisplayed = true, isDeterminate = true, message = "Importing track")
+                            ProgressData(
+                                progress = importProgress.percent,
+                                isDisplayed = true,
+                                isDeterminate = true,
+                                message = "Importing track"
+                            )
                         }
                     }
                 }
@@ -488,7 +535,12 @@ class MapViewModel @Inject constructor(
             hasStartedCalculationsInThread = true
 
             _progressState.update {
-                ProgressData(progress = 0, isDisplayed = true, isDeterminate = false, message = "Processing track view")
+                ProgressData(
+                    progress = 0,
+                    isDisplayed = true,
+                    isDeterminate = false,
+                    message = "Processing track view"
+                )
             }
 
             val result = withContext(Dispatchers.Default) {
@@ -512,7 +564,12 @@ class MapViewModel @Inject constructor(
             }
 
             _progressState.update {
-                ProgressData(progress = 0, isDisplayed = false, isDeterminate = false, message = null)
+                ProgressData(
+                    progress = 0,
+                    isDisplayed = false,
+                    isDeterminate = false,
+                    message = null
+                )
             }
 
             hasStartedCalculationsInThread = false
@@ -540,9 +597,10 @@ class MapViewModel @Inject constructor(
 
             _editState.update {
 
-                if(action.selectionCount == SelectionCount.NONE &&
+                if (action.selectionCount == SelectionCount.NONE &&
                     action != ActionType.ADD &&
-                    action != ActionType.REMOVE){
+                    action != ActionType.REMOVE
+                ) {
                     return@launch
                 }
 
@@ -564,10 +622,12 @@ class MapViewModel @Inject constructor(
 
             }
         }
-        Log.d("debug", "Selected ${editState.value.currentSelectedTool}, " +
-                "Last tool : ${editState.value.lastSelectedTool}, " +
-                "tracks:${editState.value.currentSelectedTracks}, " +
-                "points: ${editState.value.currentSelectedPoints}")
+        Log.d(
+            "debug", "Selected ${editState.value.currentSelectedTool}, " +
+                    "Last tool : ${editState.value.lastSelectedTool}, " +
+                    "tracks:${editState.value.currentSelectedTracks}, " +
+                    "points: ${editState.value.currentSelectedPoints}"
+        )
     }
 
     /**
@@ -616,29 +676,39 @@ class MapViewModel @Inject constructor(
                 else -> {}
             }
         }
+
+        _editState.update {
+            it.copy(
+                currentSelectedTracks = mutableListOf(),
+                currentSelectedPoints = mutableListOf(),
+                version = System.nanoTime()
+            )
+        }
     }
 
     suspend fun sendFilterResults(result: FilterResult) {
-        if (result.succeeded) {
-            _editState.update {
-                it.copy(
-                    currentSelectedTracks = mutableListOf(),
-                    currentSelectedPoints = mutableListOf(),
-                    version = System.nanoTime()
-                )
-            }
+
+        // Remove selection
+        _editState.update {
+            it.copy(
+                currentSelectedTracks = mutableListOf(),
+                currentSelectedPoints = mutableListOf(),
+                version = System.nanoTime()
+            )
         }
 
+        // Send redisplay track update
         result.update.forEach {
-            when(it){
+            when (it) {
                 is WaypointUpdate.FilteredTrack -> {
-                    displayTrackUseCase(it.trackId, false)
+                    loadTrackWaypointsAndUpdate(it.trackId, false)
                 }
 
                 else -> {}
             }
             _waypointEvents.emit(it)
         }
+
     }
 
     suspend fun sendDeleteResults(parameters: WaypointUpdate?) {
@@ -656,7 +726,7 @@ class MapViewModel @Inject constructor(
     }
 
     private suspend fun sendReverseResults(result: WaypointUpdate?) {
-        when(result){
+        when (result) {
             is WaypointUpdate.ReversedTrack -> displayTrackUseCase(result.trackId, false)
             else -> return
         }

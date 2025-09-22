@@ -3,6 +3,7 @@ package com.minapps.trackeditor.feature_map_editor.presentation.overlay
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
+import android.preference.PreferenceManager
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.minapps.trackeditor.R
@@ -19,9 +20,12 @@ import com.minapps.trackeditor.feature_map_editor.presentation.util.PaintType
 import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.usecase.EvenIntervalDecimationUseCase
 import org.osmdroid.api.IGeoPoint
 import org.osmdroid.api.IMapController
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.util.MapTileIndex
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Polyline
@@ -176,6 +180,24 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             MapView.getTileSystem().maxLatitude, MapView.getTileSystem().minLatitude, 0
         );
         mMap.minZoomLevel = 4.0
+
+
+        val esriWorldImagery = object : OnlineTileSourceBase(
+            "EsriWorldImagery",
+            0, 20, 256, ".jpg",
+            arrayOf() // we will build full URL ourselves
+        ) {
+            override fun getTileURLString(pMapTileIndex: Long): String {
+                val x = MapTileIndex.getX(pMapTileIndex)
+                val y = MapTileIndex.getY(pMapTileIndex)
+                val z = MapTileIndex.getZoom(pMapTileIndex)
+                // Esri tile URL format: /tile/{z}/{y}/{x}
+                return "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/$z/$y/$x"
+            }
+        }
+
+        mMap.setTileSource(esriWorldImagery)
+
     }
 
 
@@ -648,7 +670,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
 
             is WaypointUpdate.RemovedTracks -> handleRemovedTrack(event.trackIds)
             is WaypointUpdate.JoinedTracks -> handleJoinedTrack(event)
-            is WaypointUpdate.FilteredTrack -> null
+            is WaypointUpdate.FilteredTrack -> handleTrackFiltered(event)
             is WaypointUpdate.ReversedTrack -> null
         }
 
@@ -798,6 +820,10 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
         // TODO
     }
 
+    private fun handleTrackFiltered(event: WaypointUpdate.FilteredTrack) {
+        // TODO
+    }
+
     private fun handleJoinedTrack(event: WaypointUpdate.JoinedTracks){
         // Delete second track
         mMap.overlays.remove(displayedPolylines[event.trackIdRemoved]?.polyline)
@@ -817,6 +843,11 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
     fun deselectTracks(){
         selectedPolylines = mutableListOf()
         colorTracks()
+    }
+
+    fun deselectPoints(){
+        clearTrackOverlaySelection()
+        clearPointOverlaySelection()
     }
 
     private fun colorTracks() {

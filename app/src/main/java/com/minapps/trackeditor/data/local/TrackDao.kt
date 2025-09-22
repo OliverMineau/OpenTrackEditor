@@ -9,115 +9,45 @@ import androidx.room.*
 @Dao
 interface TrackDao {
 
-    /**
-     * Insert a new Track into the database.
-     * @param track TrackEntity to insert
-     * @return ID of the inserted track (auto-generated primary key)
-     */
+    // ==========================
+    // TRACK OPERATIONS
+    // ==========================
+
+    /** Insert a new Track into the database. Returns generated ID. */
     @Insert
     suspend fun insertTrack(track: TrackEntity): Long
 
+    /** Remove a track by its ID. */
     @Query("DELETE FROM tracks WHERE trackId = :trackId ")
     suspend fun removeTrack(trackId: Int)
 
-    /**
-     * Fetch a single track by its ID.
-     * @param id Track ID
-     * @return TrackEntity or null if not found
-     */
+    /** Get a track by its ID. */
     @Query("SELECT * FROM tracks WHERE trackId = :id LIMIT 1")
     suspend fun getTrackById(id: Int): TrackEntity?
 
+    /** Get all track IDs. */
+    @Query("SELECT trackId FROM tracks")
+    suspend fun getTrackIds(): List<Int>
 
-    @Query("""SELECT MIN(waypointId) FROM waypoints WHERE trackOwnerId = :trackId""")
-    suspend fun getTrackFirstWaypointId(trackId: Int): Double?
-
-    @Query("""SELECT MAX(waypointId) FROM waypoints WHERE trackOwnerId = :trackId""")
-    suspend fun getTrackLastWaypointId(trackId: Int): Double?
-
-    @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId = :trackId AND waypointId < :id")
-    suspend fun getWaypointIndex(trackId: Int, id: Double): Int?
-
-    @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId ORDER BY waypointId ASC LIMIT 1 OFFSET :index")
-    suspend fun getWaypoint(trackId: Int, index: Int): WaypointEntity?
-
-    @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId = :trackId AND latitude BETWEEN :latSouth AND :latNorth AND longitude BETWEEN :lonWest AND :lonEast")
-    suspend fun getVisibleTrackWaypointsCount(
-        trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double
-    ): Double
-
-    @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId AND latitude BETWEEN :latSouth AND :latNorth AND longitude BETWEEN :lonWest AND :lonEast ORDER BY waypointId ASC")
-    suspend fun getVisibleTrackWaypoints(
-        trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double
-    ): List<WaypointEntity>
-
-    @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId AND latitude BETWEEN :latSouth AND :latNorth AND longitude BETWEEN :lonWest AND :lonEast ORDER BY waypointId ASC LIMIT :chunkSize OFFSET :offset")
-    suspend fun getVisibleTrackWaypointsChunk(
-        trackId: Int,
-        latNorth: Double,
-        latSouth: Double,
-        lonWest: Double,
-        lonEast: Double,
-        chunkSize: Int,
-        offset: Int
-    ): List<WaypointEntity>
-
-    @Query(
-        """
-    SELECT * FROM waypoints
-    WHERE latitude BETWEEN :latSouth AND :latNorth
-      AND longitude BETWEEN :lonWest AND :lonEast
-    ORDER BY trackOwnerId ASC, waypointId ASC
-"""
-    )
-    suspend fun getTracksWithVisibleWaypoints(
-        latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double
-    ): List<WaypointEntity>
-
-    @Query(
-        """
-    SELECT COUNT(*) FROM waypoints
-    WHERE latitude BETWEEN :latSouth AND :latNorth
-      AND longitude BETWEEN :lonWest AND :lonEast
-    ORDER BY trackOwnerId ASC, waypointId ASC
-"""
-    )
-    suspend fun getTracksWithVisibleWaypointsCount(
-        latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double
-    ): Double
-
-    @Query(
-        """
-    SELECT DISTINCT trackOwnerId FROM waypoints
-    WHERE latitude BETWEEN :latSouth AND :latNorth
-      AND longitude BETWEEN :lonWest AND :lonEast
-    ORDER BY trackOwnerId ASC
-"""
-    )
-    suspend fun getTrackIdsWithVisibleWaypoints(
-        latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double
-    ): List<Int>
+    /** Delete all tracks. */
+    @Query("DELETE FROM tracks")
+    suspend fun clearTracks()
 
 
-    /**
-     * Insert a waypoint into the database.
-     * If the waypoint already exists, it will be replaced.
-     * @param waypoint
-     */
+
+    // ==========================
+    // WAYPOINT BASIC OPERATIONS
+    // ==========================
+
+    /** Insert or replace a waypoint. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWaypoint(waypoint: WaypointEntity)
 
-    /**
-     * Inserts a waypoint, ensuring the parent track exists.
-     *
-     * If the waypoint's track doesn't exist yet (It should but just in case):
-     *  - Creates a new "Untitled Track"
-     *  - Uses the new track's ID as the waypoint's trackOwnerId
-     *
-     * This method is marked @Transaction to ensure both inserts happen atomically.
-     *
-     * @param waypoint
-     */
+    /** Insert multiple waypoints at once. */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWaypoints(waypoints: List<WaypointEntity>)
+
+    /** Insert waypoint with track check; creates new track if necessary. */
     @Transaction
     suspend fun insertWaypointWithTrackCheck(waypoint: WaypointEntity) {
         val existing = getTrackById(waypoint.trackOwnerId)
@@ -129,251 +59,274 @@ interface TrackDao {
         insertWaypoint(waypoint.copy(trackOwnerId = trackId))
     }
 
-    /**
-     * Inserts a list of waypoints
-     *
-     * @param waypoints
-     */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertWaypoints(waypoints: List<WaypointEntity>)
-
-    @Query("SELECT trackId FROM tracks")
-    suspend fun getTrackIds(): List<Int>
-
-    /**
-     * Get all waypoints for a specific track, ordered by their ID.
-     * @param trackId Track ID
-     */
-    @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId ORDER BY waypointId ASC")
-    suspend fun getTrackWaypoints(trackId: Int): List<WaypointEntity>
-
-    @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId AND waypointId % :sampleRate = 0 ORDER BY waypointId ASC")
-    suspend fun getTrackWaypointsSample(trackId: Int, sampleRate: Int): List<WaypointEntity>
-
-
-    /**
-     * Get all waypoints in the database (for debugging or global operations).
-     */
+    /** Get all waypoints. */
     @Query("SELECT * FROM waypoints")
     suspend fun getAllWaypoints(): List<WaypointEntity>
 
-    /**
-     * Delete a single waypoint debug (for debugging or global operations).
-     */
-    @Delete
-    suspend fun deleteWaypoint(waypoint: WaypointEntity)
+    /** Get waypoints for a specific track. */
+    @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId ORDER BY waypointId ASC")
+    suspend fun getTrackWaypoints(trackId: Int): List<WaypointEntity>
 
-    @Query("DELETE FROM waypoints WHERE trackOwnerId = :trackId AND waypointId = :id")
-    suspend fun deleteWaypoint(trackId: Int, id: Double)
+    /** Get sampled waypoints for a track. */
+    @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId AND waypointId % :sampleRate = 0 ORDER BY waypointId ASC")
+    suspend fun getTrackWaypointsSample(trackId: Int, sampleRate: Int): List<WaypointEntity>
 
-    @Query("DELETE FROM waypoints WHERE trackOwnerId = :trackId AND waypointId > :startId AND waypointId < :endId")
-    suspend fun deleteSegment(trackId: Int, startId: Double, endId: Double)
+    /** Get first waypoint ID of a track. */
+    @Query("""SELECT MIN(waypointId) FROM waypoints WHERE trackOwnerId = :trackId""")
+    suspend fun getTrackFirstWaypointId(trackId: Int): Double?
 
-    @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId = :trackId")
-    suspend fun countWaypointsForTrack(trackId: Int): Int
+    /** Get last waypoint ID of a track. */
+    @Query("""SELECT MAX(waypointId) FROM waypoints WHERE trackOwnerId = :trackId""")
+    suspend fun getTrackLastWaypointId(trackId: Int): Double?
 
+    /** Get the index of a waypoint in a track. */
+    @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId = :trackId AND waypointId < :id")
+    suspend fun getWaypointIndex(trackId: Int, id: Double): Int?
 
-    @Query(
-        """
-    DELETE FROM waypoints
-    WHERE trackOwnerId = :trackId
-      AND waypointId BETWEEN :p1 AND :p2
-      AND waypointId NOT IN (
-          SELECT waypointId FROM (
-              SELECT waypointId, ROW_NUMBER() OVER (ORDER BY waypointId ASC) AS rn
-              FROM waypoints
-              WHERE trackOwnerId = :trackId
-                AND waypointId BETWEEN :p1 AND :p2
-          )
-          WHERE rn % :step = 0 OR waypointId = :p1 OR waypointId = :p2
-          )
-    """
-    )
-    suspend fun removeWaypointsByStep(
-        trackId: Int, step: Int, p1: Double, p2: Double
-    )
-
-    @Query(
-        """
-    DELETE FROM waypoints
-    WHERE trackOwnerId = :trackId
-      AND waypointId NOT IN (
-          SELECT waypointId FROM (
-              SELECT waypointId,
-                     ROW_NUMBER() OVER (ORDER BY waypointId ASC) AS rn,
-                     COUNT(*) OVER () AS total
-              FROM waypoints
-              WHERE trackOwnerId = :trackId
-          )
-          WHERE rn % :step = 0 
-             OR rn = 1   
-             OR rn = total
-      )
-"""
-    )
-    suspend fun removeWaypointsByStep(
-        trackId: Int, step: Int
-    )
+    /** Get waypoint by index for a track. */
+    @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId ORDER BY waypointId ASC LIMIT 1 OFFSET :index")
+    suspend fun getWaypoint(trackId: Int, index: Int): WaypointEntity?
 
 
-    @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId in (:trackIds)")
-    suspend fun countWaypointsForTracks(trackIds: List<Int>): Int
 
-    @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId ORDER BY waypointId ASC LIMIT :chunkSize OFFSET :offset")
-    suspend fun getWaypointsByChunk(trackId: Int, chunkSize: Int, offset: Int): List<WaypointEntity>
+    // ==========================
+    // WAYPOINT VISIBILITY / BOUNDING
+    // ==========================
 
-    /**
-     * Delete all waypoints from the database.
-     */
-    @Query("DELETE FROM waypoints")
-    suspend fun clearWaypoints()
+    /** Count visible waypoints in bounding box. */
+    @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId = :trackId AND latitude BETWEEN :latSouth AND :latNorth AND longitude BETWEEN :lonWest AND :lonEast")
+    suspend fun getVisibleTrackWaypointsCount(
+        trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double
+    ): Double
 
-    /**
-     * Delete all tracks from the database.
-     */
-    @Query("DELETE FROM tracks")
-    suspend fun clearTracks()
+    /** Get visible waypoints in bounding box. */
+    @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId AND latitude BETWEEN :latSouth AND :latNorth AND longitude BETWEEN :lonWest AND :lonEast ORDER BY waypointId ASC")
+    suspend fun getVisibleTrackWaypoints(
+        trackId: Int, latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double
+    ): List<WaypointEntity>
 
-    /**
-     * Clears the entire database (both tracks and waypoints).
-     * Runs inside a single transaction to ensure atomicity.
-     */
-    @Transaction
-    suspend fun clearAll() {
-        clearWaypoints()
-        clearTracks()
-    }
+    /** Get visible waypoint chunks in bounding box. */
+    @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId AND latitude BETWEEN :latSouth AND :latNorth AND longitude BETWEEN :lonWest AND :lonEast ORDER BY waypointId ASC LIMIT :chunkSize OFFSET :offset")
+    suspend fun getVisibleTrackWaypointsChunk(
+        trackId: Int,
+        latNorth: Double,
+        latSouth: Double,
+        lonWest: Double,
+        lonEast: Double,
+        chunkSize: Int,
+        offset: Int
+    ): List<WaypointEntity>
 
-    @Query(
-        """
+    /** Get all tracks with visible waypoints. */
+    @Query("""
+        SELECT * FROM waypoints
+        WHERE latitude BETWEEN :latSouth AND :latNorth
+          AND longitude BETWEEN :lonWest AND :lonEast
+        ORDER BY trackOwnerId ASC, waypointId ASC
+    """)
+    suspend fun getTracksWithVisibleWaypoints(
+        latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double
+    ): List<WaypointEntity>
+
+    /** Count all tracks with visible waypoints. */
+    @Query("""
+        SELECT COUNT(*) FROM waypoints
+        WHERE latitude BETWEEN :latSouth AND :latNorth
+          AND longitude BETWEEN :lonWest AND :lonEast
+        ORDER BY trackOwnerId ASC, waypointId ASC
+    """)
+    suspend fun getTracksWithVisibleWaypointsCount(
+        latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double
+    ): Double
+
+    /** Get IDs of tracks with visible waypoints. */
+    @Query("""
+        SELECT DISTINCT trackOwnerId FROM waypoints
+        WHERE latitude BETWEEN :latSouth AND :latNorth
+          AND longitude BETWEEN :lonWest AND :lonEast
+        ORDER BY trackOwnerId ASC
+    """)
+    suspend fun getTrackIdsWithVisibleWaypoints(
+        latNorth: Double, latSouth: Double, lonWest: Double, lonEast: Double
+    ): List<Int>
+
+    /** Get waypoints in a bounding box with optional step. */
+    @Query("""
         SELECT * FROM waypoints
         WHERE trackOwnerId = :trackId
           AND latitude BETWEEN :south AND :north
           AND longitude BETWEEN :west AND :east
           AND (:step = 1 OR (CAST(waypointId AS INTEGER) % :step) = 0)
         ORDER BY waypointId
-    """
-    )
+    """)
     suspend fun getWaypointsInBoundingBox(
         trackId: Int, south: Double, north: Double, west: Double, east: Double, step: Int = 1
     ): List<WaypointEntity>
 
 
-    @Query(
-        """
-        UPDATE waypoints
-        SET waypointId = waypointId + 1000000
-        WHERE trackOwnerId = :trackId
-        """
-    )
-    suspend fun shiftIdsTemporarily(trackId: Int)
 
-    @Query(
-        """
-        WITH ordered AS (
-            SELECT waypointId,
-                   ROW_NUMBER() OVER (ORDER BY waypointId) - 1 AS rn,
-                   COUNT(*) OVER () - 1 AS maxRn
-            FROM waypoints
+    // ==========================
+    // WAYPOINT BATCH OPERATIONS
+    // ==========================
+
+    /** Get waypoints by chunk for a track. */
+    @Query("SELECT * FROM waypoints WHERE trackOwnerId = :trackId ORDER BY waypointId ASC LIMIT :chunkSize OFFSET :offset")
+    suspend fun getWaypointsByChunk(trackId: Int, chunkSize: Int, offset: Int): List<WaypointEntity>
+
+    /** Get waypoints batch by ID range. */
+    @Query("""
+        SELECT * FROM waypoints 
+        WHERE trackOwnerId = :trackId 
+          AND waypointId BETWEEN :p1 AND :p2
+        ORDER BY waypointId ASC
+        LIMIT :batchSize OFFSET :offset
+    """)
+    suspend fun getWaypointsBatch(trackId: Int, p1: Double, p2: Double, batchSize: Int, offset: Int): List<WaypointEntity>
+
+    /** Get waypoints batch by ID range. */
+    @Query("""
+        SELECT * FROM waypoints 
+        WHERE trackOwnerId = :trackId 
+          AND waypointId BETWEEN :p1 AND :p2
+        ORDER BY waypointId ASC
+        LIMIT :batchSize
+    """)
+    suspend fun getWaypointsBatchFromId(trackId: Int, p1: Double, p2: Double, batchSize: Int): List<WaypointEntity>
+
+    /** Get batch of waypoints ascending. */
+    @Query("""
+        SELECT * FROM waypoints
+        WHERE trackOwnerId = :trackId
+        ORDER BY waypointId ASC
+        LIMIT :batchSize OFFSET :offset
+    """)
+    suspend fun getWaypointsBatch(trackId: Int, batchSize: Int, offset: Int): List<WaypointEntity>
+
+    /** Get batch of waypoints descending. */
+    @Query("""
+        SELECT * FROM waypoints
+        WHERE trackOwnerId = :trackId
+        ORDER BY waypointId DESC
+        LIMIT :batchSize OFFSET :offset
+    """)
+    suspend fun getWaypointsBatchDescending(trackId: Int, batchSize: Int, offset: Int): List<WaypointEntity>
+
+    /** Get batch by Room rowid ascending. */
+    @Query("""
+        SELECT * FROM waypoints
+        WHERE trackOwnerId = :trackId
+        ORDER BY rowid ASC
+        LIMIT :limit OFFSET :offset
+    """)
+    suspend fun getWaypointsBatchByRowId(trackId: Int, limit: Int, offset: Int): List<WaypointEntity>
+
+    /** Get batch by Room rowid descending. */
+    @Query("""
+        SELECT * FROM waypoints
+        WHERE trackOwnerId = :trackId
+        ORDER BY rowid DESC
+        LIMIT :limit OFFSET :offset
+    """)
+    suspend fun getWaypointsBatchByRowIdDesc(trackId: Int, limit: Int, offset: Int): List<WaypointEntity>
+
+    /** Delete a batch of waypoints by offset. */
+    @Query("""
+        DELETE FROM waypoints
+        WHERE trackOwnerId = :trackId
+        AND waypointId IN (
+            SELECT waypointId FROM waypoints
             WHERE trackOwnerId = :trackId
+            ORDER BY waypointId ASC
+            LIMIT :batchSize OFFSET :offset
         )
-        UPDATE waypoints
-        SET waypointId = :newStart + (
-            SELECT CASE 
-                     WHEN :indexDescending = 1 THEN (maxRn - rn) 
-                     ELSE rn 
-                   END
-            FROM ordered
-            WHERE ordered.waypointId = waypoints.waypointId
-        )
-        WHERE trackOwnerId = :trackId
-        """
-    )
-    suspend fun reassignIdsAscending(
-        trackId: Int, newStart: Double, indexDescending: Boolean
-    )
+    """)
+    suspend fun deleteWaypointsBatch(trackId: Int, batchSize: Int, offset: Int): Int
+
+    /** Delete multiple waypoints. */
+    @Delete
+    suspend fun deleteWaypoints(waypoints: List<WaypointEntity>)
 
 
-    @Query(
-        """
-        WITH ordered AS (
-            SELECT waypointId,
-                   ROW_NUMBER() OVER (ORDER BY waypointId) - 1 AS rn,
-                   COUNT(*) OVER () - 1 AS maxRn
-            FROM waypoints
-            WHERE trackOwnerId = :trackId
-        )
-        UPDATE waypoints
-        SET waypointId = :newStart - (
-            SELECT CASE 
-                     WHEN :indexDescending = 1 THEN (maxRn - rn) 
-                     ELSE rn 
-                   END
-            FROM ordered
-            WHERE ordered.waypointId = waypoints.waypointId
-        )
-        WHERE trackOwnerId = :trackId
-        """
-    )
-    suspend fun reassignIdsDescending(
-        trackId: Int, newStart: Double, indexDescending: Boolean
-    )
 
-    @Transaction
-    suspend fun renumberTrack(
-        trackId: Int,
-        newStart: Double,
-        descending: Boolean = false,
-        indexDescending: Boolean = false
-    ) {
-        shiftIdsTemporarily(trackId)
-        if (descending) {
-            reassignIdsDescending(trackId, newStart, indexDescending)
-        } else {
-            reassignIdsAscending(trackId, newStart, indexDescending)
-        }
-    }
+    // ==========================
+    // WAYPOINT UPDATES
+    // ==========================
 
-    @Query(
-        """
+    /** Update a list of waypoints. */
+    @Update
+    suspend fun updateWaypoints(waypoints: List<WaypointEntity>)
+
+    /** Update waypoint ID and track owner. */
+    @Query("""
+        UPDATE waypoints 
+        SET waypointId = :newId, trackOwnerId = :newTrackId
+        WHERE trackOwnerId = :oldTrackId AND waypointId = :oldId
+    """)
+    suspend fun updateWaypointIdAndTrack(oldTrackId: Int, oldId: Double, newId: Double, newTrackId: Int)
+
+    /** Change all waypoints from one track to another. */
+    @Query("""
         UPDATE waypoints
         SET trackOwnerId = :toTrackId
         WHERE trackOwnerId = :fromTrackId
-    """
-    )
+    """)
     suspend fun changeTrackId(fromTrackId: Int, toTrackId: Int)
 
-    @Query(
-        """
-        SELECT COUNT(waypointId)
-        FROM waypoints
-        WHERE trackOwnerId = :trackId AND
-        waypointId BETWEEN :p1 AND :p2
-    """
-    )
-    suspend fun getIntervalSize(trackId: Int, p1: Double, p2: Double): Int
 
 
-    @Transaction
-    suspend fun reverseTrack(trackId: Int) {
-        // Phase 1: Shift IDs out of the way
-        shiftIds(trackId)
+    // ==========================
+    // WAYPOINT DELETES
+    // ==========================
 
-        // Phase 2: Reassign reversed IDs
-        reassignReversedIds(trackId)
-    }
+    /** Delete a single waypoint by entity. */
+    @Delete
+    suspend fun deleteWaypoint(waypoint: WaypointEntity)
 
-    @Query(
-        """
+    /** Delete a single waypoint by ID. */
+    @Query("DELETE FROM waypoints WHERE trackOwnerId = :trackId AND waypointId = :id")
+    suspend fun deleteWaypoint(trackId: Int, id: Double)
+
+    /** Delete a segment of waypoints by range. */
+    @Query("DELETE FROM waypoints WHERE trackOwnerId = :trackId AND waypointId > :startId AND waypointId < :endId")
+    suspend fun deleteSegment(trackId: Int, startId: Double, endId: Double)
+
+    /** Delete all waypoints. */
+    @Query("DELETE FROM waypoints")
+    suspend fun clearWaypoints()
+
+
+
+    // ==========================
+    // TRACK MANIPULATION / ID SHIFTING / REVERSING
+    // ==========================
+
+    /** Shift waypoint IDs temporarily by 1,000,000. */
+    @Query("""
         UPDATE waypoints
         SET waypointId = waypointId + 1000000
         WHERE trackOwnerId = :trackId
-    """
-    )
+    """)
+    suspend fun shiftIdsTemporarily(trackId: Int)
+
+    /** Shift IDs in range. */
+    @Query("""
+        UPDATE waypoints
+        SET waypointId = waypointId + 1000000
+        WHERE trackOwnerId = :trackId
+          AND waypointId BETWEEN :p1 AND :p2
+    """)
+    suspend fun shiftIds(trackId: Int, p1: Double, p2: Double)
+
+    /** Shift all IDs for a track. */
+    @Query("""
+        UPDATE waypoints
+        SET waypointId = waypointId + 1000000
+        WHERE trackOwnerId = :trackId
+    """)
     suspend fun shiftIds(trackId: Int)
 
-    @Query(
-        """
+    /** Reassign reversed IDs for entire track. */
+    @Query("""
         UPDATE waypoints
         SET waypointId = (
             (SELECT (MIN(waypointId) - 1000000) + (MAX(waypointId) - 1000000)
@@ -381,32 +334,11 @@ interface TrackDao {
             ) - (waypointId - 1000000)
         )
         WHERE trackOwnerId = :trackId
-    """
-    )
+    """)
     suspend fun reassignReversedIds(trackId: Int)
 
-
-    @Transaction
-    suspend fun reverseTrack(trackId: Int, p1: Double, p2: Double) {
-        // Phase 1: Shift IDs out of the way
-        shiftIds(trackId, p1, p2)
-
-        // Phase 2: Reassign reversed IDs
-        reassignReversedIds(trackId, p1, p2)
-    }
-
-    @Query(
-        """
-        UPDATE waypoints
-        SET waypointId = waypointId + 1000000
-        WHERE trackOwnerId = :trackId
-          AND waypointId BETWEEN :p1 AND :p2
-    """
-    )
-    suspend fun shiftIds(trackId: Int, p1: Double, p2: Double)
-
-    @Query(
-        """
+    /** Reassign reversed IDs for a range. */
+    @Query("""
         UPDATE waypoints
         SET waypointId = (
             (SELECT (MIN(waypointId) - 1000000) + (MAX(waypointId) - 1000000)
@@ -417,10 +349,64 @@ interface TrackDao {
         )
         WHERE trackOwnerId = :trackId
           AND waypointId BETWEEN (:p1 + 1000000) AND (:p2 + 1000000)
-    """
-    )
+    """)
     suspend fun reassignReversedIds(trackId: Int, p1: Double, p2: Double)
 
+    /** Reverse track IDs for a range. */
+    @Transaction
+    suspend fun reverseTrack(trackId: Int, p1: Double, p2: Double) {
+        shiftIds(trackId, p1, p2)
+        reassignReversedIds(trackId, p1, p2)
+    }
+
+    /** Reverse all waypoint IDs for a track. */
+    @Transaction
+    suspend fun reverseTrack(trackId: Int) {
+        shiftIds(trackId)
+        reassignReversedIds(trackId)
+    }
+
+
+
+    // ==========================
+    // COUNT OPERATIONS
+    // ==========================
+
+    /** Count waypoints for a track. */
+    @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId = :trackId")
+    suspend fun countWaypointsForTrack(trackId: Int): Int
+
+    /** Count waypoints for multiple tracks. */
+    @Query("SELECT COUNT(*) FROM waypoints WHERE trackOwnerId in (:trackIds)")
+    suspend fun countWaypointsForTracks(trackIds: List<Int>): Int
+
+    /** Get number of waypoints for a track. */
+    @Query("""
+        SELECT COUNT(*) FROM waypoints
+        WHERE trackOwnerId = :trackId
+    """)
+    suspend fun getTrackWaypointCount(trackId: Int): Int
+
+    /** Get interval size in waypoint IDs. */
+    @Query("""
+        SELECT COUNT(waypointId)
+        FROM waypoints
+        WHERE trackOwnerId = :trackId AND
+        waypointId BETWEEN :p1 AND :p2
+    """)
+    suspend fun getIntervalSize(trackId: Int, p1: Double, p2: Double): Int
+
+
+
+    // ==========================
+    // TRANSACTIONS
+    // ==========================
+
+    /** Clear all tracks and waypoints in one transaction. */
+    @Transaction
+    suspend fun clearAll() {
+        clearWaypoints()
+        clearTracks()
+    }
 
 }
-
