@@ -2,6 +2,7 @@ package com.minapps.trackeditor.feature_map_editor.presentation.overlay
 
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Rect
 import android.preference.PreferenceManager
 import android.util.Log
@@ -33,6 +34,10 @@ import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.TilesOverlay
+import org.osmdroid.views.overlay.milestones.MilestoneManager
+import org.osmdroid.views.overlay.milestones.MilestoneMiddleLister
+import org.osmdroid.views.overlay.milestones.MilestonePathDisplayer
+import org.osmdroid.views.overlay.milestones.MilestonePixelDistanceLister
 import org.osmdroid.views.overlay.simplefastpoint.LabelledGeoPoint
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlay
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlayOptions
@@ -536,6 +541,8 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             true
         }
 
+        addDirection(polyline)
+
         // Add to polyline to be displayed
         mMap.overlayManager.add(polyline)
 
@@ -576,6 +583,29 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
 
         // Return track line and clickable overlay
         return MutablePair(polyline, pointOverlay)
+    }
+
+    fun addDirection(polyline: Polyline){
+        val path = Path().apply {
+            moveTo(-10f, -10f)
+            lineTo(0f, 1f)
+
+            moveTo(-10f, 10f)
+            lineTo(0f, -1f)
+        }
+
+        val milestoneManager = MilestoneManager(
+            MilestoneMiddleLister(50.0),
+            //MilestonePixelDistanceLister(0.0, 300.0),
+            MilestonePathDisplayer(0.0, true, path, Paint().apply {
+                //style = Paint.Style.FILL
+                style = Paint.Style.STROKE
+                strokeWidth = 5f
+                this.color = Color.BLACK
+            }),
+        )
+
+        polyline.setMilestoneManagers(listOf(milestoneManager))
     }
 
 
