@@ -117,4 +117,11 @@ interface EditTrackRepository {
 
     // Delete waypoints in batch
     suspend fun deleteWaypointsBatch(trackId: Int, batchSize: Int, offset: Int): Int
+
+    // Split track at point
+    suspend fun splitTrack(trackId: Int, point: Double): List<Int>
+
+    // Split track at segment (delete segment)
+    suspend fun splitTrackRange(trackId: Int, point1: Double, point2: Double): List<Int>
+
 }

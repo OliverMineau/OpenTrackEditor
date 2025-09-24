@@ -337,5 +337,13 @@ class EditTrackRepositoryImpl @Inject constructor(
         return dao.deleteWaypointsBatch(trackId, batchSize, offset)
     }
 
+    override suspend fun splitTrack(trackId: Int, point: Double): List<Int> {
+        return dao.splitTrack(trackId, point)
+    }
+
+    override suspend fun splitTrackRange(trackId: Int, point1: Double, point2: Double): List<Int> {
+        return listOf() //dao.splitTrackRange(trackId, point1, point2)
+    }
+
 
 }

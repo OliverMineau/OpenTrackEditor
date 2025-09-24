@@ -55,7 +55,7 @@ enum class ActionType(
         SelectionCount.NONE,
         ToolGroup.TRACK_EDITING
     ),
-    CUT(R.drawable.scissors_24, "Cut", SelectionCount.NONE, ToolGroup.TRACK_EDITING),
+    CUT(R.drawable.scissors_24, "Split", SelectionCount.NONE, ToolGroup.TRACK_EDITING),
     JOIN(R.drawable.link_alt_24, "Join", SelectionCount.NONE, ToolGroup.TRACK_EDITING),
     REDUCE_NOISE(
         R.drawable.noise_cancelling_headphones_24,

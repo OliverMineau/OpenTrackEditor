@@ -26,4 +26,5 @@ sealed class WaypointUpdate {
     data class JoinedTracks(val trackIdStayed: Int, val trackIdRemoved: Int) : WaypointUpdate()
     data class FilteredTrack(val trackId: Int) : WaypointUpdate()
     data class ReversedTrack(val trackId: Int) : WaypointUpdate()
+    data class SplitTrack(val trackIds: List<Int>?) : WaypointUpdate()
 }

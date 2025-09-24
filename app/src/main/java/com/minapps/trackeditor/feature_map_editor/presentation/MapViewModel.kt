@@ -30,6 +30,7 @@ import com.minapps.trackeditor.feature_map_editor.domain.usecase.UpdateSelection
 import com.minapps.trackeditor.feature_map_editor.presentation.model.ActionDescriptor
 import com.minapps.trackeditor.feature_map_editor.presentation.util.HapticFeedback
 import com.minapps.trackeditor.feature_map_editor.presentation.util.StringProvider
+import com.minapps.trackeditor.feature_map_editor.tools.cut.CutTool
 import com.minapps.trackeditor.feature_map_editor.tools.delete.DeleteTool
 import com.minapps.trackeditor.feature_map_editor.tools.export.ExportTool
 import com.minapps.trackeditor.feature_map_editor.tools.filter.FilterTool
@@ -77,6 +78,7 @@ class MapViewModel @Inject constructor(
     private val exportTool: ExportTool,
     private val reverseTool: ReverseTool,
     private val layerTool: LayerTool,
+    private val cutTool: CutTool,
 
     ) : ViewModel() {
 
@@ -173,6 +175,7 @@ class MapViewModel @Inject constructor(
             ActionType.SPACER,
             ActionType.REVERSE,
             ActionType.JOIN,
+            ActionType.CUT,
             ActionType.FILTER,
             ActionType.SPACER
         )
@@ -187,6 +190,7 @@ class MapViewModel @Inject constructor(
                     ActionType.EXPORT -> exportTool
                     ActionType.REVERSE -> reverseTool
                     ActionType.LAYERS -> layerTool
+                    ActionType.CUT -> cutTool
                     else -> null
                 }
 
@@ -674,6 +678,11 @@ class MapViewModel @Inject constructor(
                 sendLayerResult(result)
             }
 
+            ActionType.CUT -> {
+                result as WaypointUpdate?
+                sendSplitResult(result)
+            }
+
             else -> return
         }
 
@@ -746,6 +755,33 @@ class MapViewModel @Inject constructor(
     private fun sendLayerResult(result: LayerType?) {
         if(result != null){
             _editState.update { it.copy(layerType = result) }
+        }
+    }
+
+    private suspend fun sendSplitResult(result: WaypointUpdate?){
+
+        when (result) {
+            is WaypointUpdate.SplitTrack -> {
+
+                // Get last trackId to select
+                var trackIdToSelect = mutableListOf<Int>()
+                if(result.trackIds != null && result.trackIds.isNotEmpty()){
+                    trackIdToSelect.add(result.trackIds.last())
+                }
+
+                _editState.update {
+                    it.copy(
+                        currentSelectedTracks = trackIdToSelect,
+                        currentSelectedPoints = mutableListOf(),
+                        version = System.nanoTime()
+                    )
+                }
+
+                result.trackIds?.forEach { id ->
+                    loadTrackWaypointsAndUpdate(id, false)
+                }
+            }
+            else -> return
         }
     }
 

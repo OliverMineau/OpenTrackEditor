@@ -272,6 +272,13 @@ interface TrackDao {
     """)
     suspend fun changeTrackId(fromTrackId: Int, toTrackId: Int)
 
+    /** Change all waypoints bigger than point from trackIdFrom to trackIdTo. */
+    @Query("""
+        UPDATE waypoints 
+        SET trackOwnerId = :trackIdTo
+        WHERE trackOwnerId = :trackIdFrom AND waypointId >= :point
+    """)
+    suspend fun updateTrackIdFrom(trackIdFrom: Int, trackIdTo: Int, point: Double)
 
 
     // ==========================
@@ -408,5 +415,29 @@ interface TrackDao {
         clearWaypoints()
         clearTracks()
     }
+
+    /** Split track
+     * TODO : Copy last track info
+     * */
+    @Transaction
+    suspend fun splitTrack(trackId: Int, point: Double): List<Int>{
+
+        // If Less than 2 points don't split
+        if(getTrackWaypointCount(trackId) <= 2) return listOf()
+        // If an end, don't split
+        if(getTrackFirstWaypointId(trackId) == point || getTrackLastWaypointId(trackId) == point) return listOf()
+
+        val trackIdTo = insertTrack(
+            TrackEntity(
+                name = "Untitled Track", description = null, createdAt = System.currentTimeMillis()
+            )
+        ).toInt()
+
+        updateTrackIdFrom(trackId, trackIdTo, point)
+
+        return listOf(trackId, trackIdTo)
+    }
+
+
 
 }

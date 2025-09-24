@@ -601,7 +601,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
                 //style = Paint.Style.FILL
                 style = Paint.Style.STROKE
                 strokeWidth = 5f
-                this.color = Color.BLACK
+                this.color = Color.WHITE
             }),
         )
 
@@ -733,6 +733,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             is WaypointUpdate.RemovedTracks -> handleRemovedTrack(event.trackIds)
             is WaypointUpdate.JoinedTracks -> handleJoinedTrack(event)
             is WaypointUpdate.FilteredTrack -> handleTrackFiltered(event)
+            is WaypointUpdate.SplitTrack -> handleTrackSplit(event)
             is WaypointUpdate.ReversedTrack -> null
         }
 
@@ -883,7 +884,11 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
     }
 
     private fun handleTrackFiltered(event: WaypointUpdate.FilteredTrack) {
-        // TODO
+        // TODO : Optimise
+    }
+
+    private fun handleTrackSplit(event: WaypointUpdate.SplitTrack){
+        // TODO : Optimise
     }
 
     private fun handleJoinedTrack(event: WaypointUpdate.JoinedTracks){
