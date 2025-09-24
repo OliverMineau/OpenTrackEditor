@@ -104,10 +104,10 @@ interface EditTrackRepository {
     suspend fun getIntervalSize(trackId: Int): Int
 
     // Remove waypoints by step in range
-    suspend fun removeWaypointsByStep(trackId: Int, step: Int, p1: Double, p2: Double)
+    suspend fun removeWaypointsByStep(trackId: Int, step: Double, p1: Double, p2: Double)
 
     // Remove waypoints by step for whole track
-    suspend fun removeWaypointsByStep(trackId: Int, step: Int)
+    suspend fun removeWaypointsByStep(trackId: Int, step: Double)
 
     // Reverse a track segment
     suspend fun reverseTrack(trackId: Int, p1: Double, p2: Double)

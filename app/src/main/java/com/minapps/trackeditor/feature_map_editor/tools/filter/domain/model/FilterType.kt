@@ -49,7 +49,7 @@ sealed class FilterType(val label: String, val description: String) {
         "Advanced filter that predicts and corrects positions based on motion."
     )
 
-    // Number of points to delete / keep
+    // Number of points to keep after deleting
     data class EVEN_INTERVAL_DECIMATION(
         var waypoint: Int = -1
     ) : FilterType

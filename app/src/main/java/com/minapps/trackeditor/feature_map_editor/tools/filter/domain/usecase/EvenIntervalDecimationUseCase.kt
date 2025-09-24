@@ -25,12 +25,17 @@ class EvenIntervalDecimationUseCase @Inject constructor(
                 repository.getIntervalSize(selection.trackId, selection.pointA, selection.pointB)
         }
 
-        var totalWaypoints = parameters.waypoint
-        if(totalWaypoints == 0){
-            totalWaypoints = 1
+
+        var totalWaypointsToKeep = parameters.waypoint
+        var totalWaypointsToDelete = pointCount - totalWaypointsToKeep
+
+        // If No points to delete
+        if(totalWaypointsToDelete == 0 || pointCount == 0){
+            return FilterResult(false, listOf(WaypointUpdate.FilteredTrack(selection.trackId)))
         }
 
-        val step = pointCount / totalWaypoints
+        // Get ratio, every step point delete it
+        var step = totalWaypointsToDelete.toDouble() / pointCount
 
         if (selection.pointA == null || selection.pointB == null) {
             repository.removeWaypointsByStep(selection.trackId, step)

@@ -13,6 +13,7 @@ import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlin.Int
+import kotlin.math.roundToInt
 
 /**
  * Implementation of the EditTrackRepository interface.
@@ -258,65 +259,68 @@ class EditTrackRepositoryImpl @Inject constructor(
 
 
 
-    override suspend fun removeWaypointsByStep(trackId: Int, step: Int, p1: Double, p2: Double){
+    override suspend fun removeWaypointsByStep(trackId: Int, step: Double, p1: Double, p2: Double){
         removeWaypointsByStepLogic(trackId, step, p1, p2)
     }
 
-    override suspend fun removeWaypointsByStep(trackId: Int, step: Int){
+    override suspend fun removeWaypointsByStep(trackId: Int, step: Double){
         removeWaypointsByStepLogic(trackId, step)
     }
 
-    private suspend fun removeWaypointsByStepLogic(trackId: Int, step: Int, p1: Double? = null, p2: Double? = null){
+    private suspend fun removeWaypointsByStepLogic(
+        trackId: Int,
+        step: Double,
+        p1: Double? = null,
+        p2: Double? = null
+    ) {
+
+        // If negative or null step not logical
         if (step <= 0) return
 
-        var index = 0
-        val batchSize = 1000
+        var acc = 0.0
+        val batchSize = 50000
         var startWp = p1
         var finishWp = p2
 
         // If no waypoints selected then remove on all track
-        if(startWp == null || finishWp == null){
+        if (startWp == null || finishWp == null) {
             startWp = dao.getTrackFirstWaypointId(trackId)
             finishWp = dao.getTrackLastWaypointId(trackId)
-
-            if(startWp == null || finishWp == null){
-                return
-            }
+            if (startWp == null || finishWp == null) return
         }
 
         var startingId: Double = startWp
         while (true) {
 
-            // Get waypoints by batch
+            // Get batch
             val batch = dao.getWaypointsBatchFromId(trackId, startingId, finishWp, batchSize)
+            if (batch.isEmpty()) break
 
-            if (batch.isEmpty() || batch.size == 1) break
+            val toDelete = mutableListOf<WaypointEntity>()
 
-            startingId = batch.last().waypointId
+            // For each waypoint in batch
+            for (wp in batch) {
 
+                // If end of segment, keep
+                val keep = (wp.waypointId == startWp || wp.waypointId == finishWp)
 
-            val toDelete = batch.filter { waypoint ->
-                val keep = waypoint.waypointId == startWp || waypoint.waypointId == finishWp
-                if (keep) {
-                    index++ // increment even if we keep
-                    startingId = waypoint.waypointId
+                // Increase accumulator
+                acc += step
 
-                    false // do not delete
-                } else {
-                    val delete = index % step != 0
-                    index++
-
-                    if(!delete && finishWp > waypoint.waypointId){
-                        startingId = waypoint.waypointId
-                    }
-
-                    delete
+                // If not keep and accumulator larger than 1 delete point
+                if (!keep && acc >= 1.0) {
+                    acc -= 1.0
+                    toDelete.add(wp)
                 }
             }
 
+            // Delete all points
             if (toDelete.isNotEmpty()) {
                 dao.deleteWaypoints(toDelete)
             }
+
+            startingId = batch.last().waypointId
+            if (startingId >= finishWp) break
         }
     }
 

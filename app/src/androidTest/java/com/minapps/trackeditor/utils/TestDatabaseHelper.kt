@@ -105,4 +105,8 @@ object TestDatabaseHelper {
         return Random.nextDouble()
     }
 
+    fun generateRandomInt(min: Int, max: Int) : Int {
+        return Random.nextInt(min, max)
+    }
+
 }
