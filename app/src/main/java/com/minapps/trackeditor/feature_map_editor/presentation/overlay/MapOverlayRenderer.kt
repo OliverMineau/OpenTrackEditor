@@ -18,17 +18,21 @@ import com.minapps.trackeditor.feature_map_editor.presentation.MutablePointAdapt
 import com.minapps.trackeditor.feature_map_editor.presentation.interaction.PointInteractionListener
 import com.minapps.trackeditor.feature_map_editor.presentation.util.PaintType
 import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.usecase.EvenIntervalDecimationUseCase
+import com.minapps.trackeditor.feature_map_editor.tools.layer.domain.model.LayerType
 import org.osmdroid.api.IGeoPoint
 import org.osmdroid.api.IMapController
 import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.MapTileProviderBasic
 import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.util.MapTileIndex
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Polyline
+import org.osmdroid.views.overlay.TilesOverlay
 import org.osmdroid.views.overlay.simplefastpoint.LabelledGeoPoint
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlay
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlayOptions
@@ -162,6 +166,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
 
     // Polyline that is being modified
     private val modifyingPolylines: MutableMap<Int, Polyline> = mutableMapOf()
+    private var lastSelectedLayerType: LayerType = LayerType.TERRAIN()
 
 
     /**
@@ -169,7 +174,7 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
      *
      */
     fun setSettings() {
-        mMap.setTileSource(TileSourceFactory.MAPNIK)
+        changeMapLayer(LayerType.TERRAIN())
         mMap.setMultiTouchControls(true)
         mMap.getLocalVisibleRect(Rect())
         controller.setZoom(6.0)
@@ -180,7 +185,9 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             MapView.getTileSystem().maxLatitude, MapView.getTileSystem().minLatitude, 0
         );
         mMap.minZoomLevel = 4.0
+    }
 
+    fun changeMapLayer(type: LayerType){
 
         val esriWorldImagery = object : OnlineTileSourceBase(
             "EsriWorldImagery",
@@ -196,8 +203,33 @@ class MapOverlayRenderer(private val mMap: MapView, private val mapViewModel: Ma
             }
         }
 
-        mMap.setTileSource(esriWorldImagery)
+        val openTopo = object : OnlineTileSourceBase(
+            "OpenTopoMap",
+            0, 17, 256, "",
+            arrayOf("https://a.tile.opentopomap.org/",
+                "https://b.tile.opentopomap.org/",
+                "https://c.tile.opentopomap.org/")
+        ) {
+            override fun getTileURLString(pMapTileIndex: Long): String {
+                return baseUrl + MapTileIndex.getZoom(pMapTileIndex) + "/" +
+                        MapTileIndex.getX(pMapTileIndex) + "/" +
+                        MapTileIndex.getY(pMapTileIndex) + ".png"
+            }
+        }
 
+        val tileTerrain = TileSourceFactory.MAPNIK
+
+        var selectedType: OnlineTileSourceBase
+        when(type){
+            is LayerType.TERRAIN -> selectedType = tileTerrain
+            is LayerType.SATELLITE -> selectedType = esriWorldImagery
+            is LayerType.OPENTOPO -> selectedType = openTopo
+        }
+
+        if(type == lastSelectedLayerType) return
+        lastSelectedLayerType = type
+
+        mMap.setTileSource(selectedType)
     }
 
 

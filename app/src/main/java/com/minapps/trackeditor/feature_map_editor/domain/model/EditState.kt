@@ -2,6 +2,7 @@ package com.minapps.trackeditor.feature_map_editor.domain.model
 
 import com.minapps.trackeditor.core.domain.type.ActionType
 import com.minapps.trackeditor.core.domain.type.InsertPosition
+import com.minapps.trackeditor.feature_map_editor.tools.layer.domain.model.LayerType
 
 /**
  * Edition state
@@ -18,5 +19,6 @@ data class EditState(
     val currentSelectedTracks: MutableList<Int> = mutableListOf(),
     val currentSelectedPoints: MutableList<Pair<Int, Double>> = mutableListOf(),
     val direction: InsertPosition = InsertPosition.BACK,
+    val layerType: LayerType = LayerType.TERRAIN(),
     val version: Long = System.nanoTime(),
 )

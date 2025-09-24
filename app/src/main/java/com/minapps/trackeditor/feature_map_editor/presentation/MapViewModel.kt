@@ -36,6 +36,8 @@ import com.minapps.trackeditor.feature_map_editor.tools.filter.FilterTool
 import com.minapps.trackeditor.feature_map_editor.tools.filter.domain.model.FilterResult
 import com.minapps.trackeditor.feature_map_editor.tools.join.JoinTool
 import com.minapps.trackeditor.feature_map_editor.tools.reverse.ReverseTool
+import com.minapps.trackeditor.feature_map_editor.tools.layer.LayerTool
+import com.minapps.trackeditor.feature_map_editor.tools.layer.domain.model.LayerType
 import com.minapps.trackeditor.feature_track_export.domain.model.ExportFormat
 import com.minapps.trackeditor.feature_track_import.domain.model.DataStreamProgress
 import com.minapps.trackeditor.feature_track_import.domain.usecase.TrackImportUseCase
@@ -74,6 +76,7 @@ class MapViewModel @Inject constructor(
     private val deleteTool: DeleteTool,
     private val exportTool: ExportTool,
     private val reverseTool: ReverseTool,
+    private val layerTool: LayerTool,
 
     ) : ViewModel() {
 
@@ -166,6 +169,8 @@ class MapViewModel @Inject constructor(
             ActionType.SPACER,
             ActionType.DELETE,
             ActionType.SPACER,
+            ActionType.LAYERS,
+            ActionType.SPACER,
             ActionType.REVERSE,
             ActionType.JOIN,
             ActionType.FILTER,
@@ -181,6 +186,7 @@ class MapViewModel @Inject constructor(
                     ActionType.DELETE -> deleteTool
                     ActionType.EXPORT -> exportTool
                     ActionType.REVERSE -> reverseTool
+                    ActionType.LAYERS -> layerTool
                     else -> null
                 }
 
@@ -663,6 +669,11 @@ class MapViewModel @Inject constructor(
                 sendReverseResults(result)
             }
 
+            ActionType.LAYERS -> {
+                result as LayerType?
+                sendLayerResult(result)
+            }
+
             else -> return
         }
 
@@ -729,6 +740,12 @@ class MapViewModel @Inject constructor(
         when (result) {
             is WaypointUpdate.ReversedTrack -> displayTrackUseCase(result.trackId, false)
             else -> return
+        }
+    }
+
+    private fun sendLayerResult(result: LayerType?) {
+        if(result != null){
+            _editState.update { it.copy(layerType = result) }
         }
     }
 

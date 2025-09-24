@@ -39,7 +39,7 @@ enum class ActionType(
 
     // Visual tools
     ELEVATION(R.drawable.curve_arrow_24, "Elevation", SelectionCount.MULTIPLE),
-    LAYERS(R.drawable.land_layers_24, "Layers", SelectionCount.MULTIPLE),
+    LAYERS(R.drawable.land_layers_24, "Layers", SelectionCount.NONE),
 
     // Editing tools
     REVERSE(R.drawable.rotate_reverse_24, "Reverse", SelectionCount.NONE, ToolGroup.TRACK_EDITING),

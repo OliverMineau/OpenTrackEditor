@@ -8,7 +8,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Bundle
-import android.preference.PreferenceManager
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
@@ -416,7 +415,7 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
             }
         }
 
-
+        mapRenderer.changeMapLayer(event.layerType)
     }
 
 
