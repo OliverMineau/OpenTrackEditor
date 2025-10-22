@@ -6,7 +6,6 @@ plugins {
     id("kotlin-kapt")
     id("dagger.hilt.android.plugin")
     id("org.jetbrains.dokka") version "2.0.0"
-    id("com.google.gms.google-services")
 }
 android {
     namespace = "com.minapps.trackeditor"
@@ -50,7 +49,6 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
-    implementation(libs.play.services.location)
     implementation(libs.androidx.junit.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -64,9 +62,6 @@ dependencies {
     kapt("com.google.dagger:hilt-compiler:2.57")
     implementation("androidx.hilt:hilt-navigation-fragment:1.0.0")
     kapt("androidx.hilt:hilt-compiler:1.0.0")
-
-    implementation("com.google.firebase:firebase-database:22.0.0")
-    implementation("com.google.firebase:firebase-analytics:23.0.0")
 
     // Unit test dependencies
     testImplementation(libs.junit)                // JUnit for unit tests

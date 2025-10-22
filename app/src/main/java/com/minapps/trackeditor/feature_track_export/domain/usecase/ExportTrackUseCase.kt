@@ -4,7 +4,6 @@ package com.minapps.trackeditor.feature_track_export.domain.usecase
 import com.minapps.trackeditor.feature_track_export.domain.model.ExportFormat
 import com.minapps.trackeditor.core.domain.repository.ExportTrackRepository
 import com.minapps.trackeditor.feature_track_import.domain.model.DataStreamProgress
-import com.minapps.trackeditor.firebase.FirebaseRepository
 import dagger.hilt.android.scopes.ViewModelScoped
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -35,10 +34,6 @@ class ExportTrackUseCase @Inject constructor(
             when(exportProgress){
                 is DataStreamProgress.Completed -> {
                     emit(exportProgress)
-
-                    FirebaseRepository.increment(exportFormat) { newValue ->
-                        println("New counter value: $newValue")
-                    }
                 }
                 is DataStreamProgress.Error -> emit(exportProgress)
                 is DataStreamProgress.Progress -> emit(exportProgress)

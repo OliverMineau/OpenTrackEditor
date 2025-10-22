@@ -38,7 +38,6 @@ import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import androidx.core.view.size
 import androidx.core.view.get
-import com.google.android.gms.location.LocationServices
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.minapps.trackeditor.core.domain.tool.ToolDialog
 import com.minapps.trackeditor.core.domain.tool.ToolUiContext
@@ -569,7 +568,6 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
             ) == PackageManager.PERMISSION_GRANTED
         ) {
             // Permission granted, get location
-            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
             // Check if location is enabled
             val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -578,13 +576,7 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
                         locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
 
             if (isLocationEnabled) {
-                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                    location?.let {
-                        val geoPoint = GeoPoint(it.latitude, it.longitude)
-                        binding.osmmap.controller.setCenter(geoPoint)
-                        binding.osmmap.controller.animateTo(geoPoint)
-                    }
-                }
+
             } else {
                 // Fallback location if GPS is OFF
                 zoomToEgg = true
