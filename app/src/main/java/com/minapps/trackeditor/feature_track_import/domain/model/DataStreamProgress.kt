@@ -8,4 +8,12 @@ sealed class DataStreamProgress {
     data class Progress(val percent: Int) : DataStreamProgress()
     data class Completed(val trackIds: MutableList<Int>) : DataStreamProgress()
     data class Error(val message: String) : DataStreamProgress()
+
+    data class PartialSuccess(
+        val trackIds: List<Int>,
+        val affectedTrackIds: List<Int>,
+        val waypointCount: Int,
+        val diagnostics: List<ImportDiagnostic>,
+        val omittedDiagnosticCount: Int = 0
+    ) : DataStreamProgress()
 }

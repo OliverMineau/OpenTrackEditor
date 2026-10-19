@@ -2,158 +2,200 @@ package com.minapps.trackeditor.feature_track_import.data.parser
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
 import com.minapps.trackeditor.core.domain.model.Track
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.feature_map_editor.presentation.util.CountingInputStream
+import com.minapps.trackeditor.feature_track_import.domain.model.ImportDiagnostic
+import com.minapps.trackeditor.feature_track_import.domain.model.ImportDiagnosticKind
+import com.minapps.trackeditor.feature_track_import.domain.model.ImportDiagnosticScope
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.IOException
-import java.io.InputStream
 
-/**
- * Parser implementation for GPX files.
- * Reads GPX XML data from the provided Uri and converts it to an ImportedTrack.
- */
 class GpxParser @Inject constructor() : TrackParser {
+    override fun canHandle(fileUri: Uri): Boolean = fileUri.toString().endsWith(".gpx", ignoreCase = true)
 
-    /**
-     * Checks if the file Uri corresponds to a GPX file by extension.
-     */
-    override fun canHandle(fileUri: Uri): Boolean {
-        return fileUri.toString().endsWith(".gpx", ignoreCase = true)
-    }
+    override suspend fun parse(context: Context, fileUri: Uri, fileSize: Long, chunkSize: Int): Flow<ParsedData> {
+        // State lives outside the producer so upstream-only catch can flush after malformed XML.
+        val buffer = mutableListOf<Waypoint>()
+        var trackName = "Imported GPX Track"
+        var segmentActive = false
+        var trackActive = false
+        var rootOpen = false
+        var rootSeen = false
 
-    /**
-     * Parses the GPX file, extracting track name and waypoints.
-     * Handles XML parsing exceptions and returns null if parsing fails.
-     */
-    override suspend fun parse(context: Context, fileUri: Uri, fileSize : Long, chunkSize: Int): Flow<ParsedData> = flow {
-        val waypoints = mutableListOf<Waypoint>()
-        var inputStream: InputStream? = null
-
-        try {
-            val totalFileSize = fileSize
-
-            val rawInputStream = context.contentResolver.openInputStream(fileUri)
+        return flow {
+            val stream = context.contentResolver.openInputStream(fileUri)
                 ?: throw IOException("Cannot open input stream")
 
-            val countingStream = CountingInputStream(rawInputStream)
-            inputStream = countingStream
+            CountingInputStream(stream).use { countingStream ->
+                val parser = XmlPullParserFactory.newInstance().newPullParser()
+                parser.setInput(countingStream, null)
 
-            val factory = XmlPullParserFactory.newInstance()
-            val parser = factory.newPullParser()
-            parser.setInput(countingStream, null)
+                var event = parser.eventType
+                var pointId = 0.0
+                var latitude = 0.0
+                var longitude = 0.0
+                var elevation: Double? = null
+                var time: String? = null
+                var pointValid = false
+                var pointActive = false
+                var inTrack = false
+                var inTrackName = false
+                var inPointElevation = false
+                var inPointTime = false
+                var lastProgress = -1
 
-            var eventType = parser.eventType
-            var name = "Imported GPX Track"
-            var waypointId = 0.0
-            //var trackId = 0
-            var lat = 0.0
-            var lon = 0.0
-            var ele: Double? = null
-            var time: String? = null
-
-            while (eventType != XmlPullParser.END_DOCUMENT) {
-                when (eventType) {
-                    XmlPullParser.START_TAG -> {
-                        when (parser.name) {
-
-                            // If start of segment get track id
+                while (event != XmlPullParser.END_DOCUMENT) {
+                    when (event) {
+                        XmlPullParser.START_TAG -> when (parser.name) {
+                            "gpx" -> {
+                                rootSeen = true
+                                rootOpen = true
+                            }
+                            "trk" -> {
+                                inTrack = true
+                                trackActive = true
+                            }
+                            "name" -> if (inTrack && !segmentActive && !pointActive) inTrackName = true
                             "trkseg" -> {
-                                //trackId++
-                                waypointId = 0.0
-                                emit(ParsedData.TrackMetadata(Track(0, name, "", 0, null)))
+                                segmentActive = true
+                                pointId = 0.0
+                                emit(ParsedData.TrackMetadata(Track(0, trackName, "", 0, null)))
                             }
+                            "trkpt" -> if (segmentActive) {
+                                pointActive = true
+                                elevation = null
+                                time = null
+                                val latText = parser.getAttributeValue(null, "lat")
+                                val lonText = parser.getAttributeValue(null, "lon")
+                                val lat = latText?.toDoubleOrNull()
+                                val lon = lonText?.toDoubleOrNull()
+                                pointValid = lat != null && lon != null &&
+                                    lat.isFinite() && lon.isFinite() &&
+                                    lat in -90.0..90.0 && lon in -180.0..180.0
+                                if (pointValid) {
+                                    latitude = lat!!
+                                    longitude = lon!!
+                                } else {
+                                    emit(ParsedData.Diagnostic(ImportDiagnostic(
+                                        null, trackName,
+                                        "Invalid GPX waypoint coordinates: lat=$latText, lon=$lonText",
+                                        parser.lineNumber.takeIf { it > 0 },
+                                        parser.columnNumber.takeIf { it > 0 }
+                                    )))
+                                }
+                            }
+                            "ele" -> if (pointActive) inPointElevation = true
+                            "time" -> if (pointActive) inPointTime = true
+                        }
 
+                        XmlPullParser.TEXT -> {
+                            val value = parser.text
+                            when {
+                                inTrackName -> trackName = value.trim().ifEmpty { trackName }
+                                inPointElevation && pointValid -> {
+                                    val parsed = value.trim().toDoubleOrNull()
+                                    if (parsed != null && parsed.isFinite()) {
+                                        elevation = parsed
+                                    } else {
+                                        pointValid = false
+                                        emit(ParsedData.Diagnostic(ImportDiagnostic(
+                                            null, trackName, "Invalid GPX waypoint elevation: $value",
+                                            parser.lineNumber.takeIf { it > 0 },
+                                            parser.columnNumber.takeIf { it > 0 }
+                                        )))
+                                    }
+                                }
+                                inPointTime -> time = value.trim()
+                            }
+                        }
+
+                        XmlPullParser.END_TAG -> when (parser.name) {
+                            "name" -> inTrackName = false
+                            "ele" -> inPointElevation = false
+                            "time" -> inPointTime = false
                             "trkpt" -> {
-                                lat = parser.getAttributeValue(null, "lat").toDouble()
-                                lon = parser.getAttributeValue(null, "lon").toDouble()
-                                ele = null
-                            }
-
-                            "ele" -> {
-                                parser.next()
-                                if (parser.eventType == XmlPullParser.TEXT) {
-                                    ele = parser.text.toDouble()
+                                if (pointActive && pointValid) {
+                                    buffer.add(Waypoint(pointId++, latitude, longitude, elevation, time, 0))
+                                    if (buffer.size >= chunkSize.coerceAtLeast(1)) {
+                                        emit(ParsedData.Waypoints(buffer.toList()))
+                                        buffer.clear()
+                                    }
                                 }
+                                pointActive = false
+                                pointValid = false
                             }
-
-                            "name" -> {
-                                parser.next()
-                                if (parser.eventType == XmlPullParser.TEXT) {
-                                    name = parser.text
+                            "trkseg" -> {
+                                if (buffer.isNotEmpty()) {
+                                    emit(ParsedData.Waypoints(buffer.toList()))
+                                    buffer.clear()
                                 }
+                                segmentActive = false
                             }
-
-                            "time" -> {
-                                parser.next()
-                                if (parser.eventType == XmlPullParser.TEXT) {
-                                    time = parser.text
-                                }
+                            "trk" -> {
+                                inTrack = false
+                                trackActive = false
+                                trackName = "Imported GPX Track"
                             }
+                            "gpx" -> rootOpen = false
                         }
                     }
 
-                    XmlPullParser.END_TAG -> {
-
-                        // If waypoint read, add to list
-                        if (parser.name == "trkpt") {
-                            waypoints.add(Waypoint(waypointId, lat, lon, ele, time, 0))
-                            waypointId++
-
-                            // If list full (chunkSize), send it to be added to database
-                            if (waypoints.size >= chunkSize) {
-                                emit(ParsedData.Waypoints(waypoints))
-                                waypoints.clear()
-                            }
-                        }
-
-                        // If end of segment flush waypoints
-                        if (parser.name == "trkseg") {
-                            if (waypoints.isNotEmpty()) {
-                                emit(ParsedData.Waypoints(waypoints))
-                                waypoints.clear()
-                            }
-                            waypointId = 0.0
+                    if (fileSize > 0 && pointId > 0 && pointId % 1000.0 == 0.0) {
+                        val percent = (countingStream.bytesRead * 100 / fileSize).toInt().coerceIn(0, 100)
+                        if (percent != lastProgress) {
+                            lastProgress = percent
+                            emit(ParsedData.Progress(percent))
                         }
                     }
+                    event = parser.next()
                 }
 
-                // Emit progress every 1000 waypoints
-                if (totalFileSize > 0 && waypointId % 1000 == 0.0) {
-                    val progressPercent = (countingStream.bytesRead * 100 / totalFileSize).toInt()
-                    emit(ParsedData.Progress(progressPercent))
+                // Some XmlPullParser implementations report END_DOCUMENT for truncated XML
+                // without throwing. Do not turn an unfinished GPX document into success.
+                if (!rootSeen || rootOpen || trackActive || segmentActive) {
+                    throw XmlPullParserException(
+                        "Unexpected end of GPX document: unclosed GPX, track, or segment",
+                        parser,
+                        null
+                    )
                 }
 
-                eventType = parser.next()
+                if (buffer.isNotEmpty()) {
+                    emit(ParsedData.Waypoints(buffer.toList()))
+                    buffer.clear()
+                }
+                emit(ParsedData.Progress(100))
             }
-
-            if (waypoints.isNotEmpty()) {
-                emit(ParsedData.Waypoints(waypoints))
-                waypoints.clear()
+        }.catch { error ->
+            // Flow.catch sees upstream exceptions, not failures from downstream collectors.
+            if (error !is XmlPullParserException) throw error
+            if (segmentActive || trackActive || rootOpen) {
+                val scope = when {
+                    segmentActive -> "segment"
+                    trackActive -> "track"
+                    else -> "document"
+                }
+                val diagnosticName = if (scope == "document") "GPX document" else trackName
+                emit(ParsedData.Diagnostic(ImportDiagnostic(
+                    null, diagnosticName, "GPX $scope interrupted by malformed XML: ${error.message}",
+                    error.lineNumber.takeIf { it > 0 },
+                    error.columnNumber.takeIf { it > 0 },
+                    scope = if (scope == "document") ImportDiagnosticScope.DOCUMENT else ImportDiagnosticScope.TRACK,
+                    kind = ImportDiagnosticKind.STRUCTURAL
+                )))
             }
-
-
-            // Emit 100% progress on finish
-            emit(ParsedData.Progress(100))
-
-        } catch (e: XmlPullParserException) {
-            Log.e("GpxParser", "XML parsing error: ${e.message}", e)
-        } catch (e: IOException) {
-            Log.e("GpxParser", "IO error: ${e.message}", e)
-        } catch (e: Exception) {
-            Log.e("GpxParser", "Unexpected error: ${e.message}", e)
-        } finally {
-            try {
-                inputStream?.close()
-            } catch (ignored: IOException) {
+            if (buffer.isNotEmpty()) {
+                emit(ParsedData.Waypoints(buffer.toList()))
+                buffer.clear()
             }
+            throw error
         }
     }
-
 }

@@ -21,6 +21,10 @@ interface TrackDao {
     @Query("DELETE FROM tracks WHERE trackId = :trackId ")
     suspend fun removeTrack(trackId: Int)
 
+    /** Update only the name of an existing track. */
+    @Query("UPDATE tracks SET name = :name WHERE trackId = :trackId")
+    suspend fun updateTrackName(trackId: Int, name: String)
+
     /** Get a track by its ID. */
     @Query("SELECT * FROM tracks WHERE trackId = :id LIMIT 1")
     suspend fun getTrackById(id: Int): TrackEntity?
@@ -408,6 +412,27 @@ interface TrackDao {
     // ==========================
     // TRANSACTIONS
     // ==========================
+
+    /** Mark only affected imported tracks as incomplete. */
+    @Transaction
+    suspend fun keepRecoveredTracks(affectedTrackIds: List<Int>) {
+        for (trackId in affectedTrackIds.distinct()) {
+            val track = getTrackById(trackId)
+                ?: throw IllegalStateException("Recovered track $trackId no longer exists")
+
+            if (!track.name.endsWith(" [INCOMPLETE]")) {
+                updateTrackName(trackId, "${track.name} [INCOMPLETE]")
+            }
+        }
+    }
+
+    /** Discard every track created by an import, including unaffected tracks. */
+    @Transaction
+    suspend fun discardImportedTracks(trackIds: List<Int>) {
+        for (trackId in trackIds.distinct()) {
+            removeTrack(trackId)
+        }
+    }
 
     /** Clear all tracks and waypoints in one transaction. */
     @Transaction

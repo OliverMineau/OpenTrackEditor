@@ -16,4 +16,10 @@ interface TrackImportRepository {
      * @return An [ImportedTrack] object if import is successful, or null if it fails.
      */
     suspend fun importTrack(fileUri: Uri): Flow<DataStreamProgress>
+
+    /** Mark affected tracks as incomplete after the user chooses Keep. */
+    suspend fun keepRecoveredTracks(affectedTrackIds: List<Int>)
+
+    /** Delete all tracks created by an import after the user chooses Discard. */
+    suspend fun discardImportedTracks(trackIds: List<Int>)
 }

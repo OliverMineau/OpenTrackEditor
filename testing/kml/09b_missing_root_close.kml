@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <Placemark><name>KML-09B</name><LineString><coordinates>
+      -107.600000,37.900000,3200
+      -107.601000,37.901000,3201
+      -107.602000,37.902000,3202
+    </coordinates></LineString></Placemark>
+  </Document>

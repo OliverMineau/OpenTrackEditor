@@ -2,207 +2,212 @@ package com.minapps.trackeditor.feature_track_import.data.parser
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
 import com.minapps.trackeditor.core.domain.model.Track
 import com.minapps.trackeditor.core.domain.model.Waypoint
 import com.minapps.trackeditor.feature_map_editor.presentation.util.CountingInputStream
+import com.minapps.trackeditor.feature_track_import.domain.model.ImportDiagnostic
+import com.minapps.trackeditor.feature_track_import.domain.model.ImportDiagnosticKind
+import com.minapps.trackeditor.feature_track_import.domain.model.ImportDiagnosticScope
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.IOException
-import java.io.InputStream
 
-/**
- * Parser implementation for KML files.
- * Reads KML XML data from the provided Uri and converts it to an ImportedTrack.
- */
 class KmlParser @Inject constructor() : TrackParser {
+    override fun canHandle(fileUri: Uri): Boolean = fileUri.toString().endsWith(".kml", ignoreCase = true)
 
-    override fun canHandle(fileUri: Uri): Boolean {
-        return fileUri.toString().endsWith(".kml", ignoreCase = true)
-    }
+    override suspend fun parse(context: Context, fileUri: Uri, fileSize: Long, chunkSize: Int): Flow<ParsedData> {
+        val buffer = mutableListOf<Waypoint>()
+        var trackName = "Imported KML Track"
+        var inTrack = false
+        val coordinateText = StringBuilder()
+        var inCoordinates = false
 
-    override suspend fun parse(
-        context: Context,
-        fileUri: Uri,
-        fileSize: Long,
-        chunkSize: Int
-    ): Flow<ParsedData> = flow {
-        val waypoints = mutableListOf<Waypoint>()
-        var inputStream: InputStream? = null
-
-        try {
-            val totalFileSize = fileSize
-
-            val rawInputStream = context.contentResolver.openInputStream(fileUri)
+        return flow {
+            val stream = context.contentResolver.openInputStream(fileUri)
                 ?: throw IOException("Cannot open input stream")
 
-            val countingStream = CountingInputStream(rawInputStream)
-            inputStream = countingStream
+            CountingInputStream(stream).use { countingStream ->
+                val factory = XmlPullParserFactory.newInstance()
+                factory.isNamespaceAware = true
+                val parser = factory.newPullParser()
+                parser.setInput(countingStream, null)
 
-            val factory = XmlPullParserFactory.newInstance()
-            val parser = factory.newPullParser()
-            parser.setInput(countingStream, null)
+                var event = parser.eventType
+                var pointId = 0.0
+                var pointTime: String? = null
+                var placemarkDepth = 0
+                var nameDepth = -1
+                var whenDepth = -1
+                var depth = 0
+                var lastProgress = -1
+                var trackKind: String? = null
+                var rootSeen = false
+                var rootClosed = false
 
-            var eventType = parser.eventType
-            var name = "Imported KML Track"
-            var waypointId = 0.0
-            var lat = 0.0
-            var lon = 0.0
-            var ele: Double? = null
-            var time: String? = null
-
-            var inTrack = false
-
-            while (eventType != XmlPullParser.END_DOCUMENT) {
-                when (eventType) {
-                    XmlPullParser.START_TAG -> {
-                        when (parser.name) {
-
-                            // Get name
-                            "name" -> {
-                                parser.next()
-                                if (parser.eventType == XmlPullParser.TEXT) {
-                                    name = parser.text
-                                }
-
-                            }
-
-                            // Create track
-                            "gx:Track" -> {
-                                waypointId = 0.0
-                                emit(ParsedData.TrackMetadata(Track(0, name, "", 0, null)))
-                                inTrack = true
-                            }
-
-                            // Create track
-                            "LineString" -> {
-                                waypointId = 0.0
-                                emit(ParsedData.TrackMetadata(Track(0, name, "", 0, null)))
-                                inTrack = true
-                            }
-
-                            // Get creation time
-                            "when" -> {
-                                parser.next()
-                                if (parser.eventType == XmlPullParser.TEXT) {
-                                    time = parser.text
-                                }
-                            }
-
-                            // Get coords (for track)
-                            "gx:coord" -> {
-
-                                if (inTrack) {
-
-                                    val coordText = parser.nextText().trim()
-                                    val parts = coordText.split(" ")
-
-                                    // If contains at least lat lon
-                                    if (parts.size >= 2) {
-                                        lon = parts[0].toDouble()
-                                        lat = parts[1].toDouble()
-
-                                        // If contains elevation
-                                        ele = if (parts.size == 3) parts[2].toDouble() else null
-                                        waypoints.add(Waypoint(waypointId, lat, lon, ele, time, 0))
-                                        waypointId++
-                                    }
-                                }
-                            }
-
-                            // Get coords (for line string)
-                            "coordinates" -> {
-
-                                if (inTrack) {
-
-                                    val coordBlock = parser.nextText().trim()
-                                    val coords = coordBlock.split("\\s+".toRegex())
-
-                                    // For each block of lat lng (elevation)
-                                    for (coord in coords) {
-                                        val parts = coord.split(",")
-                                        if (parts.size >= 2) {
-                                            lon = parts[0].toDouble()
-                                            lat = parts[1].toDouble()
-                                            ele = if (parts.size == 3) parts[2].toDouble() else null
-                                            waypoints.add(
-                                                Waypoint(
-                                                    waypointId,
-                                                    lat,
-                                                    lon,
-                                                    ele,
-                                                    null,
-                                                    0
-                                                )
-                                            )
-                                            waypointId++
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    XmlPullParser.END_TAG -> {
-                        when (parser.name) {
-                            "gx:Track" -> {
-                                if (waypoints.isNotEmpty()) {
-                                    emit(ParsedData.Waypoints(waypoints.toList()))
-                                    waypoints.clear()
-                                }
-                                inTrack = false
-                            }
-
-                            "LineString" -> {
-                                if (waypoints.isNotEmpty()) {
-                                    emit(ParsedData.Waypoints(waypoints.toList()))
-                                    waypoints.clear()
-                                }
-                                inTrack = false
-                            }
-                        }
+                suspend fun kotlinx.coroutines.flow.FlowCollector<ParsedData>.flush() {
+                    if (buffer.isNotEmpty()) {
+                        emit(ParsedData.Waypoints(buffer.toList()))
+                        buffer.clear()
                     }
                 }
 
-                // Emit chunk when buffer full
-                if (waypoints.size >= chunkSize) {
-                    emit(ParsedData.Waypoints(waypoints.toList()))
-                    waypoints.clear()
+                suspend fun kotlinx.coroutines.flow.FlowCollector<ParsedData>.diagnose(message: String) {
+                    emit(ParsedData.Diagnostic(ImportDiagnostic(
+                        null, trackName, message,
+                        parser.lineNumber.takeIf { it > 0 },
+                        parser.columnNumber.takeIf { it > 0 }
+                    )))
                 }
 
-                // Emit progress every 1000 waypoints
-                if (totalFileSize > 0 && waypointId % 1000 == 0.0) {
-                    val progressPercent = (countingStream.bytesRead * 100 / totalFileSize).toInt()
-                    emit(ParsedData.Progress(progressPercent))
+                suspend fun kotlinx.coroutines.flow.FlowCollector<ParsedData>.append(
+                    lonText: String?, latText: String?, eleText: String?, raw: String, timestamp: String?
+                ) {
+                    val lon = lonText?.toDoubleOrNull()
+                    val lat = latText?.toDoubleOrNull()
+                    val ele = eleText?.toDoubleOrNull()
+                    if (lon == null || lat == null || !lon.isFinite() || !lat.isFinite() ||
+                        lon !in -180.0..180.0 || lat !in -90.0..90.0 ||
+                        (eleText != null && (ele == null || !ele.isFinite()))
+                    ) {
+                        diagnose("Invalid KML coordinate: $raw")
+                        return
+                    }
+                    buffer.add(Waypoint(pointId++, lat, lon, ele, timestamp, 0))
+                    if (buffer.size >= chunkSize.coerceAtLeast(1)) flush()
                 }
 
-                eventType = parser.next()
-            }
+                suspend fun kotlinx.coroutines.flow.FlowCollector<ParsedData>.consumeCoordinates(
+                    text: String, finish: Boolean = false
+                ) {
+                    coordinateText.append(text)
+                    var end = 0
+                    while (end < coordinateText.length) {
+                        if (!coordinateText[end].isWhitespace()) {
+                            end++
+                            continue
+                        }
+                        val tuple = coordinateText.substring(0, end)
+                        coordinateText.delete(0, end + 1)
+                        end = 0
+                        if (tuple.isNotEmpty()) {
+                            val parts = tuple.split(",")
+                            if (parts.size !in 2..3) diagnose("Invalid KML coordinate tuple: $tuple")
+                            else append(parts[0], parts[1], parts.getOrNull(2), tuple, null)
+                        }
+                    }
+                    if (finish && coordinateText.isNotEmpty()) {
+                        val tuple = coordinateText.toString()
+                        coordinateText.clear()
+                        val parts = tuple.split(",")
+                        if (parts.size !in 2..3) diagnose("Invalid KML coordinate tuple: $tuple")
+                        else append(parts[0], parts[1], parts.getOrNull(2), tuple, null)
+                    }
+                }
 
-            // Flush remaining waypoints
-            if (waypoints.isNotEmpty()) {
-                emit(ParsedData.Waypoints(waypoints))
-                waypoints.clear()
-            }
+                while (event != XmlPullParser.END_DOCUMENT) {
+                    val localName = parser.name?.substringAfter(':')
+                    when (event) {
+                        XmlPullParser.START_TAG -> {
+                            depth++
+                            when (localName) {
+                                "kml" -> if (depth == 1) rootSeen = true
+                                "Placemark" -> {
+                                    placemarkDepth = depth
+                                    trackName = "Imported KML Track"
+                                    pointTime = null
+                                }
+                                "name" -> if (placemarkDepth > 0 && depth == placemarkDepth + 1) {
+                                    nameDepth = depth
+                                }
+                                "LineString", "Track" -> if (!inTrack && placemarkDepth > 0) {
+                                    inTrack = true
+                                    trackKind = localName
+                                    pointId = 0.0
+                                    emit(ParsedData.TrackMetadata(Track(0, trackName, "", 0, null)))
+                                }
+                                "when" -> if (inTrack) whenDepth = depth
+                                "coord" -> if (inTrack && trackKind == "Track") {
+                                    val raw = parser.nextText().trim()
+                                    val parts = raw.split(Regex("\\s+"))
+                                    if (parts.size !in 2..3) {
+                                        diagnose("Invalid KML gx:coord: $raw")
+                                    } else {
+                                        append(parts[0], parts[1], parts.getOrNull(2), raw, pointTime)
+                                    }
+                                    depth--
+                                }
+                                "coordinates" -> if (inTrack && trackKind == "LineString") {
+                                    inCoordinates = true
+                                    coordinateText.clear()
+                                }
+                            }
+                        }
+                        XmlPullParser.TEXT -> {
+                            if (inCoordinates) consumeCoordinates(parser.text)
+                            if (nameDepth > 0) {
+                                trackName = parser.text.trim().ifEmpty { trackName }
+                            }
+                            if (whenDepth > 0) pointTime = parser.text.trim()
+                        }
+                        XmlPullParser.END_TAG -> {
+                            when (localName) {
+                                "kml" -> if (depth == 1) rootClosed = true
+                                "coordinates" -> if (inCoordinates) {
+                                    consumeCoordinates("", finish = true)
+                                    inCoordinates = false
+                                }
+                                "name" -> if (depth == nameDepth) nameDepth = -1
+                                "when" -> if (depth == whenDepth) whenDepth = -1
+                                "LineString", "Track" -> if (inTrack && localName == trackKind) {
+                                    flush()
+                                    inTrack = false
+                                    trackKind = null
+                                }
+                                "Placemark" -> if (depth == placemarkDepth) placemarkDepth = 0
+                            }
+                            depth--
+                        }
+                    }
 
-            // Emit 100% progress on finish
-            emit(ParsedData.Progress(100))
+                    if (fileSize > 0 && pointId > 0 && pointId % 1000.0 == 0.0) {
+                        val percent = (countingStream.bytesRead * 100 / fileSize).toInt().coerceIn(0, 100)
+                        if (percent != lastProgress) {
+                            lastProgress = percent
+                            emit(ParsedData.Progress(percent))
+                        }
+                    }
+                    event = parser.next()
+                }
 
-        } catch (e: XmlPullParserException) {
-            Log.e("KmlParser", "XML parsing error: ${e.message}", e)
-        } catch (e: IOException) {
-            Log.e("KmlParser", "IO error: ${e.message}", e)
-        } catch (e: Exception) {
-            Log.e("KmlParser", "Unexpected error: ${e.message}", e)
-        } finally {
-            try {
-                inputStream?.close()
-            } catch (ignored: IOException) {
+                if (!rootSeen || !rootClosed || depth != 0 || inTrack || inCoordinates) {
+                    throw XmlPullParserException("Unexpected end of KML document: unclosed KML structure", parser, null)
+                }
+
+                flush()
+                emit(ParsedData.Progress(100))
             }
+        }.catch { error ->
+            if (error !is XmlPullParserException) throw error
+            val scope = if (inTrack) ImportDiagnosticScope.TRACK else ImportDiagnosticScope.DOCUMENT
+            val diagnosticName = if (inTrack) trackName else "KML document"
+            val location = if (inTrack) "track" else "document"
+            emit(ParsedData.Diagnostic(ImportDiagnostic(
+                null, diagnosticName, "KML $location interrupted by malformed XML: ${error.message}",
+                error.lineNumber.takeIf { it > 0 },
+                error.columnNumber.takeIf { it > 0 },
+                scope = scope,
+                kind = ImportDiagnosticKind.STRUCTURAL
+            )))
+            if (buffer.isNotEmpty()) {
+                emit(ParsedData.Waypoints(buffer.toList()))
+                buffer.clear()
+            }
+            throw error
         }
     }
 }

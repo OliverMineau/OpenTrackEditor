@@ -99,6 +99,15 @@ class MapViewModel @Inject constructor(
     private val _progressState = MutableStateFlow(ProgressData())
     val progressState: StateFlow<ProgressData> = _progressState
 
+    // Retain partial-import results across Activity recreation until resolved.
+    private val _pendingImportRecovery = MutableStateFlow<DataStreamProgress.PartialSuccess?>(null)
+    val pendingImportRecovery: StateFlow<DataStreamProgress.PartialSuccess?> = _pendingImportRecovery
+
+    // Prevent overlapping imports and duplicate recovery decisions.
+    private var importInProgress = false
+    private val _recoveryDecisionInProgress = MutableStateFlow(false)
+    val recoveryDecisionInProgress: StateFlow<Boolean> = _recoveryDecisionInProgress
+
     private val _toastEvents = MutableSharedFlow<String>()
     val toastEvents: MutableSharedFlow<String> = _toastEvents
 
@@ -439,6 +448,19 @@ class MapViewModel @Inject constructor(
                             )
                         }
                     }
+
+                    is DataStreamProgress.PartialSuccess -> {
+                        Log.e("MapViewModel", "Unexpected PartialSuccess result during export")
+                        _progressState.update {
+                            ProgressData(
+                                progress = 0,
+                                isDisplayed = false,
+                                isDeterminate = true,
+                                message = null
+                            )
+                        }
+                        _toastEvents.emit("Export failed: unexpected import recovery result")
+                    }
                 }
             }
         }
@@ -446,10 +468,19 @@ class MapViewModel @Inject constructor(
 
     fun importTrack(uri: Uri) {
 
+        if (_pendingImportRecovery.value != null || importInProgress) {
+            viewModelScope.launch {
+                _toastEvents.emit("Finish the current import before starting another")
+            }
+            return
+        }
+
+        importInProgress = true
         onToolSelected(ActionType.VIEW)
 
         viewModelScope.launch {
-            trackImportUseCase(uri).collect { importProgress ->
+            try {
+                trackImportUseCase(uri).collect { importProgress ->
                 _progressState.update {
                     ProgressData(
                         progress = 0,
@@ -509,7 +540,93 @@ class MapViewModel @Inject constructor(
                             )
                         }
                     }
+
+                    is DataStreamProgress.PartialSuccess -> {
+                        Log.w(
+                            "MapViewModel",
+                            "Partial import: ${importProgress.trackIds.size} tracks, " +
+                                    "${importProgress.waypointCount} waypoints, " +
+                                    "${importProgress.diagnostics.size} retained diagnostics"
+                        )
+
+                        // Preserve recovery details until the user chooses Keep or Discard.
+                        _pendingImportRecovery.value = importProgress
+
+                        _progressState.update {
+                            ProgressData(
+                                progress = 0,
+                                isDisplayed = false,
+                                isDeterminate = true,
+                                message = null
+                            )
+                        }
+                    }
                 }
+            }
+        } finally {
+            importInProgress = false
+        }
+    }
+}
+
+    /**
+     * Keep recovered tracks and mark only affected tracks as incomplete.
+     * Database recovery must succeed before the pending decision is cleared.
+     */
+    fun keepRecoveredImport() {
+        if (_recoveryDecisionInProgress.value) return
+        val recovery = _pendingImportRecovery.value ?: return
+
+        _recoveryDecisionInProgress.value = true
+
+        viewModelScope.launch {
+            try {
+                trackImportUseCase.keepRecoveredTracks(recovery.affectedTrackIds)
+
+                // The database decision is committed; do not offer Discard afterward.
+                _pendingImportRecovery.value = null
+
+                var isFirst = true
+                for (id in recovery.trackIds) {
+                    loadTrackWaypoints(id, isFirst)
+                    isFirst = false
+                }
+
+                _toastEvents.emit("Recovered tracks imported successfully")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("MapViewModel", "Keeping recovered tracks failed", e)
+                _toastEvents.emit("Could not finish keeping recovered tracks: ${e.message}")
+            } finally {
+                _recoveryDecisionInProgress.value = false
+            }
+        }
+    }
+
+    /**
+     * Discard all tracks created by the import.
+     * Keep the pending decision available if deletion fails.
+     */
+    fun discardRecoveredImport() {
+        if (_recoveryDecisionInProgress.value) return
+        val recovery = _pendingImportRecovery.value ?: return
+
+        _recoveryDecisionInProgress.value = true
+
+        viewModelScope.launch {
+            try {
+                trackImportUseCase.discardImportedTracks(recovery.trackIds)
+
+                _pendingImportRecovery.value = null
+                _toastEvents.emit("Incomplete import discarded")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("MapViewModel", "Discarding incomplete import failed", e)
+                _toastEvents.emit("Could not discard incomplete import: ${e.message}")
+            } finally {
+                _recoveryDecisionInProgress.value = false
             }
         }
     }

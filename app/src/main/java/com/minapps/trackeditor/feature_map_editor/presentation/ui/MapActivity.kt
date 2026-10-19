@@ -3,6 +3,8 @@ package com.minapps.trackeditor.feature_map_editor.presentation.ui
 import ToolboxPopup
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -12,9 +14,13 @@ import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Toast
+import android.widget.TextView
+import android.widget.ScrollView
+import android.widget.LinearLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -25,6 +31,7 @@ import com.minapps.trackeditor.databinding.ActivityMapBinding
 import com.minapps.trackeditor.databinding.BottomNavigationBinding
 import com.minapps.trackeditor.feature_map_editor.presentation.overlay.MapOverlayRenderer
 import com.minapps.trackeditor.feature_map_editor.presentation.MapViewModel
+import com.minapps.trackeditor.feature_track_import.domain.model.DataStreamProgress
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
@@ -71,6 +78,8 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
     private val updateInterval = 400L // 200ms
     private val fallbackGeoPoint = GeoPoint(45.71232, 5.12749)
     private var zoomToEgg = false
+    private var recoveryDialog: AlertDialog? = null
+    private var displayedRecovery: DataStreamProgress.PartialSuccess? = null
 
 
     //When file picked call viewmodel's importTrack
@@ -374,7 +383,109 @@ class MapActivity : AppCompatActivity(), MapListener, ToolUiContext, ToolResultL
                         showToastEvent(message)
                     }
                 }
+
+                launch {
+                    mapViewModel.pendingImportRecovery.collect { recovery ->
+                        if (recovery == null) {
+                            recoveryDialog?.dismiss()
+                            recoveryDialog = null
+                            displayedRecovery = null
+                        } else if (recoveryDialog?.isShowing != true || displayedRecovery != recovery) {
+                            showImportRecoveryDialog(recovery)
+                        }
+                    }
+                }
+
+                launch {
+                    mapViewModel.recoveryDecisionInProgress.collect { busy ->
+                        recoveryDialog?.getButton(AlertDialog.BUTTON_POSITIVE)?.isEnabled = !busy
+                        recoveryDialog?.getButton(AlertDialog.BUTTON_NEGATIVE)?.isEnabled = !busy
+                    }
+                }
             }
+        }
+    }
+
+    private fun showImportRecoveryDialog(recovery: DataStreamProgress.PartialSuccess) {
+        try {
+        recoveryDialog?.dismiss()
+
+        val report = buildString {
+            appendLine("Recovered tracks: ${recovery.trackIds.size}")
+            appendLine("Recovered waypoints: ${recovery.waypointCount}")
+            appendLine("Affected tracks: ${recovery.affectedTrackIds.size}")
+            appendLine()
+            recovery.diagnostics.forEachIndexed { index, diagnostic ->
+                append("${index + 1}. ")
+                append(diagnostic.trackName ?: diagnostic.trackId?.let { "Track $it" } ?: "Import")
+                if (diagnostic.line != null) {
+                    append(" (line ${diagnostic.line}")
+                    diagnostic.column?.let { append(", column $it") }
+                    append(")")
+                }
+                appendLine(": ${diagnostic.message}")
+            }
+            if (recovery.omittedDiagnosticCount > 0) {
+                appendLine()
+                appendLine("${recovery.omittedDiagnosticCount} additional diagnostics omitted.")
+            }
+        }
+
+        val padding = (20 * resources.displayMetrics.density).toInt()
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(padding, padding / 2, padding, padding / 2)
+        }
+        val summary = TextView(this).apply {
+            text = "This file contains invalid or incomplete data. Keep the recovered tracks or discard the entire import."
+        }
+        val details = TextView(this).apply {
+            text = report
+            setTextIsSelectable(true)
+        }
+        val scroll = ScrollView(this).apply {
+            addView(details)
+        }
+        val copyButton = android.widget.Button(this).apply {
+            text = "Copy All Errors"
+            setOnClickListener {
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("Import recovery report", report))
+                Toast.makeText(this@MapActivity, "Recovery report copied", Toast.LENGTH_SHORT).show()
+            }
+        }
+        container.addView(summary)
+        container.addView(copyButton)
+        container.addView(scroll, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            (240 * resources.displayMetrics.density).toInt()
+        ))
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Incomplete import")
+            .setView(container)
+            .setPositiveButton("Keep Recovered Tracks", null)
+            .setNegativeButton("Discard Import", null)
+            .setCancelable(false)
+            .create()
+
+        dialog.setCanceledOnTouchOutside(false)
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                mapViewModel.keepRecoveredImport()
+            }
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
+                mapViewModel.discardRecoveredImport()
+            }
+            val busy = mapViewModel.recoveryDecisionInProgress.value
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = !busy
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).isEnabled = !busy
+        }
+        recoveryDialog = dialog
+        displayedRecovery = recovery
+        dialog.show()
+        } catch (e: Exception) {
+            Log.e("MapActivity", "Recovery dialog construction/display failed", e)
         }
     }
 

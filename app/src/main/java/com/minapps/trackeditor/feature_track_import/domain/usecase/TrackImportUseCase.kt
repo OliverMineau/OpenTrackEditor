@@ -6,6 +6,7 @@ import com.minapps.trackeditor.core.domain.repository.TrackImportRepository
 import com.minapps.trackeditor.feature_track_import.domain.model.DataStreamProgress
 import dagger.hilt.android.scopes.ViewModelScoped
 import jakarta.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
@@ -40,11 +41,23 @@ class TrackImportUseCase @Inject constructor(
                 }
 
                 is DataStreamProgress.Progress -> emit(importProgress)
+                is DataStreamProgress.PartialSuccess -> emit(importProgress)
             }
 
         }
 
     }.catch { e ->
+        if (e is CancellationException) throw e
         emit(DataStreamProgress.Error(e.message ?: "Unknown import error"))
+    }
+
+    /** Keep recovered tracks, marking only affected tracks as incomplete. */
+    suspend fun keepRecoveredTracks(affectedTrackIds: List<Int>) {
+        repository.keepRecoveredTracks(affectedTrackIds)
+    }
+
+    /** Discard all tracks created by the import. */
+    suspend fun discardImportedTracks(trackIds: List<Int>) {
+        repository.discardImportedTracks(trackIds)
     }
 }

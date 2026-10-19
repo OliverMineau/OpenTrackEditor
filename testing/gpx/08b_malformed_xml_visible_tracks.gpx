@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="OTE test fixtures" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk><name>GPX-08B</name><trkseg>
+    <trkpt lat="37.900000" lon="-107.600000" />
+    <trkpt lat="37.901000" lon="-107.601000" />
+    <trkpt lat="37.902000" lon="-107.602000" />
+    <trkpt lat="37.903000" lon="-107.603000" />
+    <trkpt lat="37.904000" lon="-107.604000" />
+  </trkseg></trk>
+  <trk><name>GPX-08B.2</name><trkseg>
+    <trkpt lat="37.920000" lon="-107.620000" />
+    <trkpt lat="37.921000" lon="-107.621000" />
+    <trkpt lat="37.922000" lon="-107.622000" />
+    <trkpt lat="37.923000" lon="-107.623000">
+  </trkseg></trk>
+  <trk><name>GPX-08B.3</name><trkseg>
+    <trkpt lat="37.940000" lon="-107.640000" />
+    <trkpt lat="37.941000" lon="-107.641000" />
+  </trkseg></trk>
+</gpx>
